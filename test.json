@@ -1,0 +1,247 @@
+{
+    "parameters": [
+        {
+            "id": "101",
+            "name": "MPUax",
+            "sensor_group": "MPU",
+            "unit": "m/s2",
+            "description": "",
+            "threshold": {
+                "low_crit": 2.0,
+                "low_warn": 3.0,
+                "high_warn": 7.0,
+                "high_crit": 9.0
+            }
+        },
+        {
+            "id": "102",
+            "name": "MPUay",
+            "sensor_group": "MPU",
+            "unit": "m/s2",
+            "description": "",
+            "threshold": {
+                "low_crit": 2.0,
+                "low_warn": 3.0,
+                "high_warn": 7.0,
+                "high_crit": 9.0
+            }
+        },
+        {
+            "id": "103",
+            "name": "MPUaz",
+            "sensor_group": "MPU",
+            "unit": "m/s2",
+            "description": "",
+            "threshold": {
+                "low_crit": 2.0,
+                "low_warn": 3.0,
+                "high_warn": 7.0,
+                "high_crit": 9.0
+            }
+        },
+        {
+            "id": "104",
+            "name": "HMCx",
+            "sensor_group": "HMC",
+            "unit": "uT",
+            "description": "",
+            "threshold": {
+                "low_crit": 0.1,
+                "low_warn": 0.3,
+                "high_warn": 0.7,
+                "high_crit": 0.9
+            },
+            "color": "#00BFFF"
+        },
+        {
+            "id": "105",
+            "name": "HMCy",
+            "sensor_group": "HMC",
+            "unit": "uT",
+            "description": "",
+            "threshold": {
+                "low_crit": 0.2,
+                "low_warn": 0.3,
+                "high_warn": 0.7,
+                "high_crit": 0.9
+            },
+            "color": "#FF3131"
+        },
+        {
+            "id": "106",
+            "name": "HMCz",
+            "sensor_group": "HMC",
+            "unit": "uT",
+            "description": "",
+            "threshold": {
+                "low_crit": 0.05,
+                "low_warn": 0.5,
+                "high_warn": 0.6,
+                "high_crit": 0.9
+            },
+            "color": "#39CCCC"
+        },
+        {
+            "id": "107",
+            "name": "Altitude",
+            "sensor_group": "General",
+            "unit": "m",
+            "description": "",
+            "threshold": {
+                "low_crit": 1.0,
+                "low_warn": 5.0,
+                "high_warn": 10.0,
+                "high_crit": 15.0
+            },
+            "color": "#01FF70"
+        },
+        {
+            "id": "108",
+            "name": "MPUgx",
+            "sensor_group": "MPU",
+            "unit": "m/s2",
+            "description": "",
+            "threshold": {
+                "low_crit": -5.0,
+                "low_warn": -3.0,
+                "high_warn": -2.0,
+                "high_crit": 0.0
+            }
+        },
+        {
+            "id": "109",
+            "name": "MPUgy",
+            "sensor_group": "MPU",
+            "unit": "m/s2",
+            "description": "",
+            "threshold": {
+                "low_crit": -5.0,
+                "low_warn": -3.0,
+                "high_warn": -2.0,
+                "high_crit": 0.0
+            }
+        },
+        {
+            "id": "110",
+            "name": "MPUgz",
+            "sensor_group": "MPU",
+            "unit": "m/s2",
+            "description": "",
+            "threshold": {
+                "low_crit": -4.0,
+                "low_warn": -2.0,
+                "high_warn": 0.0,
+                "high_crit": 1.0
+            }
+        },
+        {
+            "id": "111",
+            "name": "Latitude",
+            "sensor_group": "Location",
+            "unit": "degree",
+            "description": "",
+            "threshold": {
+                "low_crit": 43.0,
+                "low_warn": 50.0,
+                "high_warn": 59.0,
+                "high_crit": 63.0
+            }
+        },
+        {
+            "id": "112",
+            "name": "Longitude",
+            "sensor_group": "Location",
+            "unit": "degree",
+            "description": "",
+            "threshold": {
+                "low_crit": 23.0,
+                "low_warn": 32.0,
+                "high_warn": 47.0,
+                "high_crit": 78.0
+            }
+        }
+    ],
+    "tabs": [
+        {
+            "name": "Main View",
+            "configs": {
+                "0d2bb995-5331-4edc-ba92-3d94cd2f65d1": {
+                    "param_ids": [
+                        "101",
+                        "102",
+                        "103"
+                    ],
+                    "displayType": "Log Table",
+                    "priority": "High"
+                },
+                "89434695-e488-44a9-a07f-98663d0f927e": {
+                    "param_ids": [
+                        "107"
+                    ],
+                    "displayType": "Graph",
+                    "priority": "High"
+                },
+                "5a34b6fb-a48b-426d-8b7a-a93da0dfc81b": {
+                    "param_ids": [
+                        "108",
+                        "109",
+                        "110"
+                    ],
+                    "displayType": "Log Table",
+                    "priority": "High"
+                },
+                "793cda75-5657-4899-9482-33898c5730da": {
+                    "param_ids": [
+                        "104"
+                    ],
+                    "displayType": "Instant",
+                    "priority": "High"
+                },
+                "0b1e5541-7d94-4d12-b164-47fbefd5aa01": {
+                    "param_ids": [
+                        "105"
+                    ],
+                    "displayType": "Instant",
+                    "priority": "High"
+                },
+                "243bd1c6-6868-4ada-adc2-52defd7c8c9c": {
+                    "param_ids": [
+                        "106"
+                    ],
+                    "displayType": "Instant",
+                    "priority": "High"
+                },
+                "f54f2deb-dabb-45fc-ba5d-35d862e6e973": {
+                    "param_ids": [
+                        "111"
+                    ],
+                    "displayType": "Instant",
+                    "priority": "High"
+                },
+                "5835eae8-b623-4ab1-a7a7-98d7b7f14b5c": {
+                    "param_ids": [
+                        "112"
+                    ],
+                    "displayType": "Instant",
+                    "priority": "High"
+                },
+                "2236defa-f58b-42f8-bfe9-cde26c8215f7": {
+                    "param_ids": [
+                        "107"
+                    ],
+                    "displayType": "Graph",
+                    "priority": "High"
+                },
+                "6e1ccb71-6fb6-4f4d-9a57-036328ee5fd6": {
+                    "param_ids": [
+                        "107"
+                    ],
+                    "displayType": "Graph",
+                    "priority": "High"
+                }
+            },
+            "layout_state": "AAAA/wAAAAD9AAAAAgAAAAAAAAIMAAABn/wCAAAAAfwAAAEgAAABnwAAAAAA/////AEAAAAC/AAAAAAAAAQIAAAAAAD////8AgAAAAD8AAAAAAAAAgwAAAAAAP////r/////AgAAAAAAAAACAAAE1gAAAN/8AQAAAAT7/////wIAAAJpAAABcQAAAdwAAAEL+/////8BAAAAAAAAAsYAAAIMAP////wAAAM4AAAAlAAAAAAA////+v////8BAAAAB/v/////AwAAAAEAAAFyAAAAhwAAAGD7/////wMAAACKAAABcgAAAIwAAABg+/////8DAAABFwAAAXIAAACFAAAAYPv/////A/////4AAAHyAAAAygAAATj7/////wMAAADNAAAB9AAAAMoAAAE8+/////8CAAABmgAAAXYAAAKvAAABXvv/////AwAAAZsAAAFxAAADSgAAAb37/////wEAAALKAAACDAAAAgwA////AAAE1gAAAdwAAAAEAAAABAAAAAgAAAAI/AAAAAA="
+        }
+    ],
+    "active_tab_index": 0
+}
