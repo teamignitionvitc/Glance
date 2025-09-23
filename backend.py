@@ -14,26 +14,28 @@ class DataReader:
     def read_line(self):
         if not self.ser:
             return None
+        try:        
+            line = self.ser.readline().decode("utf-8").strip()
+            if line:
+                cleaned = line.replace(";", ",")
+                if cleaned[0] == "[":
+                    final_data = json.loads(cleaned)
+                    final_data = [float(x) for x in final_data]
+                    return final_data
+                else:
+                    return None
+            else:
+                return None   # <--- instead of falling through to None
+        except Exception as e:
+            print("Parse error:", line, e)
+            return "Parse"
 
-        while True:
-                try:
-                    line = self.ser.readline().decode("utf-8").strip()
-                    if line:
-                        cleaned = line.replace(";",",")
-                        if(cleaned[0]=="["):
-                            final_data = json.loads(cleaned)
-                            print(cleaned)
-
-                except Exception as e:
-                    print("Parse error:",line,e)
      
 
     def close(self):
         if self.ser:
             self.ser.close()
 
-reader = DataReader()
-reader.read_line();  
 
 
-
+ 
