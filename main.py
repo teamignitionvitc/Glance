@@ -1,3 +1,43 @@
+"""
+                                        ::                                                      
+                                        ::                                                      
+                                        ::                                                      
+                                        ::                                                      
+                                        ::                                                      
+    ..    ..........    :.      ::      ::     .........  ..    ..........    ...      .        
+    ::    ::            : .:.   ::     .::.       ::      ::    ::       :    :: :.    :        
+    ::    ::   ..:::    :   .:. ::    ::::::      ::      ::    ::       :    ::   ::  :        
+    ::    ::......::    :      :::    ::::::      ::      ::    ::.......:    ::     :::        
+                                      ::::::                                                    
+                                      :.::.:                                                    
+                         .::::          ::          ::::.                                      
+                       .::::::::.       ::       .:::::::::                                    
+                       ::::::::::::....::::.....:::::::::::                                    
+                        .:::::::::::::::::::::::::::::::::.        
+
+                 © Copyright of Ignition Software Department
+"""
+
+####################################################################################################
+# File:        main.py
+# Author:      Neil Baranwal
+# Created On:  <Date>
+#
+# @brief       Brief description of the module purpose
+# @details     Detailed explanation of module functionality and behavior
+###################################################################################################
+# HISTORY:
+#
+#       +----- (NEW | MODify | ADD | DELete)
+#       |
+# No#   |       when       who                  what
+######+*********+**********+********************+**************************************************
+# 000  NEW      <Date>      <Author Name>        Initial creation
+####################################################################################################
+
+####################################################################################################
+
+# Imports
 import sys
 import random
 import time
@@ -18,6 +58,10 @@ from PySide6.QtCore import QThread, Signal, Qt, QTimer, QByteArray
 from PySide6.QtGui import QFont, QColor, QBrush
 import pyqtgraph as pg
 import numpy as np
+from backend import DataReader
+
+####################################################################################################
+
 
 # --- 1. DATA SIMULATOR & WIDGETS ---
 
@@ -30,7 +74,7 @@ class DataSimulator(QThread):
         self.num_channels = num_channels
         self._is_running = True
         self._is_paused = False
-        self.mode = "dummy" # "dummy" or "backend"
+        self.mode = "backend" # "dummy" or "backend"
 
     def run(self):
         while self._is_running:
@@ -46,12 +90,19 @@ class DataSimulator(QThread):
                         if random.random() > 0.98:
                             value = random.uniform(-10, 120)
                         packet[i] = value
-                    self.newData.emit(packet)
+                    self.newData.emit(packet)   
 
                 elif self.mode == "backend":
-                    # Placeholder for real backend connection (e.g., socket, serial)
-                    # For now, it does nothing.
-                    pass
+                    if not hasattr(self,"reader"):
+                        #establish backend connection
+                        self.reader = DataReader("COM4",115200)    
+                    line = self.reader.read_line()
+                    
+                    if isinstance(line,list):
+                        packet = line
+                        timestamp = time.time()
+                        self.newData.emit(packet)
+                    
             time.sleep(0.1)
 
     def toggle_pause(self):
@@ -105,6 +156,7 @@ class TimeGraph(QWidget):
         self.plot_widget.addItem(self.label)
         self.proxy = pg.SignalProxy(self.plot_widget.scene().sigMouseMoved, rateLimit=60, slot=self.mouse_moved)
         self.plot_widget.scene().sigMouseClicked.connect(self.mouse_clicked)
+
     def update_data(self, history):
         for param_id, curve in self.curves.items():
             if param_id in history and history[param_id]:
@@ -113,6 +165,7 @@ class TimeGraph(QWidget):
                 timestamps = [dp['timestamp'] - self.start_time for dp in param_history]
                 values = [dp['value'] for dp in param_history]
                 curve.setData(x=timestamps, y=values)
+
     def mouse_moved(self, evt):
         pos = evt[0]
         if self.plot_widget.sceneBoundingRect().contains(pos):
@@ -393,7 +446,7 @@ class MainWindow(QMainWindow):
         source_group = QGroupBox("DATA SOURCE")
         source_layout = QFormLayout(source_group)
         self.source_combo = QComboBox()
-        self.source_combo.addItems(["Dummy Data", "Backend (Not Implemented)"])
+        self.source_combo.addItems(["Backend","Dummy Data"])
         self.source_combo.currentTextChanged.connect(self.on_source_changed)
         source_layout.addRow("Source:", self.source_combo)
         # ---
@@ -420,14 +473,14 @@ class MainWindow(QMainWindow):
     # --- MODIFIED: Handles new data source selection ---
     def on_source_changed(self, source_text):
         if not self.simulator: return
-        if "Dummy" in source_text:
+        if "Dummy" in source_text or "dummy" in self.simulator.mode:
             self.simulator.mode = "dummy"
+            source_text = "Dummy Data"
             if self.simulator._is_paused: self.toggle_pause_stream()
         else: # Backend
             self.simulator.mode = "backend"
-            # In a real app, you would initiate the backend connection here
+            source_text = "Backend"
             if not self.simulator._is_paused: self.toggle_pause_stream()
-            QMessageBox.information(self, "Backend", "Backend connection is not implemented in this demo.")
 
     def add_widget_to_dashboard(self, config, tab_index, widget_id=None):
         # (Unchanged)
@@ -493,11 +546,11 @@ class MainWindow(QMainWindow):
                                 widget.update_data(param_id, self.data_history)
 
     def restart_simulator(self):
-        # (Unchanged logic, just passes different args to simulator)
-        if self.simulator: self.simulator.stop(); self.simulator.wait()
-        self.simulator = DataSimulator(num_channels=32) # Assume 32 channels from backend/dummy
-        self.simulator.newData.connect(self.update_data)
-        self.simulator.start()
+            # (Unchanged logic, just passes different args to simulator)
+            if self.simulator: self.simulator.stop(); self.simulator.wait()
+            self.simulator = DataSimulator(num_channels=32) # Assume 32 channels from backend/dummy
+            self.simulator.newData.connect(self.update_data)
+            self.simulator.start()  
 
     # --- All other MainWindow methods are unchanged ---
     def open_add_widget_dialog(self):
