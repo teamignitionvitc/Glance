@@ -1,45 +1,4 @@
-"""
-                                        ::                                                      
-                                        ::                                                      
-                                        ::                                                      
-                                        ::                                                      
-                                        ::                                                      
-    ..    ..........    :.      ::      ::     .........  ..    ..........    ...      .        
-    ::    ::            : .:.   ::     .::.       ::      ::    ::       :    :: :.    :        
-    ::    ::   ..:::    :   .:. ::    ::::::      ::      ::    ::       :    ::   ::  :        
-    ::    ::......::    :      :::    ::::::      ::      ::    ::.......:    ::     :::        
-                                      ::::::                                                    
-                                      :.::.:                                                    
-                         .::::          ::          ::::.                                      
-                       .::::::::.       ::       .:::::::::                                    
-                       ::::::::::::....::::.....:::::::::::                                    
-                        .:::::::::::::::::::::::::::::::::.        
-
-                 © Copyright of Ignition Software Department
-"""
-
-####################################################################################################
-# File:        backend.py
-# Author:      Shawn Liju Thomas
-# Created On:  16-09-2025
-#
-# @brief       This module serves as the backend for the Dashboard Builder project
-# @details     Detailed explanation of module functionality and behavior
-####################################################################################################
-# HISTORY:
-#
-#       +----- (NEW | MODify | ADD | DELete)
-#       |
-# No#   |       when       who                  what
-######+*********+**********+********************+**************************************************
-# 000  NEW      <Date>      <Author Name>        Initial creation
-####################################################################################################
-
-####################################################################################################
-# Imports
-
 import json
-import re
 import socket
 from typing import Optional, List, Union
 
@@ -48,13 +7,11 @@ try:
 except Exception:  # pragma: no cover - optional at runtime
     serial = None
 
-####################################################################################################
 
 class DataReader:
     """Flexible line-based reader supporting Serial, TCP, and UDP input.
 
-    Expected payload format per line: JSON array like [1,2,3]. Semicolons are
-    tolerated and converted to commas.
+    Supports formats: json_array, csv, raw_bytes, bits.
     """
 
     def __init__(
@@ -122,7 +79,6 @@ class DataReader:
                     self.rx_bytes += len(data)
                 return data or None
             elif self.mode == "tcp" and self.sock:
-                # Read chunks until we find a newline
                 if b"\n" not in self._buffer:
                     chunk = self.sock.recv(4096)
                     if not chunk:
@@ -138,7 +94,6 @@ class DataReader:
                 if not chunk:
                     return None
                 self.rx_bytes += len(chunk)
-                # Assume each datagram is a logical line
                 return chunk
             else:
                 return None
@@ -188,9 +143,7 @@ class DataReader:
                     values.append(float(val))
                 return values if values else None
             elif self.data_format == "bits":
-                # Parse an integer then expand to bits
                 base_val: Optional[int] = None
-                # Try JSON first
                 try:
                     line = raw.decode("utf-8", errors="ignore").strip()
                     if line and line[0] == "[":
@@ -205,7 +158,6 @@ class DataReader:
                 except Exception:
                     base_val = None
                 if base_val is None:
-                    # Fall back to raw bytes
                     buf = bytes(raw)
                     if len(buf) > 0:
                         base_val = int.from_bytes(buf, byteorder="little" if self.little_endian else "big", signed=False)
@@ -234,5 +186,3 @@ class DataReader:
             pass
 
 
-
- 
