@@ -1,10 +1,16 @@
-from PySide6.QtWidgets import QWidget, QVBoxLayout, QFrame, QLabel, QTableWidget, QHeaderView, QAbstractItemView, QGroupBox, QHBoxLayout, QTableWidgetItem
+from PySide6.QtWidgets import QWidget, QVBoxLayout, QFrame, QLabel, QTableWidget, QHeaderView, QAbstractItemView, QGroupBox, QHBoxLayout, QTableWidgetItem, QComboBox
 from PySide6.QtGui import QFont, QColor, QBrush
 from PySide6.QtCore import Qt
 import time
 import math
 import numpy as np
 import pyqtgraph as pg
+
+# Optional: Map widget using QWebEngineView if available
+try:
+    from PySide6.QtWebEngineWidgets import QWebEngineView  # type: ignore
+except Exception:
+    QWebEngineView = None
 
 
 class ValueCard(QFrame):
@@ -172,5 +178,336 @@ class LogTable(QWidget):
         else:
             from PySide6.QtWidgets import QMessageBox
             QMessageBox.information(self, "Search", f"No value matching '{condition} {target_val}' found for '{target_p_name}'.")
+
+
+class GaugeWidget(QFrame):
+    def __init__(self, param_config):
+        super().__init__()
+        self.param = param_config
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(16, 16, 16, 16)
+        layout.setSpacing(8)
+        
+        # Clean parameter name
+        clean_name = param_config['name'].replace('GPS(', '').replace(')', '') if param_config['name'].startswith('GPS(') else param_config['name']
+        
+        # Title with icon
+        title_layout = QHBoxLayout()
+        icon_label = QLabel("Target")
+        icon_label.setFont(QFont("Arial", 14))
+        title = QLabel(f"{clean_name}")
+        title.setFont(QFont("Arial", 12, QFont.Weight.Bold))
+        title.setStyleSheet("color: #ffffff;")
+        if param_config.get('unit'):
+            unit_label = QLabel(f"({param_config['unit']})")
+            unit_label.setFont(QFont("Arial", 10))
+            unit_label.setStyleSheet("color: #aaaaaa;")
+            title_layout.addWidget(icon_label)
+            title_layout.addWidget(title)
+            title_layout.addWidget(unit_label)
+            title_layout.addStretch()
+        else:
+            title_layout.addWidget(icon_label)
+            title_layout.addWidget(title)
+            title_layout.addStretch()
+        
+        # Value display
+        self.value_lbl = QLabel("--")
+        value_font = QFont("Monospace", 32, QFont.Weight.Bold)
+        value_font.setStyleStrategy(QFont.PreferAntialias)
+        self.value_lbl.setFont(value_font)
+        self.value_lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.value_lbl.setStyleSheet("color: #00ff88; padding: 8px;")
+        
+        # Gauge bar
+        self.bar = pg.PlotWidget()
+        self.bar.setFixedHeight(140)
+        self.bar.setBackground(QColor(20, 20, 20))
+        self.bar.hideAxis('left')
+        self.bar.hideAxis('bottom')
+        self.bar.setMenuEnabled(False)
+        self.bar.setYRange(0, 100, padding=0)
+        self.bar.setXRange(0, 100, padding=0)
+        
+        # Color regions
+        self.low_region = pg.LinearRegionItem(values=(0, 25), brush=(255, 49, 49, 80))
+        self.warn_region = pg.LinearRegionItem(values=(25, 75), brush=(255, 191, 0, 60))
+        self.high_region = pg.LinearRegionItem(values=(75, 100), brush=(28, 156, 79, 80))
+        
+        for reg in [self.low_region, self.warn_region, self.high_region]:
+            reg.setZValue(-10)
+            reg.setMovable(False)
+            self.bar.addItem(reg)
+        
+        # Indicator line
+        self.indicator = pg.InfiniteLine(pos=0, angle=90, pen=pg.mkPen('#00BFFF', width=4))
+        self.bar.addItem(self.indicator)
+        
+        layout.addLayout(title_layout)
+        layout.addWidget(self.value_lbl)
+        layout.addWidget(self.bar)
+        
+        # Set frame style
+        self.setStyleSheet("""
+            background-color: #1a1a1a;
+            border-radius: 12px;
+            border: 2px solid #333;
+        """)
+    
+    def update_value(self, value):
+        try:
+            self.value_lbl.setText(f"{float(value):.2f}")
+        except Exception:
+            self.value_lbl.setText("--")
+        
+        # Normalize gauge range based on thresholds
+        t = self.param.get('threshold', {'low_crit': 0, 'low_warn': 25, 'high_warn': 75, 'high_crit': 100})
+        lo = float(t.get('low_crit', 0))
+        hi = float(t.get('high_crit', 100))
+        val = float(value) if value is not None else lo
+        span = max(1e-6, hi - lo)
+        x = max(0.0, min(1.0, (val - lo) / span)) * 100.0
+        self.indicator.setPos(x)
+
+
+class HistogramWidget(QWidget):
+    def __init__(self, param_config):
+        super().__init__(); self.param = param_config
+        layout = QVBoxLayout(self); layout.setContentsMargins(0,0,0,0)
+        self.plot = pg.PlotWidget(); self.plot.setBackground(QColor(12,12,12)); self.plot.setMenuEnabled(False)
+        self.plot.showGrid(x=True, y=True, alpha=0.2)
+        self.plot.setLabel('bottom', f"{param_config['name']} ({param_config['unit']})", color='#FFFFFF')
+        self.bar_item = pg.BarGraphItem(x=[], height=[], width=0.9, brush='#39CCCC'); self.plot.addItem(self.bar_item)
+        layout.addWidget(self.plot)
+    def update_histogram(self, values):
+        if not values: return
+        bins = np.histogram(values, bins=20)
+        self.bar_item.setOpts(x=bins[1][:-1], height=bins[0])
+
+
+class LEDWidget(QFrame):
+    def __init__(self, param_config):
+        super().__init__()
+        self.param = param_config
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(16, 16, 16, 16)
+        layout.setSpacing(12)
+        
+        # Clean parameter name
+        clean_name = param_config['name'].replace('GPS(', '').replace(')', '') if param_config['name'].startswith('GPS(') else param_config['name']
+        
+        # Title with icon
+        title_layout = QHBoxLayout()
+        icon_label = QLabel("LED")
+        icon_label.setFont(QFont("Arial", 14))
+        title = QLabel(f"{clean_name}")
+        title.setFont(QFont("Arial", 12, QFont.Weight.Bold))
+        title.setStyleSheet("color: #ffffff;")
+        if param_config.get('unit'):
+            unit_label = QLabel(f"({param_config['unit']})")
+            unit_label.setFont(QFont("Arial", 10))
+            unit_label.setStyleSheet("color: #aaaaaa;")
+            title_layout.addWidget(icon_label)
+            title_layout.addWidget(title)
+            title_layout.addWidget(unit_label)
+            title_layout.addStretch()
+        else:
+            title_layout.addWidget(icon_label)
+            title_layout.addWidget(title)
+            title_layout.addStretch()
+        
+        # LED indicator
+        self.led = QLabel("")
+        self.led.setFixedSize(40, 40)
+        self.led.setStyleSheet("""
+            border-radius: 20px; 
+            background: #555; 
+            border: 3px solid #333;
+        """)
+        
+        # Value display
+        self.value_lbl = QLabel("--")
+        self.value_lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.value_lbl.setFont(QFont("Monospace", 16, QFont.Weight.Bold))
+        self.value_lbl.setStyleSheet("color: #ffffff;")
+        
+        layout.addLayout(title_layout)
+        layout.addWidget(self.led, alignment=Qt.AlignmentFlag.AlignCenter)
+        layout.addWidget(self.value_lbl)
+        
+        # Set frame style
+        self.setStyleSheet("""
+            background-color: #1a1a1a;
+            border-radius: 12px;
+            border: 2px solid #333;
+        """)
+    
+    def update_value(self, value):
+        try:
+            v = float(value)
+            self.value_lbl.setText(f"{v:.2f}")
+        except Exception:
+            self.value_lbl.setText("--")
+            v = None
+        
+        # Determine LED state based on thresholds
+        t = self.param.get('threshold', {'low_crit': 0, 'low_warn': 25, 'high_warn': 75, 'high_crit': 100})
+        if v is not None:
+            if v >= t.get('high_crit', 100):
+                # Critical - red
+                self.led.setStyleSheet("""
+                    border-radius: 20px; 
+                    background: #ff3131; 
+                    border: 3px solid #ff6666;
+                    box-shadow: 0 0 10px #ff3131;
+                """)
+            elif v >= t.get('high_warn', 75):
+                # Warning - yellow
+                self.led.setStyleSheet("""
+                    border-radius: 20px; 
+                    background: #ffbf00; 
+                    border: 3px solid #ffcc33;
+                    box-shadow: 0 0 10px #ffbf00;
+                """)
+            elif v >= t.get('low_warn', 25):
+                # Normal - green
+                self.led.setStyleSheet("""
+                    border-radius: 20px; 
+                    background: #21b35a; 
+                    border: 3px solid #4ade80;
+                    box-shadow: 0 0 10px #21b35a;
+                """)
+            else:
+                # Low - blue
+                self.led.setStyleSheet("""
+                    border-radius: 20px; 
+                    background: #0078ff; 
+                    border: 3px solid #3b82f6;
+                    box-shadow: 0 0 10px #0078ff;
+                """)
+        else:
+            # No data - gray
+            self.led.setStyleSheet("""
+                border-radius: 20px; 
+                background: #555; 
+                border: 3px solid #333;
+            """)
+
+
+class MapWidget(QWidget):
+    def __init__(self, param_configs):
+        super().__init__()
+        self.param_configs = param_configs
+        if len(param_configs) != 2:
+            lbl = QLabel("Map requires [Lat, Lon] parameters")
+            lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            layout = QVBoxLayout(self)
+            layout.addWidget(lbl)
+            return
+        
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(16, 16, 16, 16)
+        layout.setSpacing(8)
+        
+        # Title
+        lat_name = param_configs[0]['name'].replace('GPS(', '').replace(')', '') if param_configs[0]['name'].startswith('GPS(') else param_configs[0]['name']
+        lon_name = param_configs[1]['name'].replace('GPS(', '').replace(')', '') if param_configs[1]['name'].startswith('GPS(') else param_configs[1]['name']
+        
+        # Title with icon
+        title_layout = QHBoxLayout()
+        icon_label = QLabel("Map")
+        icon_label.setFont(QFont("Arial", 14))
+        self.title = QLabel(f"{lat_name} + {lon_name}")
+        self.title.setFont(QFont("Arial", 12, QFont.Weight.Bold))
+        self.title.setStyleSheet("color: #ffffff;")
+        title_layout.addWidget(icon_label)
+        title_layout.addWidget(self.title)
+        title_layout.addStretch()
+        
+        # Coordinates display
+        self.coords_label = QLabel("Lat: -- | Lon: --")
+        self.coords_label.setFont(QFont("Monospace", 10))
+        self.coords_label.setStyleSheet("color: #aaaaaa;")
+        self.coords_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        
+        layout.addLayout(title_layout)
+        layout.addWidget(self.coords_label)
+        
+        # Map view
+        if QWebEngineView is not None:
+            self.web_view = QWebEngineView()
+            self.web_view.setFixedHeight(300)
+            layout.addWidget(self.web_view)
+            
+            # Initial map
+            self.update_map(0.0, 0.0)
+        else:
+            # Fallback: simple text display
+            self.fallback = QLabel("WebEngine not available\nMap display disabled")
+            self.fallback.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            self.fallback.setStyleSheet("color: #ff6666; font-size: 14px;")
+            layout.addWidget(self.fallback)
+        
+        # Set frame style
+        self.setStyleSheet("""
+            background-color: #1a1a1a;
+            border-radius: 12px;
+            border: 2px solid #333;
+        """)
+    
+    def update_position(self, history):
+        lat_param = self.param_configs[0]['id']
+        lon_param = self.param_configs[1]['id']
+        
+        if lat_param in history and lon_param in history:
+            lat_hist = history[lat_param]
+            lon_hist = history[lon_param]
+            
+            if lat_hist and lon_hist:
+                lat = lat_hist[-1]['value']
+                lon = lon_hist[-1]['value']
+                self.coords_label.setText(f"Lat: {lat:.6f}° | Lon: {lon:.6f}°")
+                
+                if hasattr(self, 'web_view'):
+                    self.update_map(lat, lon)
+                elif hasattr(self, 'fallback'):
+                    self.fallback.setText(f"Lat: {lat:.6f}°\nLon: {lon:.6f}°")
+    
+    def update_map(self, lat, lon):
+        if not hasattr(self, 'web_view'):
+            return
+        
+        # Simple OpenStreetMap embed
+        html = f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="utf-8">
+            <style>
+                body {{ margin: 0; padding: 0; }}
+                #map {{ width: 100%; height: 100%; }}
+            </style>
+        </head>
+        <body>
+            <div id="map"></div>
+            <script>
+                // Simple map display using OpenStreetMap
+                var mapDiv = document.getElementById('map');
+                mapDiv.innerHTML = `
+                    <iframe 
+                        width="100%" 
+                        height="100%" 
+                        frameborder="0" 
+                        scrolling="no" 
+                        marginheight="0" 
+                        marginwidth="0" 
+                        src="https://www.openstreetmap.org/export/embed.html?bbox=${lon-0.01},{lat-0.01},{lon+0.01},{lat+0.01}&layer=mapnik&marker={lat},{lon}"
+                    ></iframe>
+                `;
+            </script>
+        </body>
+        </html>
+        """
+        self.web_view.setHtml(html)
 
 

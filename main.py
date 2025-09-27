@@ -45,6 +45,9 @@ import json
 import base64
 import math
 import uuid
+import csv
+import os
+from datetime import datetime
 from PySide6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
     QListWidget, QListWidgetItem, QComboBox, QLineEdit,
@@ -59,6 +62,8 @@ from PySide6.QtGui import QFont, QColor, QBrush, QAction
 import pyqtgraph as pg
 import numpy as np
 from backend import DataReader
+from app.widgets import ValueCard, TimeGraph, LogTable, GaugeWidget, HistogramWidget, LEDWidget, MapWidget
+from app.dialogs import ConnectionSettingsDialog, AddWidgetDialog, ParameterEntryDialog, ManageParametersDialog, DataLoggingDialog
 try:
     from serial.tools import list_ports as _serial_list_ports  # type: ignore
 except Exception:
@@ -67,7 +72,131 @@ except Exception:
 ####################################################################################################
 
 
-# --- 1. DATA SIMULATOR & WIDGETS ---
+# --- 1. DATA LOGGING SYSTEM ---
+
+class DataLogger:
+    """Handles data logging to CSV and JSON formats"""
+    
+    def __init__(self):
+        self.is_logging = False
+        self.log_format = 'csv'  # 'csv' or 'json'
+        self.log_file_path = None
+        self.log_file = None
+        self.csv_writer = None
+        self.log_start_time = None
+        self.parameters = []
+        self.log_buffer = []
+        self.buffer_size = 100  # Write to file every N entries
+        
+    def configure(self, format_type='csv', file_path=None, parameters=None, buffer_size=100):
+        """Configure the data logger"""
+        self.log_format = format_type
+        self.parameters = parameters or []
+        self.buffer_size = buffer_size
+        
+        if file_path:
+            self.log_file_path = file_path
+        else:
+            # Generate default filename with timestamp
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            if format_type == 'csv':
+                self.log_file_path = f"dashboard_data_{timestamp}.csv"
+            else:
+                self.log_file_path = f"dashboard_data_{timestamp}.json"
+    
+    def start_logging(self):
+        """Start data logging"""
+        if not self.log_file_path:
+            raise ValueError("No log file path configured")
+        
+        self.log_file = open(self.log_file_path, 'w', newline='', encoding='utf-8')
+        self.log_start_time = time.time()
+        
+        if self.log_format == 'csv':
+            # Write CSV header
+            headers = ['timestamp', 'elapsed_time']
+            for param in self.parameters:
+                headers.append(f"{param['id']}_{param['name']}")
+            self.csv_writer = csv.writer(self.log_file)
+            self.csv_writer.writerow(headers)
+        else:  # JSON format
+            # Write JSON header comment
+            self.log_file.write("# Dashboard Data Log\n")
+            self.log_file.write("# Format: JSON Lines (one JSON object per line)\n")
+            self.log_file.write(f"# Parameters: {', '.join([p['id'] for p in self.parameters])}\n")
+            self.log_file.write("# Start Time: " + datetime.fromtimestamp(self.log_start_time).isoformat() + "\n\n")
+        
+        self.is_logging = True
+        self.log_buffer = []
+    
+    def stop_logging(self):
+        """Stop data logging and flush buffer"""
+        if self.is_logging:
+            self.flush_buffer()
+            if self.log_file:
+                self.log_file.close()
+                self.log_file = None
+            self.is_logging = False
+    
+    def log_data(self, packet_data, data_history):
+        """Log incoming data"""
+        if not self.is_logging:
+            return
+        
+        timestamp = time.time()
+        elapsed_time = timestamp - self.log_start_time
+        
+        # Create log entry
+        log_entry = {
+            'timestamp': timestamp,
+            'elapsed_time': elapsed_time,
+            'data': {}
+        }
+        
+        # Add parameter values from data history
+        for param in self.parameters:
+            param_id = param['id']
+            if param_id in data_history and data_history[param_id]:
+                latest_value = data_history[param_id][-1]['value']
+                log_entry['data'][param_id] = latest_value
+            else:
+                log_entry['data'][param_id] = None
+        
+        self.log_buffer.append(log_entry)
+        
+        # Flush buffer if it's full
+        if len(self.log_buffer) >= self.buffer_size:
+            self.flush_buffer()
+    
+    def flush_buffer(self):
+        """Write buffered data to file"""
+        if not self.log_buffer or not self.log_file:
+            return
+        
+        if self.log_format == 'csv':
+            for entry in self.log_buffer:
+                row = [
+                    datetime.fromtimestamp(entry['timestamp']).strftime('%Y-%m-%d %H:%M:%S.%f')[:-3],
+                    f"{entry['elapsed_time']:.3f}"
+                ]
+                for param in self.parameters:
+                    value = entry['data'].get(param['id'])
+                    row.append(f"{value:.6f}" if value is not None else "")
+                self.csv_writer.writerow(row)
+        else:  # JSON
+            for entry in self.log_buffer:
+                json_entry = {
+                    'timestamp': datetime.fromtimestamp(entry['timestamp']).isoformat(),
+                    'elapsed_time': entry['elapsed_time'],
+                    'parameters': entry['data']
+                }
+                self.log_file.write(json.dumps(json_entry) + '\n')
+        
+        self.log_file.flush()
+        self.log_buffer = []
+
+
+# --- 2. DATA SIMULATOR & WIDGETS ---
 
 # --- MODIFIED: Now works with an array/list of data ---
 class DataSimulator(QThread):
@@ -157,7 +286,17 @@ class ValueCard(QFrame):
  
         # Title with icon
         title_layout = QHBoxLayout()
-
+        title_label = QLabel(param_name)
+        title_label.setFont(QFont("Arial", 12, QFont.Weight.Bold))
+        title_label.setStyleSheet("color: #ffffff;")
+        title_layout.addWidget(title_label)
+        title_layout.addStretch()
+        
+        # Unit label
+        unit_label = QLabel(unit)
+        unit_label.setFont(QFont("Arial", 10))
+        unit_label.setStyleSheet("color: #aaaaaa;")
+        title_layout.addWidget(unit_label)
         
         # Value display
         self.value_label = QLabel("---")
@@ -282,94 +421,6 @@ class TimeGraph(QWidget):
             time_str = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(ts))
             QMessageBox.information(self, "Data Point Selected", f"Parameter: {name}\nValue: {val:.3f}\nTimestamp: {time_str}")
 
-class GaugeWidget(QFrame):
-    def __init__(self, param_config):
-        super().__init__()
-        self.param = param_config
-        layout = QVBoxLayout(self)
-        layout.setContentsMargins(16, 16, 16, 16)
-        layout.setSpacing(8)
-        
-        # Clean parameter name
-        clean_name = param_config['name'].replace('GPS(', '').replace(')', '') if param_config['name'].startswith('GPS(') else param_config['name']
-        
-        # Title with icon
-        title_layout = QHBoxLayout()
-        icon_label = QLabel("🎯")
-        icon_label.setFont(QFont("Arial", 14))
-        title = QLabel(f"{clean_name}")
-        title.setFont(QFont("Arial", 12, QFont.Weight.Bold))
-        title.setStyleSheet("color: #ffffff;")
-        if param_config.get('unit'):
-            unit_label = QLabel(f"({param_config['unit']})")
-            unit_label.setFont(QFont("Arial", 10))
-            unit_label.setStyleSheet("color: #aaaaaa;")
-            title_layout.addWidget(icon_label)
-            title_layout.addWidget(title)
-            title_layout.addWidget(unit_label)
-            title_layout.addStretch()
-        else:
-            title_layout.addWidget(icon_label)
-            title_layout.addWidget(title)
-            title_layout.addStretch()
-        
-        # Value display
-        self.value_lbl = QLabel("--")
-        value_font = QFont("Monospace", 32, QFont.Weight.Bold)
-        value_font.setStyleStrategy(QFont.PreferAntialias)
-        self.value_lbl.setFont(value_font)
-        self.value_lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.value_lbl.setStyleSheet("color: #00ff88; padding: 8px;")
-        
-        # Gauge bar
-        self.bar = pg.PlotWidget()
-        self.bar.setFixedHeight(140)
-        self.bar.setBackground(QColor(20, 20, 20))
-        self.bar.hideAxis('left')
-        self.bar.hideAxis('bottom')
-        self.bar.setMenuEnabled(False)
-        self.bar.setYRange(0, 100, padding=0)
-        self.bar.setXRange(0, 100, padding=0)
-        
-        # Color regions
-        self.low_region = pg.LinearRegionItem(values=(0, 25), brush=(255, 49, 49, 80))
-        self.warn_region = pg.LinearRegionItem(values=(25, 75), brush=(255, 191, 0, 60))
-        self.high_region = pg.LinearRegionItem(values=(75, 100), brush=(28, 156, 79, 80))
-        
-        for reg in [self.low_region, self.warn_region, self.high_region]:
-            reg.setZValue(-10)
-            reg.setMovable(False)
-            self.bar.addItem(reg)
-        
-        # Indicator line
-        self.indicator = pg.InfiniteLine(pos=0, angle=90, pen=pg.mkPen('#00BFFF', width=4))
-        self.bar.addItem(self.indicator)
-        
-        layout.addLayout(title_layout)
-        layout.addWidget(self.value_lbl)
-        layout.addWidget(self.bar)
-        
-        # Set frame style
-        self.setStyleSheet("""
-            background-color: #1a1a1a;
-            border-radius: 12px;
-            border: 2px solid #333;
-        """)
-    
-    def update_value(self, value):
-        try:
-            self.value_lbl.setText(f"{float(value):.2f}")
-        except Exception:
-            self.value_lbl.setText("--")
-        
-        # Normalize gauge range based on thresholds
-        t = self.param.get('threshold', {'low_crit': 0, 'low_warn': 25, 'high_warn': 75, 'high_crit': 100})
-        lo = float(t.get('low_crit', 0))
-        hi = float(t.get('high_crit', 100))
-        val = float(value) if value is not None else lo
-        span = max(1e-6, hi - lo)
-        x = max(0.0, min(1.0, (val - lo) / span)) * 100.0
-        self.indicator.setPos(x)
 
 class HistogramWidget(QWidget):
     def __init__(self, param_config):
@@ -403,7 +454,7 @@ class LEDWidget(QFrame):
         
         # Title with icon
         title_layout = QHBoxLayout()
-        icon_label = QLabel("💡")
+        icon_label = QLabel("LED")
         icon_label.setFont(QFont("Arial", 14))
         title = QLabel(f"{clean_name}")
         title.setFont(QFont("Arial", 12, QFont.Weight.Bold))
@@ -526,7 +577,7 @@ class MapWidget(QWidget):
         
         # Title with icon
         title_layout = QHBoxLayout()
-        icon_label = QLabel("🗺️")
+        icon_label = QLabel("Map")
         icon_label.setFont(QFont("Arial", 14))
         self.title = QLabel(f"{lat_name} + {lon_name}")
         self.title.setFont(QFont("Arial", 12, QFont.Weight.Bold))
@@ -667,196 +718,6 @@ class LogTable(QWidget):
 
 # --- 2. DIALOGS ---
 
-class AddWidgetDialog(QDialog):
-    def __init__(self, parameters, parent=None):
-        super().__init__(parent)
-        self.setWindowTitle("Add Display Widget")
-        self.parameters = parameters
-        self.setMinimumSize(500, 400)
-        
-        # Main layout
-        main_layout = QVBoxLayout(self)
-        main_layout.setSpacing(16)
-        
-        # Title
-        title = QLabel("<h2 style='color: #ffffff; margin: 0 0 16px 0;'>Create New Widget</h2>")
-        main_layout.addWidget(title)
-        
-        # Form layout
-        form_layout = QFormLayout()
-        form_layout.setSpacing(12)
-        
-        # Sensor group selection
-        self.sensor_group_combo = QComboBox()
-        groups = sorted(list(set(p.get('sensor_group', 'Default') for p in self.parameters)))
-        self.sensor_group_combo.addItems(["All"] + groups)
-        form_layout.addRow("📊 Sensor Group:", self.sensor_group_combo)
-        
-        # Parameter selection
-        param_group = QGroupBox("📋 Select Parameters")
-        param_layout = QVBoxLayout(param_group)
-        param_layout.setContentsMargins(8, 8, 8, 8)
-        
-        self.param_list = QListWidget()
-        self.param_list.setSelectionMode(QAbstractItemView.SelectionMode.ExtendedSelection)
-        self.param_list.setMinimumHeight(120)
-        param_layout.addWidget(self.param_list)
-        form_layout.addRow(param_group)
-        
-        # Display type selection
-        self.type_combo = QComboBox()
-        self.type_combo.addItems([
-            "📊 Instant Value", 
-            "📈 Time Graph", 
-            "📋 Log Table", 
-            "🎯 Gauge", 
-            "📊 Histogram", 
-            "💡 LED Indicator", 
-            "🗺️ Map (GPS)"
-        ])
-        form_layout.addRow("🎨 Display Type:", self.type_combo)
-        
-        # Priority selection (only for Instant)
-        self.priority_combo = QComboBox()
-        self.priority_combo.addItems(["High", "Medium", "Low"])
-        form_layout.addRow("⚡ Priority:", self.priority_combo)
-        
-        # Widget-specific options
-        self.options_group = QGroupBox("⚙️ Widget Options")
-        self.options_layout = QFormLayout(self.options_group)
-        self.options_layout.setContentsMargins(8, 8, 8, 8)
-        
-        # Graph options
-        self.graph_time_range = QSpinBox()
-        self.graph_time_range.setRange(10, 300)
-        self.graph_time_range.setValue(60)
-        self.graph_time_range.setSuffix(" seconds")
-        
-        # Gauge options
-        self.gauge_min = QDoubleSpinBox()
-        self.gauge_min.setRange(-10000, 10000)
-        self.gauge_min.setValue(0)
-        self.gauge_max = QDoubleSpinBox()
-        self.gauge_max.setRange(-10000, 10000)
-        self.gauge_max.setValue(100)
-        
-        # LED options
-        self.led_threshold = QDoubleSpinBox()
-        self.led_threshold.setRange(-10000, 10000)
-        self.led_threshold.setValue(50)
-        self.led_condition = QComboBox()
-        self.led_condition.addItems([">", "<", ">=", "<=", "=="])
-        
-        # Map options
-        self.map_zoom = QSpinBox()
-        self.map_zoom.setRange(1, 18)
-        self.map_zoom.setValue(10)
-        
-        form_layout.addRow(self.options_group)
-        main_layout.addLayout(form_layout)
-        
-        # Buttons
-        buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel)
-        buttons.button(QDialogButtonBox.StandardButton.Ok).setText("Create Widget")
-        buttons.button(QDialogButtonBox.StandardButton.Cancel).setText("Cancel")
-        main_layout.addWidget(buttons)
-        
-        # Connect signals
-        buttons.accepted.connect(self.validate_and_accept)
-        buttons.rejected.connect(self.reject)
-        self.type_combo.currentTextChanged.connect(self.on_type_changed)
-        self.sensor_group_combo.currentTextChanged.connect(self.filter_parameters)
-        
-        # Initialize
-        self.on_type_changed(self.type_combo.currentText())
-        self.filter_parameters()
-    
-    def filter_parameters(self):
-        self.param_list.clear()
-        group = self.sensor_group_combo.currentText()
-        for p in sorted(self.parameters, key=lambda x: x['name']):
-            if group == "All" or p.get('sensor_group', 'Default') == group:
-                item = QListWidgetItem(f"{p['name']} ({p.get('unit', '')})")
-                item.setData(Qt.ItemDataRole.UserRole, p['id'])
-                self.param_list.addItem(item)
-    
-    def on_type_changed(self, text):
-        # Clear previous options
-        for i in reversed(range(self.options_layout.rowCount())):
-            self.options_layout.removeRow(i)
-        
-        # Set selection mode based on type
-        if "Instant" in text or "Gauge" in text or "Histogram" in text or "LED" in text:
-            self.param_list.setSelectionMode(QAbstractItemView.SelectionMode.SingleSelection)
-            self.priority_combo.setEnabled(True)
-        else:
-            self.param_list.setSelectionMode(QAbstractItemView.SelectionMode.ExtendedSelection)
-            self.priority_combo.setEnabled(False)
-        
-        # Add type-specific options
-        if "Graph" in text:
-            self.options_layout.addRow("⏱️ Time Range:", self.graph_time_range)
-        elif "Gauge" in text:
-            self.options_layout.addRow("📉 Min Value:", self.gauge_min)
-            self.options_layout.addRow("📈 Max Value:", self.gauge_max)
-        elif "LED" in text:
-            self.options_layout.addRow("🎯 Threshold:", self.led_threshold)
-            self.options_layout.addRow("🔍 Condition:", self.led_condition)
-        elif "Map" in text:
-            self.options_layout.addRow("🔍 Initial Zoom:", self.map_zoom)
-    
-    def validate_and_accept(self):
-        if not self.param_list.selectedItems():
-            QMessageBox.warning(self, "Selection Error", "You must select at least one parameter.")
-            return
-        
-        selected_count = len(self.param_list.selectedItems())
-        widget_type = self.type_combo.currentText()
-        
-        # Validate parameter count for different widget types
-        if "Instant" in widget_type and selected_count > 1:
-            QMessageBox.warning(self, "Selection Error", "Instant display supports only one parameter.")
-            return
-        elif "Gauge" in widget_type and selected_count > 1:
-            QMessageBox.warning(self, "Selection Error", "Gauge display supports only one parameter.")
-            return
-        elif "Histogram" in widget_type and selected_count > 1:
-            QMessageBox.warning(self, "Selection Error", "Histogram display supports only one parameter.")
-            return
-        elif "LED" in widget_type and selected_count > 1:
-            QMessageBox.warning(self, "Selection Error", "LED display supports only one parameter.")
-            return
-        elif "Map" in widget_type and selected_count != 2:
-            QMessageBox.warning(self, "Selection Error", "Map display requires exactly 2 parameters (Latitude and Longitude).")
-            return
-        
-        self.accept()
-    
-    def get_selection(self):
-        selected_items = self.param_list.selectedItems()
-        param_ids = [item.data(Qt.ItemDataRole.UserRole) for item in selected_items]
-        
-        # Get widget options
-        options = {}
-        widget_type = self.type_combo.currentText()
-        
-        if "Graph" in widget_type:
-            options['time_range'] = self.graph_time_range.value()
-        elif "Gauge" in widget_type:
-            options['min_value'] = self.gauge_min.value()
-            options['max_value'] = self.gauge_max.value()
-        elif "LED" in widget_type:
-            options['threshold'] = self.led_threshold.value()
-            options['condition'] = self.led_condition.currentText()
-        elif "Map" in widget_type:
-            options['zoom'] = self.map_zoom.value()
-        
-        return {
-            'param_ids': param_ids, 
-            'displayType': widget_type, 
-            'priority': self.priority_combo.currentText(),
-            'options': options
-        }
 
 # --- MODIFIED: Added Array Index field ---
 class ParameterEntryDialog(QDialog):
@@ -980,7 +841,15 @@ class MainWindow(QMainWindow):
             'udp_port': 9000,
             'timeout': 1.0,
         }
-        # Three-phase UI: Welcome -> Setup -> Dashboard
+        
+        # Initialize data logger
+        self.data_logger = DataLogger()
+        self.logging_settings = None
+        
+        # Track unsaved changes
+        self.has_unsaved_changes = False
+        self.current_project_path = None
+        # Four-phase UI: Welcome -> Setup -> Widgets -> Dashboard
         self.stack = QStackedWidget()
         self.setCentralWidget(self.stack)
         self.tab_widget = QTabWidget(); self.tab_widget.setTabsClosable(True)
@@ -988,10 +857,15 @@ class MainWindow(QMainWindow):
         # Minimal list to track active displays; not shown in UI currently
         self.active_displays_list = QListWidget()
         header_widget = QWidget(); header_layout = QHBoxLayout(header_widget)
-        self.stream_status_label = QLabel("● Awaiting Parameters")
+        self.stream_status_label = QLabel("Awaiting Parameters")
+        self.connection_status_label = QLabel("Not Connected")
         self.pause_button = QPushButton("Pause Stream"); self.pause_button.setCheckable(True)
+        self.logging_status_label = QLabel("Logging: OFF")
         header_layout.addWidget(QLabel("<h2>Dashboard</h2>")); header_layout.addStretch()
-        header_layout.addWidget(self.stream_status_label); header_layout.addWidget(self.pause_button)
+        header_layout.addWidget(self.connection_status_label)
+        header_layout.addWidget(self.stream_status_label)
+        header_layout.addWidget(self.logging_status_label)
+        header_layout.addWidget(self.pause_button)
         self.header_dock = QDockWidget(); self.header_dock.setTitleBarWidget(QWidget())
         self.header_dock.setWidget(header_widget); self.header_dock.setFeatures(QDockWidget.DockWidgetFeature.NoDockWidgetFeatures)
         self.addDockWidget(Qt.DockWidgetArea.TopDockWidgetArea, self.header_dock)
@@ -1002,10 +876,14 @@ class MainWindow(QMainWindow):
         self.apply_stylesheet()
         self._build_welcome_page()
         self._build_setup_page()
+        self._build_widgets_page()
         self._build_dashboard_page()
         self.show_phase("welcome")
         self.restart_simulator()
         self.update_control_states()
+        
+        # Initialize window title
+        self.update_window_title()
 
     def list_serial_ports(self):
         ports = []
@@ -1039,7 +917,6 @@ class MainWindow(QMainWindow):
         self.update_status_bar()
 
     def add_widget_to_dashboard(self, config, tab_index, widget_id=None):
-        # (Unchanged)
         tab_info = self.tab_data.get(tab_index)
         if not tab_info: return
         if widget_id is None: widget_id = str(uuid.uuid4())
@@ -1048,24 +925,25 @@ class MainWindow(QMainWindow):
         if not param_configs: return
         widget_title = ", ".join([p['name'] for p in param_configs])
         widget = None
-        if config['displayType'] == 'Graph':
+        if config['displayType'] == 'Time Graph':
             for p_config in param_configs:
                 p_config['color'] = self.graph_color_palette[self.next_graph_color_index % len(self.graph_color_palette)]
                 self.next_graph_color_index += 1
             widget = TimeGraph(param_configs)
         elif config['displayType'] == 'Log Table':
             widget = LogTable(param_configs)
-        elif config['displayType'] == 'Instant' and len(param_configs) == 1:
+        elif config['displayType'] == 'Instant Value' and len(param_configs) == 1:
             p_config = param_configs[0]
             widget = ValueCard(p_config['name'], p_config['unit'], config['priority'])
         elif config['displayType'] == 'Gauge' and len(param_configs) == 1:
             widget = GaugeWidget(param_configs[0])
         elif config['displayType'] == 'Histogram' and len(param_configs) == 1:
             widget = HistogramWidget(param_configs[0])
-        elif config['displayType'] == 'LED' and len(param_configs) == 1:
+        elif config['displayType'] == 'LED Indicator' and len(param_configs) == 1:
             widget = LEDWidget(param_configs[0])
-        elif config['displayType'].startswith('Map') and len(param_configs) == 2:
+        elif config['displayType'] == 'Map (GPS)' and len(param_configs) == 2:
             widget = MapWidget(param_configs)
+        
         if widget:
             # Set minimum sizes for better visibility
             widget.setMinimumSize(300, 200)
@@ -1430,6 +1308,10 @@ class MainWindow(QMainWindow):
                                 widget.update_value(value)
                             elif isinstance(widget, MapWidget):
                                 widget.update_position(self.data_history)
+        
+        # Log data if logging is enabled
+        if self.data_logger.is_logging:
+            self.data_logger.log_data(packet, self.data_history)
 
     def restart_simulator(self):
         if self.simulator: 
@@ -1445,9 +1327,11 @@ class MainWindow(QMainWindow):
         else:
             self.simulator.mode = "backend"
         
-            self.simulator.newData.connect(self.update_data)
-            self.simulator.start()  
-            self.update_status_bar()
+        # Connect the signal for both modes
+        self.simulator.newData.connect(self.update_data)
+        self.simulator.start()
+        self.update_status_bar()
+        self.update_connection_status()
 
     # --- All other MainWindow methods are unchanged ---
     def open_add_widget_dialog(self):
@@ -1481,6 +1365,7 @@ class MainWindow(QMainWindow):
         dialog = ManageParametersDialog(self.parameters, self)
         if dialog.exec() == QDialog.DialogCode.Accepted:
              self.update_control_states() # No need to restart simulator anymore
+             self.mark_as_unsaved()
              QMessageBox.information(self, "Update", "Parameter definitions have been updated.")
     def update_control_states(self):
         has_params = bool(self.parameters)
@@ -1523,17 +1408,49 @@ class MainWindow(QMainWindow):
             self.pause_button.setText("Resume Stream" if is_paused else "Pause Stream")
     def check_data_stream(self):
         if not self.parameters:
-            self.stream_status_label.setText("● Awaiting Parameters")
+            self.stream_status_label.setText("Awaiting Parameters")
             self.stream_status_label.setStyleSheet("color: #FFBF00;")
         elif self.simulator and not self.simulator._is_paused:
-            self.stream_status_label.setText("● STREAMING")
+            self.stream_status_label.setText("STREAMING")
             self.stream_status_label.setStyleSheet("color: #01FF70;")
         else:
-            self.stream_status_label.setText("● PAUSED")
+            self.stream_status_label.setText("PAUSED")
             self.stream_status_label.setStyleSheet("color: #FF3131;")
+        
+        # Update connection status
+        self.update_connection_status()
+    def mark_as_unsaved(self):
+        """Mark the project as having unsaved changes"""
+        self.has_unsaved_changes = True
+        self.update_window_title()
+    
+    def mark_as_saved(self):
+        """Mark the project as saved"""
+        self.has_unsaved_changes = False
+        self.update_window_title()
+    
+    def update_window_title(self):
+        """Update window title to show unsaved changes"""
+        base_title = "Dashboard Builder"
+        if self.current_project_path:
+            filename = os.path.basename(self.current_project_path)
+            title = f"{base_title} - {filename}"
+        else:
+            title = f"{base_title} - Untitled"
+        
+        if self.has_unsaved_changes:
+            title += " *"
+        
+        self.setWindowTitle(title)
+    
     def save_project(self):
-        path, _ = QFileDialog.getSaveFileName(self, "Save Project", "", "JSON Files (*.json)")
-        if not path: return
+        """Save project with improved functionality"""
+        if not self.current_project_path:
+            path, _ = QFileDialog.getSaveFileName(self, "Save Project", "", "Dashboard Project (*.json)")
+            if not path:
+                return
+            self.current_project_path = path
+        
         try:
             layout_data = {}
             for index, tab_info in self.tab_data.items():
@@ -1543,18 +1460,82 @@ class MainWindow(QMainWindow):
                     'state': base64.b64encode(state.data()).decode('utf-8'),
                     'configs': tab_info['configs']
                 }
-            project_data = {'parameters': self.parameters, 'layout': layout_data}
-            with open(path, 'w') as f: json.dump(project_data, f, indent=4)
-            QMessageBox.information(self, "Success", "Project saved successfully.")
-        except Exception as e: QMessageBox.critical(self, "Error", f"Failed to save project: {e}")
+            
+            # Include data logging settings
+            project_data = {
+                'parameters': self.parameters,
+                'layout': layout_data,
+                'connection_settings': self.connection_settings,
+                'logging_settings': self.logging_settings,
+                'configured_widgets': getattr(self, 'configured_widgets', []),
+                'version': '1.0',
+                'created': datetime.now().isoformat()
+            }
+            
+            with open(self.current_project_path, 'w') as f:
+                json.dump(project_data, f, indent=4)
+            
+            self.mark_as_saved()
+            QMessageBox.information(self, "Success", f"Project saved successfully to:\n{self.current_project_path}")
+            
+        except Exception as e:
+            QMessageBox.critical(self, "Error", f"Failed to save project: {e}")
+    
+    def save_project_as(self):
+        """Save project with new filename"""
+        self.current_project_path = None
+        self.save_project()
     def load_project(self):
-        path, _ = QFileDialog.getOpenFileName(self, "Load Project", "", "JSON Files (*.json)")
-        if not path: return
+        """Load project with improved functionality"""
+        if self.has_unsaved_changes:
+            reply = QMessageBox.question(
+                self, "Unsaved Changes", 
+                "You have unsaved changes. Do you want to save them before loading a new project?",
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No | QMessageBox.StandardButton.Cancel
+            )
+            if reply == QMessageBox.StandardButton.Yes:
+                self.save_project()
+            elif reply == QMessageBox.StandardButton.Cancel:
+                return
+        
+        path, _ = QFileDialog.getOpenFileName(self, "Load Project", "", "Dashboard Project (*.json);;JSON Files (*.json)")
+        if not path:
+            return
+        
         try:
-            with open(path, 'r') as f: project_data = json.load(f)
+            with open(path, 'r') as f:
+                project_data = json.load(f)
+            
+            # Load parameters
             self.parameters = project_data.get('parameters', [])
+            
+            # Load connection settings
+            if 'connection_settings' in project_data:
+                self.connection_settings.update(project_data['connection_settings'])
+            
+            # Load logging settings
+            if 'logging_settings' in project_data:
+                self.logging_settings = project_data['logging_settings']
+                # Reconfigure data logger if settings exist
+                if self.logging_settings:
+                    selected_params = [p for p in self.parameters if p['id'] in self.logging_settings['selected_params']]
+                    self.data_logger.configure(
+                        format_type=self.logging_settings['format'],
+                        file_path=self.logging_settings['file_path'],
+                        parameters=selected_params,
+                        buffer_size=self.logging_settings['buffer_size']
+                    )
+            
+            # Load configured widgets
+            if 'configured_widgets' in project_data:
+                self.configured_widgets = project_data['configured_widgets']
+            
+            # Clear existing tabs and data
             self.data_history.clear()
-            while self.tab_widget.count() > 0: self.close_tab(0)
+            while self.tab_widget.count() > 0:
+                self.close_tab(0)
+            
+            # Load layout data
             layout_data = project_data.get('layout', {})
             for tab_name, tab_layout_data in layout_data.items():
                 index = self.add_new_tab(name=tab_name)
@@ -1562,11 +1543,18 @@ class MainWindow(QMainWindow):
                     self.add_widget_to_dashboard(config, index, widget_id)
                 state_data = base64.b64decode(tab_layout_data['state'])
                 self.tab_data[index]['mainwindow'].restoreState(QByteArray(state_data))
-            QMessageBox.information(self, "Success", "Project loaded successfully.")
+            
+            self.current_project_path = path
+            self.mark_as_saved()
+            
             self.restart_simulator()
             self.update_control_states()
             self.update_status_bar()
-        except Exception as e: QMessageBox.critical(self, "Error", f"Failed to load project: {e}")
+            
+            QMessageBox.information(self, "Success", f"Project loaded successfully from:\n{path}")
+            
+        except Exception as e:
+            QMessageBox.critical(self, "Error", f"Failed to load project: {e}")
     def _build_menu_bar(self):
         menubar = self.menuBar()
         file_menu = menubar.addMenu("File")
@@ -1576,15 +1564,23 @@ class MainWindow(QMainWindow):
 
         new_action = QAction("New Dashboard", self); new_action.triggered.connect(lambda: self.show_phase("setup"))
         load_action = QAction("Load Project...", self); load_action.triggered.connect(self.load_project)
-        save_action = QAction("Save Project...", self); save_action.triggered.connect(self.save_project)
+        save_action = QAction("Save Project", self); save_action.triggered.connect(self.save_project)
+        save_as_action = QAction("Save Project As...", self); save_as_action.triggered.connect(self.save_project_as)
         conn_action = QAction("Connection Settings...", self); conn_action.triggered.connect(self.open_connection_settings)
         exit_action = QAction("Exit", self); exit_action.triggered.connect(self.close)
-        file_menu.addAction(new_action); file_menu.addAction(load_action); file_menu.addAction(save_action); file_menu.addAction(conn_action); file_menu.addSeparator(); file_menu.addAction(exit_action)
+        file_menu.addAction(new_action); file_menu.addAction(load_action); file_menu.addAction(save_action); file_menu.addAction(save_as_action); file_menu.addSeparator(); file_menu.addAction(conn_action); file_menu.addSeparator(); file_menu.addAction(exit_action)
 
         manage_params_action = QAction("Manage Parameters...", self); manage_params_action.triggered.connect(self.open_manage_parameters_dialog)
         add_widget_action = QAction("Add Widget...", self); add_widget_action.triggered.connect(self.open_add_widget_dialog)
         remove_widget_action = QAction("Remove Widget...", self); remove_widget_action.triggered.connect(self.remove_selected_display)
         edit_menu.addAction(manage_params_action); edit_menu.addAction(add_widget_action); edit_menu.addAction(remove_widget_action)
+        
+        # Data logging menu
+        logging_menu = menubar.addMenu("Data Logging")
+        config_logging_action = QAction("Configure Logging...", self); config_logging_action.triggered.connect(self.open_logging_config)
+        start_logging_action = QAction("Start Logging", self); start_logging_action.triggered.connect(self.start_logging)
+        stop_logging_action = QAction("Stop Logging", self); stop_logging_action.triggered.connect(self.stop_logging)
+        logging_menu.addAction(config_logging_action); logging_menu.addAction(start_logging_action); logging_menu.addAction(stop_logging_action)
 
         add_tab_action = QAction("Add Tab", self); add_tab_action.triggered.connect(lambda: self.add_new_tab())
         rename_tab_action = QAction("Rename Current Tab", self); rename_tab_action.triggered.connect(self.rename_current_tab)
@@ -1697,8 +1693,8 @@ class MainWindow(QMainWindow):
         btn_layout = QHBoxLayout(btn_container)
         btn_layout.setSpacing(16)
         
-        create_btn = QPushButton("🚀 Create New Dashboard")
-        load_btn = QPushButton("📁 Load Project...")
+        create_btn = QPushButton("Create New Dashboard")
+        load_btn = QPushButton("Load Project...")
         
         create_btn.setObjectName("PrimaryCTA")
         load_btn.setObjectName("SecondaryCTA")
@@ -1744,7 +1740,7 @@ class MainWindow(QMainWindow):
         scroll_layout.setContentsMargins(0, 0, 0, 0)
         
         # Connection settings group
-        conn_group = QGroupBox("🔌 Connection Settings")
+        conn_group = QGroupBox("Connection Settings")
         conn_group.setStyleSheet("QGroupBox { font-weight: bold; margin-top: 10px; }")
         conn_form = QFormLayout(conn_group)
         conn_form.setSpacing(12)
@@ -1781,7 +1777,7 @@ class MainWindow(QMainWindow):
         conn_form.addRow("UDP Port:", self.setup_udp_port)
         
         # Data format group
-        format_group = QGroupBox("📊 Data Format")
+        format_group = QGroupBox("Data Format")
         format_group.setStyleSheet("QGroupBox { font-weight: bold; margin-top: 10px; }")
         format_form = QFormLayout(format_group)
         format_form.setSpacing(12)
@@ -1816,9 +1812,9 @@ class MainWindow(QMainWindow):
         btn_row = QHBoxLayout()
         btn_row.setSpacing(12)
         
-        back_btn = QPushButton("← Back")
-        manage_btn = QPushButton("⚙️ Manage Parameters...")
-        next_btn = QPushButton("🚀 Start Dashboard")
+        back_btn = QPushButton("Back")
+        manage_btn = QPushButton("Manage Parameters...")
+        next_btn = QPushButton("Start Dashboard")
         
         back_btn.setObjectName("SecondaryCTA")
         manage_btn.setObjectName("SecondaryCTA")
@@ -1869,7 +1865,7 @@ class MainWindow(QMainWindow):
             # Show dummy data indicator
             if is_dummy:
                 if not hasattr(self, 'dummy_indicator'):
-                    self.dummy_indicator = QLabel("🎲 Using Dummy Data - No real connection required")
+                    self.dummy_indicator = QLabel("Using Dummy Data - No real connection required")
                     self.dummy_indicator.setStyleSheet("color: #00ff88; font-weight: bold; padding: 8px; background: #1a3a1a; border-radius: 4px;")
                     self.dummy_indicator.setAlignment(Qt.AlignmentFlag.AlignCenter)
                     conn_form.addRow(self.dummy_indicator)
@@ -1881,7 +1877,7 @@ class MainWindow(QMainWindow):
         self.setup_mode_combo.currentTextChanged.connect(_apply_setup_mode)
         _apply_setup_mode(self.setup_mode_combo.currentText())
         back_btn.clicked.connect(lambda: self.show_phase("welcome"))
-        manage_btn.clicked.connect(self.open_connection_settings)
+        manage_btn.clicked.connect(self.open_manage_parameters_dialog)
         def _start():
             self.connection_settings = {
                 'mode': self.setup_mode_combo.currentText(),
@@ -1898,8 +1894,332 @@ class MainWindow(QMainWindow):
                 'little_endian': (self.setup_endian.currentText() == 'little'),
                 'csv_separator': self.setup_csv_sep.text() or ',',
             }
-            self.restart_simulator(); self.show_phase("dashboard")
+            self.restart_simulator(); self.show_phase("widgets")
         next_btn.clicked.connect(_start)
+
+    def _build_widgets_page(self):
+        self.widgets_page = QWidget()
+        main_layout = QVBoxLayout(self.widgets_page)
+        main_layout.setContentsMargins(40, 30, 40, 30)
+        main_layout.setSpacing(20)
+        
+        # Title
+        title = QLabel("<h2 style='color: #ffffff; margin: 0 0 16px 0;'>Configure Dashboard Widgets</h2>")
+        main_layout.addWidget(title)
+        
+        # Description
+        desc = QLabel("<p style='color: #aaaaaa; margin: 0 0 20px 0;'>Add widgets to display your telemetry data. You can always add more widgets later from the dashboard.</p>")
+        main_layout.addWidget(desc)
+        
+        # Widget configuration area
+        config_group = QGroupBox("Widget Configuration")
+        config_layout = QVBoxLayout(config_group)
+        config_layout.setSpacing(12)
+        
+        # Current widgets list
+        self.widgets_list = QListWidget()
+        self.widgets_list.setMinimumHeight(200)
+        self.widgets_list.setToolTip("Widgets that will be added to your dashboard")
+        config_layout.addWidget(QLabel("Widgets to be added:"))
+        config_layout.addWidget(self.widgets_list)
+        
+        # Buttons
+        btn_layout = QHBoxLayout()
+        add_widget_btn = QPushButton("Add Widget...")
+        add_widget_btn.setObjectName("PrimaryCTA")
+        remove_widget_btn = QPushButton("Remove Selected")
+        remove_widget_btn.setObjectName("SecondaryCTA")
+        clear_widgets_btn = QPushButton("Clear All")
+        clear_widgets_btn.setObjectName("SecondaryCTA")
+        
+        add_widget_btn.clicked.connect(self.add_widget_to_config)
+        remove_widget_btn.clicked.connect(self.remove_selected_widget)
+        clear_widgets_btn.clicked.connect(self.clear_all_widgets)
+        
+        btn_layout.addWidget(add_widget_btn)
+        btn_layout.addWidget(remove_widget_btn)
+        btn_layout.addWidget(clear_widgets_btn)
+        btn_layout.addStretch()
+        
+        config_layout.addLayout(btn_layout)
+        main_layout.addWidget(config_group)
+        
+        # Navigation buttons
+        nav_layout = QHBoxLayout()
+        back_btn = QPushButton("Back to Setup")
+        back_btn.setObjectName("SecondaryCTA")
+        skip_btn = QPushButton("Skip (Add widgets later)")
+        skip_btn.setObjectName("SecondaryCTA")
+        create_btn = QPushButton("Create Dashboard")
+        create_btn.setObjectName("PrimaryCTA")
+        
+        back_btn.clicked.connect(lambda: self.show_phase("setup"))
+        skip_btn.clicked.connect(self.create_dashboard_without_widgets)
+        create_btn.clicked.connect(self.create_dashboard_with_widgets)
+        
+        nav_layout.addWidget(back_btn)
+        nav_layout.addStretch()
+        nav_layout.addWidget(skip_btn)
+        nav_layout.addWidget(create_btn)
+        
+        main_layout.addLayout(nav_layout)
+        self.stack.addWidget(self.widgets_page)
+        
+        # Initialize empty widgets list
+        self.configured_widgets = []
+        
+        # Add default parameters if none exist
+        if not self.parameters:
+            self.create_default_parameters()
+
+    def add_widget_to_config(self):
+        """Add a widget to the configuration list"""
+        if not self.parameters:
+            QMessageBox.warning(self, "No Parameters", "Please add some parameters first using 'Manage Parameters'.")
+            return
+        
+        dialog = AddWidgetDialog(self.parameters, self)
+        if dialog.exec() == QDialog.DialogCode.Accepted:
+            selection = dialog.get_selection()
+            if selection:
+                # Create a descriptive name for the widget
+                param_names = [p['name'] for p in self.parameters if p['id'] in selection['param_ids']]
+                widget_name = f"{selection['displayType']}: {', '.join(param_names)}"
+                
+                # Add to configured widgets list
+                widget_config = {
+                    'id': str(uuid.uuid4()),
+                    'name': widget_name,
+                    'config': selection
+                }
+                self.configured_widgets.append(widget_config)
+                self.mark_as_unsaved()
+                
+                # Update the display list
+                self.refresh_widgets_list()
+
+    def remove_selected_widget(self):
+        """Remove the selected widget from configuration"""
+        current_row = self.widgets_list.currentRow()
+        if current_row >= 0 and current_row < len(self.configured_widgets):
+            del self.configured_widgets[current_row]
+            self.refresh_widgets_list()
+
+    def clear_all_widgets(self):
+        """Clear all configured widgets"""
+        if self.configured_widgets:
+            reply = QMessageBox.question(self, "Clear All Widgets", 
+                                       "Are you sure you want to remove all configured widgets?",
+                                       QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
+            if reply == QMessageBox.StandardButton.Yes:
+                self.configured_widgets.clear()
+                self.refresh_widgets_list()
+
+    def refresh_widgets_list(self):
+        """Refresh the widgets list display"""
+        self.widgets_list.clear()
+        for widget in self.configured_widgets:
+            item = QListWidgetItem(widget['name'])
+            item.setData(Qt.ItemDataRole.UserRole, widget['id'])
+            self.widgets_list.addItem(item)
+
+    def create_dashboard_without_widgets(self):
+        """Create dashboard without any widgets"""
+        self.create_dashboard_with_widgets()
+
+    def create_dashboard_with_widgets(self):
+        """Create dashboard and add configured widgets"""
+        # Create the main tab
+        self.show_phase("dashboard")
+        
+        # Ensure we have a tab at index 0
+        if self.tab_widget.count() == 0:
+            self.add_new_tab(name="Main View", is_closable=False)
+        
+        # Add configured widgets to the main tab
+        if self.configured_widgets:
+            for widget_config in self.configured_widgets:
+                self.add_widget_to_dashboard(widget_config['config'], 0, widget_config['id'])
+        
+        # Show success message if widgets were added
+        if self.configured_widgets:
+            QMessageBox.information(self, "Dashboard Created", 
+                                  f"Dashboard created successfully with {len(self.configured_widgets)} widget(s)!")
+
+    def create_default_parameters(self):
+        """Create default parameters for demonstration"""
+        default_params = [
+            {
+                'id': 'temp_sensor',
+                'name': 'Temperature',
+                'array_index': 0,
+                'sensor_group': 'Temperature',
+                'unit': '°C',
+                'description': 'Ambient temperature sensor',
+                'color': '#FF3131',
+                'decimals': 1,
+                'threshold': {'low_crit': -10, 'low_warn': 0, 'high_warn': 80, 'high_crit': 100}
+            },
+            {
+                'id': 'humidity',
+                'name': 'Humidity',
+                'array_index': 1,
+                'sensor_group': 'Environmental',
+                'unit': '%',
+                'description': 'Relative humidity sensor',
+                'color': '#00BFFF',
+                'decimals': 1,
+                'threshold': {'low_crit': 0, 'low_warn': 20, 'high_warn': 80, 'high_crit': 100}
+            },
+            {
+                'id': 'pressure',
+                'name': 'Pressure',
+                'array_index': 2,
+                'sensor_group': 'Environmental',
+                'unit': 'hPa',
+                'description': 'Atmospheric pressure sensor',
+                'color': '#21b35a',
+                'decimals': 2,
+                'threshold': {'low_crit': 800, 'low_warn': 900, 'high_warn': 1100, 'high_crit': 1200}
+            },
+            {
+                'id': 'accel_x',
+                'name': 'Acceleration X',
+                'array_index': 3,
+                'sensor_group': 'IMU',
+                'unit': 'm/s²',
+                'description': 'X-axis acceleration from IMU',
+                'color': '#FFBF00',
+                'decimals': 2,
+                'threshold': {'low_crit': -20, 'low_warn': -10, 'high_warn': 10, 'high_crit': 20}
+            },
+            {
+                'id': 'accel_y',
+                'name': 'Acceleration Y',
+                'array_index': 4,
+                'sensor_group': 'IMU',
+                'unit': 'm/s²',
+                'description': 'Y-axis acceleration from IMU',
+                'color': '#F012BE',
+                'decimals': 2,
+                'threshold': {'low_crit': -20, 'low_warn': -10, 'high_warn': 10, 'high_crit': 20}
+            },
+            {
+                'id': 'accel_z',
+                'name': 'Acceleration Z',
+                'array_index': 5,
+                'sensor_group': 'IMU',
+                'unit': 'm/s²',
+                'description': 'Z-axis acceleration from IMU',
+                'color': '#39CCCC',
+                'decimals': 2,
+                'threshold': {'low_crit': -20, 'low_warn': -10, 'high_warn': 10, 'high_crit': 20}
+            },
+            {
+                'id': 'gps_lat',
+                'name': 'GPS Latitude',
+                'array_index': 6,
+                'sensor_group': 'GPS',
+                'unit': '°',
+                'description': 'GPS latitude coordinate',
+                'color': '#FF851B',
+                'decimals': 6,
+                'threshold': {'low_crit': -90, 'low_warn': -80, 'high_warn': 80, 'high_crit': 90}
+            },
+            {
+                'id': 'gps_lon',
+                'name': 'GPS Longitude',
+                'array_index': 7,
+                'sensor_group': 'GPS',
+                'unit': '°',
+                'description': 'GPS longitude coordinate',
+                'color': '#FF851B',
+                'decimals': 6,
+                'threshold': {'low_crit': -180, 'low_warn': -170, 'high_warn': 170, 'high_crit': 180}
+            }
+        ]
+        
+        self.parameters.extend(default_params)
+
+    def open_logging_config(self):
+        """Open data logging configuration dialog"""
+        dialog = DataLoggingDialog(self.parameters, self.logging_settings, self)
+        if dialog.exec() == QDialog.DialogCode.Accepted:
+            self.logging_settings = dialog.get_settings()
+            # Configure the data logger
+            selected_params = [p for p in self.parameters if p['id'] in self.logging_settings['selected_params']]
+            self.data_logger.configure(
+                format_type=self.logging_settings['format'],
+                file_path=self.logging_settings['file_path'],
+                parameters=selected_params,
+                buffer_size=self.logging_settings['buffer_size']
+            )
+            self.mark_as_unsaved()
+            QMessageBox.information(self, "Logging Configured", 
+                                  f"Data logging configured for {len(selected_params)} parameters.")
+
+    def start_logging(self):
+        """Start data logging"""
+        if not self.logging_settings:
+            QMessageBox.warning(self, "Not Configured", "Please configure data logging first.")
+            return
+        
+        try:
+            self.data_logger.start_logging()
+            self.logging_status_label.setText(f"Logging: ON ({os.path.basename(self.data_logger.log_file_path)})")
+            self.logging_status_label.setStyleSheet("color: #21b35a; font-weight: bold;")
+            QMessageBox.information(self, "Logging Started", 
+                                  f"Data logging started to: {self.data_logger.log_file_path}")
+        except Exception as e:
+            QMessageBox.critical(self, "Logging Error", f"Failed to start logging: {str(e)}")
+
+    def stop_logging(self):
+        """Stop data logging"""
+        if self.data_logger.is_logging:
+            self.data_logger.stop_logging()
+            self.logging_status_label.setText("Logging: OFF")
+            self.logging_status_label.setStyleSheet("color: #888888;")
+            QMessageBox.information(self, "Logging Stopped", "Data logging has been stopped.")
+
+    def update_connection_status(self):
+        """Update connection status display"""
+        if not self.simulator:
+            self.connection_status_label.setText("Not Connected")
+            self.connection_status_label.setStyleSheet("color: #ff3131; font-weight: bold;")
+            return
+        
+        mode = self.connection_settings.get('mode', 'dummy')
+        
+        if mode == 'dummy':
+            self.connection_status_label.setText("Connected (Dummy Data)")
+            self.connection_status_label.setStyleSheet("color: #21b35a; font-weight: bold;")
+        else:
+            # Check if backend connection is active
+            if hasattr(self.simulator, 'reader') and self.simulator.reader:
+                if mode == 'serial':
+                    if hasattr(self.simulator.reader, 'ser') and self.simulator.reader.ser:
+                        self.connection_status_label.setText(f"Connected (Serial: {self.connection_settings.get('serial_port', 'N/A')})")
+                        self.connection_status_label.setStyleSheet("color: #21b35a; font-weight: bold;")
+                    else:
+                        self.connection_status_label.setText("Disconnected (Serial)")
+                        self.connection_status_label.setStyleSheet("color: #ff3131; font-weight: bold;")
+                elif mode == 'tcp':
+                    if hasattr(self.simulator.reader, 'sock') and self.simulator.reader.sock:
+                        self.connection_status_label.setText(f"Connected (TCP: {self.connection_settings.get('tcp_host', 'N/A')}:{self.connection_settings.get('tcp_port', 'N/A')})")
+                        self.connection_status_label.setStyleSheet("color: #21b35a; font-weight: bold;")
+                    else:
+                        self.connection_status_label.setText("Disconnected (TCP)")
+                        self.connection_status_label.setStyleSheet("color: #ff3131; font-weight: bold;")
+                elif mode == 'udp':
+                    if hasattr(self.simulator.reader, 'sock') and self.simulator.reader.sock:
+                        self.connection_status_label.setText(f"Connected (UDP: {self.connection_settings.get('udp_host', 'N/A')}:{self.connection_settings.get('udp_port', 'N/A')})")
+                        self.connection_status_label.setStyleSheet("color: #21b35a; font-weight: bold;")
+                    else:
+                        self.connection_status_label.setText("Disconnected (UDP)")
+                        self.connection_status_label.setStyleSheet("color: #ff3131; font-weight: bold;")
+            else:
+                self.connection_status_label.setText("Not Connected")
+                self.connection_status_label.setStyleSheet("color: #ff3131; font-weight: bold;")
 
     def _build_dashboard_page(self):
         self.dashboard_page = QWidget(); layout = QVBoxLayout(self.dashboard_page)
@@ -1919,7 +2239,9 @@ class MainWindow(QMainWindow):
             self.stack.setCurrentWidget(self.welcome_page)
         elif which == "setup":
             self.stack.setCurrentWidget(self.setup_page)
-        else:
+        elif which == "widgets":
+            self.stack.setCurrentWidget(self.widgets_page)
+        else:  # dashboard
             self.stack.setCurrentWidget(self.dashboard_page)
             if self.tab_widget.count() == 0:
                 self.add_new_tab(name="Main View", is_closable=False)
@@ -1928,6 +2250,7 @@ class MainWindow(QMainWindow):
         dialog = ConnectionSettingsDialog(self.connection_settings, self)
         if dialog.exec() == QDialog.DialogCode.Accepted:
             self.connection_settings = dialog.get_settings()
+            self.mark_as_unsaved()
             self.restart_simulator()
             self.update_status_bar()
     def apply_stylesheet(self):
@@ -1958,9 +2281,31 @@ class MainWindow(QMainWindow):
         """)
 
     def closeEvent(self, event):
+        """Handle application close with unsaved changes check"""
+        # Check for unsaved changes
+        if self.has_unsaved_changes:
+            reply = QMessageBox.question(
+                self, "Unsaved Changes", 
+                "You have unsaved changes. Do you want to save them before closing?",
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No | QMessageBox.StandardButton.Cancel
+            )
+            if reply == QMessageBox.StandardButton.Yes:
+                self.save_project()
+                if self.has_unsaved_changes:  # Still unsaved after save attempt
+                    event.ignore()
+                    return
+            elif reply == QMessageBox.StandardButton.Cancel:
+                event.ignore()
+                return
+        
+        # Stop data logging if active
+        if self.data_logger.is_logging:
+            self.data_logger.stop_logging()
+        
+        # Stop simulator
         try:
             if self.simulator:
-                self.simulator.stop();
+                self.simulator.stop()
                 self.simulator._is_paused = True
                 try:
                     if hasattr(self.simulator, 'reader') and self.simulator.reader:
@@ -1970,6 +2315,7 @@ class MainWindow(QMainWindow):
                 self.simulator.wait(1000)
         except Exception:
             pass
+        
         super().closeEvent(event)
 
 class ConnectionSettingsDialog(QDialog):
