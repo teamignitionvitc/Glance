@@ -1,0 +1,6 @@
+presets/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.al/
