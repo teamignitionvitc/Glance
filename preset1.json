@@ -27,42 +27,85 @@
                 "low_warn": 20.0,
                 "high_warn": 30.0,
                 "high_crit": 40.0
-            }
+            },
+            "color": "#00BFFF"
         }
     ],
     "layout": {
         "Main View": {
-            "state": "AAAA/wAAAAD9AAAAAQAAAAAAAAYwAAADmfwCAAAAAfwAAAAAAAADmQAAATYA/////AEAAAAC/AAAAAAAAAD/AAAAfwD////8AgAAAAL7/////wEAAAAAAAAB7wAAAHwA////+/////8BAAAB9QAAAaQAAAB8AP////wAAAEFAAAFKwAAAhEA/////AIAAAAC+/////8BAAAAAAAAAdAAAABwAP////v/////AQAAAdYAAAHDAAAAwAD///8AAAAAAAADmQAAAAQAAAAEAAAACAAAAAj8AAAAAA==",
+            "state": "AAAA/wAAAAD9AAAAAQAAAAAAAAY+AAADMPwCAAAAAfwAAAAAAAADMAAAAUcA/////AEAAAAC+/////8BAAAAAAAAAwQAAAGQAP////v/////AQAAAwoAAAM0AAABLAD///8AAAAAAAACIwAAAAQAAAAEAAAACAAAAAj8AAAAAA==",
             "configs": {
-                "44b7da52-cda8-4f4a-97b1-1903f6f86cac": {
+                "dc084b2c-da61-49da-ae46-981388c13b39": {
                     "param_ids": [
                         "101"
                     ],
-                    "displayType": "Instant",
-                    "priority": "High"
+                    "displayType": "Time Graph",
+                    "priority": "High",
+                    "options": {
+                        "time_range": 300
+                    }
                 },
-                "b45ff37f-8866-44ae-9f1e-bb40eb5fe4c8": {
+                "db8ba937-940c-49bc-9328-124282491ea9": {
                     "param_ids": [
                         "100"
                     ],
-                    "displayType": "Graph",
-                    "priority": "High"
-                },
-                "b66148c2-cb79-4184-bd70-eb89fad6c9ab": {
-                    "param_ids": [
-                        "100"
-                    ],
-                    "displayType": "Log Table",
-                    "priority": "High"
-                },
-                "d1049608-e0d8-4a1e-908d-e12ea374255a": {
-                    "param_ids": [
-                        "100"
-                    ],
-                    "displayType": "Instant",
-                    "priority": "High"
+                    "displayType": "Gauge",
+                    "priority": "High",
+                    "options": {
+                        "min_value": 0.0,
+                        "max_value": 100.0
+                    }
                 }
             }
         }
-    }
+    },
+    "connection_settings": {
+        "mode": "dummy",
+        "serial_port": "COM4",
+        "baudrate": 115200,
+        "tcp_host": "127.0.0.1",
+        "tcp_port": 9000,
+        "udp_host": "0.0.0.0",
+        "udp_port": 9000,
+        "timeout": 1.0,
+        "data_format": "json_array",
+        "channel_count": 32,
+        "sample_width_bytes": 2,
+        "little_endian": true,
+        "csv_separator": ","
+    },
+    "logging_settings": null,
+    "configured_widgets": [
+        {
+            "id": "dc084b2c-da61-49da-ae46-981388c13b39",
+            "name": "Time Graph: GPS",
+            "config": {
+                "param_ids": [
+                    "101"
+                ],
+                "displayType": "Time Graph",
+                "priority": "High",
+                "options": {
+                    "time_range": 300
+                }
+            }
+        },
+        {
+            "id": "db8ba937-940c-49bc-9328-124282491ea9",
+            "name": "Gauge: Gyro",
+            "config": {
+                "param_ids": [
+                    "100"
+                ],
+                "displayType": "Gauge",
+                "priority": "High",
+                "options": {
+                    "min_value": 0.0,
+                    "max_value": 100.0
+                }
+            }
+        }
+    ],
+    "version": "1.0",
+    "created": "2025-09-27T18:52:16.534519"
 }
