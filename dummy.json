@@ -1,0 +1,272 @@
+{
+    "parameters": [
+        {
+            "id": "temp_sensor",
+            "name": "Temperature",
+            "array_index": 0,
+            "sensor_group": "Temperature",
+            "unit": "\u00b0C",
+            "description": "Ambient temperature sensor",
+            "color": "#FF3131",
+            "decimals": 1,
+            "threshold": {
+                "low_crit": -10,
+                "low_warn": 0,
+                "high_warn": 80,
+                "high_crit": 100
+            }
+        },
+        {
+            "id": "humidity",
+            "name": "Humidity",
+            "array_index": 1,
+            "sensor_group": "Environmental",
+            "unit": "%",
+            "description": "Relative humidity sensor",
+            "color": "#00BFFF",
+            "decimals": 1,
+            "threshold": {
+                "low_crit": 0,
+                "low_warn": 20,
+                "high_warn": 80,
+                "high_crit": 100
+            }
+        },
+        {
+            "id": "pressure",
+            "name": "Pressure",
+            "array_index": 2,
+            "sensor_group": "Environmental",
+            "unit": "hPa",
+            "description": "Atmospheric pressure sensor",
+            "color": "#21b35a",
+            "decimals": 2,
+            "threshold": {
+                "low_crit": 800,
+                "low_warn": 900,
+                "high_warn": 1100,
+                "high_crit": 1200
+            }
+        },
+        {
+            "id": "accel_x",
+            "name": "Acceleration X",
+            "array_index": 3,
+            "sensor_group": "IMU",
+            "unit": "m/s\u00b2",
+            "description": "X-axis acceleration from IMU",
+            "color": "#FF3131",
+            "decimals": 2,
+            "threshold": {
+                "low_crit": -20,
+                "low_warn": -10,
+                "high_warn": 10,
+                "high_crit": 20
+            }
+        },
+        {
+            "id": "accel_y",
+            "name": "Acceleration Y",
+            "array_index": 4,
+            "sensor_group": "IMU",
+            "unit": "m/s\u00b2",
+            "description": "Y-axis acceleration from IMU",
+            "color": "#39CCCC",
+            "decimals": 2,
+            "threshold": {
+                "low_crit": -20,
+                "low_warn": -10,
+                "high_warn": 10,
+                "high_crit": 20
+            }
+        },
+        {
+            "id": "accel_z",
+            "name": "Acceleration Z",
+            "array_index": 5,
+            "sensor_group": "IMU",
+            "unit": "m/s\u00b2",
+            "description": "Z-axis acceleration from IMU",
+            "color": "#00BFFF",
+            "decimals": 2,
+            "threshold": {
+                "low_crit": -20,
+                "low_warn": -10,
+                "high_warn": 10,
+                "high_crit": 20
+            }
+        },
+        {
+            "id": "gps_lon",
+            "name": "GPS Longitude",
+            "array_index": 7,
+            "sensor_group": "GPS",
+            "unit": "\u00b0",
+            "description": "GPS longitude coordinate",
+            "color": "#FF851B",
+            "decimals": 6,
+            "threshold": {
+                "low_crit": -180,
+                "low_warn": -170,
+                "high_warn": 170,
+                "high_crit": 180
+            }
+        }
+    ],
+    "layout": {
+        "Main View": {
+            "state": "AAAA/wAAAAD9AAAAAQAAAAAAAAd+AAADbfwCAAAAAfwAAAAAAAADbQAAApgA/////AEAAAAC/AAAAAAAAAQDAAADKAD////8AgAAAAL8AAAAAAAAAhgAAAFJAP////wBAAAAAvv/////AQAAAAAAAAJlAAABkAD////7/////wEAAAJrAAABmAAAAZIA////+/////8BAAACHgAAAU8AAAFJAP////wAAAQJAAADdQAAAmAA/////AIAAAAC+/////8BAAAAAAAAAgMAAAFJAP////wAAAIJAAABZAAAAOUA/////AEAAAAC+/////8BAAAECQAAAS4AAAEuAP////v/////AQAABT0AAAJBAAABLAD///8AAAAAAAADbQAAAAQAAAAEAAAACAAAAAj8AAAAAA==",
+            "configs": {
+                "74d8fabd-4de3-4c1d-9ec9-d5449ed3c32c": {
+                    "param_ids": [
+                        "accel_z"
+                    ],
+                    "displayType": "Time Graph",
+                    "priority": "High",
+                    "options": {
+                        "time_range": 300
+                    }
+                },
+                "91995e96-2672-4787-9fd5-a9ab72a6021b": {
+                    "param_ids": [
+                        "pressure"
+                    ],
+                    "displayType": "Log Table",
+                    "priority": "High",
+                    "options": {}
+                },
+                "f4bc8f25-c9f4-46c4-baca-49a003de0c69": {
+                    "param_ids": [
+                        "accel_x"
+                    ],
+                    "displayType": "Time Graph",
+                    "priority": "High",
+                    "options": {
+                        "time_range": 300
+                    }
+                },
+                "00f77632-8def-4c20-84a4-5f70b77eb6a3": {
+                    "param_ids": [
+                        "accel_y"
+                    ],
+                    "displayType": "Time Graph",
+                    "priority": "High",
+                    "options": {
+                        "time_range": 300
+                    }
+                },
+                "38fa52e9-1362-43f4-beb0-ac1af4fa23ce": {
+                    "param_ids": [
+                        "accel_z"
+                    ],
+                    "displayType": "LED Indicator",
+                    "priority": "High",
+                    "options": {
+                        "threshold": 0.0,
+                        "condition": "=="
+                    }
+                },
+                "e830f07a-1bc5-4178-b8b2-bb2d4e234702": {
+                    "param_ids": [
+                        "humidity"
+                    ],
+                    "displayType": "Gauge",
+                    "priority": "High",
+                    "options": {
+                        "min_value": 0.0,
+                        "max_value": 100.0
+                    }
+                }
+            }
+        }
+    },
+    "connection_settings": {
+        "mode": "dummy",
+        "serial_port": "COM4",
+        "baudrate": 115200,
+        "tcp_host": "127.0.0.1",
+        "tcp_port": 9000,
+        "udp_host": "0.0.0.0",
+        "udp_port": 9000,
+        "timeout": 1.0,
+        "data_format": "json_array",
+        "channel_count": 32,
+        "sample_width_bytes": 2,
+        "little_endian": true,
+        "csv_separator": ","
+    },
+    "logging_settings": null,
+    "configured_widgets": [
+        {
+            "id": "74d8fabd-4de3-4c1d-9ec9-d5449ed3c32c",
+            "name": "Time Graph: Acceleration Z",
+            "config": {
+                "param_ids": [
+                    "accel_z"
+                ],
+                "displayType": "Time Graph",
+                "priority": "High",
+                "options": {
+                    "time_range": 300
+                }
+            }
+        },
+        {
+            "id": "91995e96-2672-4787-9fd5-a9ab72a6021b",
+            "name": "Log Table: Pressure",
+            "config": {
+                "param_ids": [
+                    "pressure"
+                ],
+                "displayType": "Log Table",
+                "priority": "High",
+                "options": {}
+            }
+        },
+        {
+            "id": "f4bc8f25-c9f4-46c4-baca-49a003de0c69",
+            "name": "Time Graph: Acceleration X",
+            "config": {
+                "param_ids": [
+                    "accel_x"
+                ],
+                "displayType": "Time Graph",
+                "priority": "High",
+                "options": {
+                    "time_range": 300
+                }
+            }
+        },
+        {
+            "id": "00f77632-8def-4c20-84a4-5f70b77eb6a3",
+            "name": "Time Graph: Acceleration Y",
+            "config": {
+                "param_ids": [
+                    "accel_y"
+                ],
+                "displayType": "Time Graph",
+                "priority": "High",
+                "options": {
+                    "time_range": 300
+                }
+            }
+        },
+        {
+            "id": "38fa52e9-1362-43f4-beb0-ac1af4fa23ce",
+            "name": "LED Indicator: Acceleration Z",
+            "config": {
+                "param_ids": [
+                    "accel_z"
+                ],
+                "displayType": "LED Indicator",
+                "priority": "High",
+                "options": {
+                    "threshold": 0.0,
+                    "condition": "=="
+                }
+            }
+        }
+    ],
+    "version": "1.0",
+    "created": "2025-09-27T21:17:02.967582"
+}
