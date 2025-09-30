@@ -1993,47 +1993,214 @@ class MainWindow(QMainWindow):
         self.update_status_bar()
 
     def _build_status_bar(self):
-        sb = self.statusBar()
-        self.clock_label = QLabel("")
-        self.conn_label = QLabel("")
-        self.rx_label = QLabel("RX: 0 B")
-        self.clock_label.setObjectName("SBClock"); self.conn_label.setObjectName("SBConn"); self.rx_label.setObjectName("SBRx")
-        # Center clock: add stretch labels around it
-        self.left_spacer = QLabel("")
-        self.right_spacer = QLabel("")
-        sb.addPermanentWidget(self.left_spacer, 1)
-        sb.addPermanentWidget(self.clock_label, 0)
-        sb.addPermanentWidget(self.right_spacer, 1)
-        sb.addPermanentWidget(self.conn_label, 0)
-        sb.addPermanentWidget(self.rx_label, 0)
-        self.clock_timer = QTimer(self); self.clock_timer.timeout.connect(self.update_status_bar); self.clock_timer.start(1000)
+            sb = self.statusBar()
+            sb.setStyleSheet("""
+                QStatusBar {
+                    background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
+                        stop:0 #1565c0, stop:1 #1976d2);
+                    border-top: 1px solid #2196f3;
+                    color: #ffffff;
+                    padding: 8px 16px;
+                    font-size: 12px;
+                    font-weight: 600;
+                }
+                QStatusBar QLabel {
+                    padding: 6px 12px;
+                    margin: 0 4px;
+                    border-radius: 4px;
+                    background-color: rgba(0, 0, 0, 0.2);
+                    color: #ffffff;
+                    font-weight: 600;
+                }
+                QStatusBar QLabel#SBClock {
+                    font-family: 'Consolas', 'Courier New', monospace;
+                    font-size: 12px;
+                    letter-spacing: 0.3px;
+                    background-color: rgba(0, 0, 0, 0.25);
+                }
+                QStatusBar QLabel#SBConn {
+                    background-color: rgba(0, 0, 0, 0.25);
+                }
+                QStatusBar QLabel#SBStatus {
+                    background-color: rgba(76, 175, 80, 0.35);
+                    font-weight: 700;
+                }
+                QStatusBar QLabel#SBMetric {
+                    background-color: rgba(0, 0, 0, 0.2);
+                    min-width: 85px;
+                }
+                QStatusBar QLabel#Separator {
+                    background-color: transparent;
+                    color: rgba(255, 255, 255, 0.3);
+                    font-weight: normal;
+                    padding: 0 2px;
+                    margin: 0;
+                }
+            """)
+            
+            # Clock
+            self.clock_label = QLabel("")
+            self.clock_label.setObjectName("SBClock")
+            self.clock_label.setToolTip("System Time")
+            
+            # Connection status
+            self.conn_label = QLabel("NOT CONNECTED")
+            self.conn_label.setObjectName("SBConn")
+            self.conn_label.setToolTip("Connection Details")
+            
+            # Stream status
+            self.status_label = QLabel("READY")
+            self.status_label.setObjectName("SBStatus")
+            self.status_label.setToolTip("Stream Status")
+            
+            # Metrics
+            self.uptime_label = QLabel("UPTIME: 00:00:00")
+            self.uptime_label.setObjectName("SBMetric")
+            self.uptime_label.setToolTip("Dashboard Runtime")
+            
+            self.rx_label = QLabel("RX: 0 B")
+            self.rx_label.setObjectName("SBMetric")
+            self.rx_label.setToolTip("Total Bytes Received")
+            
+            self.packets_label = QLabel("PACKETS: 0")
+            self.packets_label.setObjectName("SBMetric")
+            self.packets_label.setToolTip("Total Packets")
+            
+            self.rate_label = QLabel("RATE: 0/s")
+            self.rate_label.setObjectName("SBMetric")
+            self.rate_label.setToolTip("Packet Rate")
+            
+            # Separators
+            sep1 = QLabel("|")
+            sep1.setObjectName("Separator")
+            sep2 = QLabel("|")
+            sep2.setObjectName("Separator")
+            
+            # Layout
+            sb.addWidget(self.clock_label)
+            sb.addWidget(sep1)
+            sb.addWidget(self.conn_label)
+            sb.addWidget(self.status_label)
+            sb.addWidget(sep2)
+            sb.addPermanentWidget(self.uptime_label)
+            sb.addPermanentWidget(self.rx_label)
+            sb.addPermanentWidget(self.packets_label)
+            sb.addPermanentWidget(self.rate_label)
+            
+            # Initialize tracking
+            self.start_time = time.time()
+            self.packet_count = 0
+            self.packet_rate = 0.0
+            self.packet_timestamps = []
+            
+            # Update timer
+            self.clock_timer = QTimer(self)
+            self.clock_timer.timeout.connect(self.update_status_bar)
+            self.clock_timer.start(1000)
 
     def update_status_bar(self):
-        # clock
-        self.clock_label.setText(time.strftime('%a %d %b %Y • %H:%M:%S'))
-        # connection
+        # Update clock
+        current_time = datetime.now()
+        self.clock_label.setText(current_time.strftime('%H:%M:%S • %d %b %Y'))
+        
+        # Update uptime
+        uptime_seconds = int(time.time() - self.start_time)
+        hours = uptime_seconds // 3600
+        minutes = (uptime_seconds % 3600) // 60
+        seconds = uptime_seconds % 60
+        self.uptime_label.setText(f"UPTIME: {hours:02d}:{minutes:02d}:{seconds:02d}")
+        
+        # Calculate packet rate (rolling 5-second average)
+        current_time_ts = time.time()
+        self.packet_timestamps = [ts for ts in self.packet_timestamps if current_time_ts - ts < 5.0]
+        
+        if len(self.packet_timestamps) > 1:
+            time_span = current_time_ts - self.packet_timestamps[0]
+            if time_span > 0:
+                self.packet_rate = len(self.packet_timestamps) / time_span
+        else:
+            self.packet_rate = 0.0
+        
+        # Update connection and status
         if self.simulator and self.simulator.mode == 'backend':
             cs = self.connection_settings
-            mode = cs.get('mode','serial')
+            mode = cs.get('mode', 'serial')
+            
             if mode == 'serial':
-                self.conn_label.setText(f"SERIAL {cs.get('serial_port')} @ {cs.get('baudrate')}")
+                port = cs.get('serial_port', 'N/A')
+                baud = cs.get('baudrate', 'N/A')
+                self.conn_label.setText(f"SERIAL: {port} @ {baud:,} bps")
             elif mode == 'tcp':
-                self.conn_label.setText(f"TCP {cs.get('tcp_host')}:{cs.get('tcp_port')}")
+                host = cs.get('tcp_host', 'N/A')
+                port = cs.get('tcp_port', 'N/A')
+                self.conn_label.setText(f"TCP: {host}:{port}")
+            elif mode == 'udp':
+                host = cs.get('udp_host', 'N/A')
+                port = cs.get('udp_port', 'N/A')
+                self.conn_label.setText(f"UDP: {host}:{port}")
+            
+            # Update stream status
+            if self.simulator._is_paused:
+                self.status_label.setText("PAUSED")
+                self.status_label.setStyleSheet("""
+                    background-color: rgba(255, 152, 0, 0.4);
+                    color: #ffffff;
+                    font-weight: 700;
+                    padding: 6px 12px;
+                    margin: 0 4px;
+                    border-radius: 4px;
+                """)
             else:
-                self.conn_label.setText(f"UDP {cs.get('udp_host')}:{cs.get('udp_port')}")
-            # rx bytes (human readable)
+                self.status_label.setText("STREAMING")
+                self.status_label.setStyleSheet("""
+                    background-color: rgba(76, 175, 80, 0.35);
+                    color: #ffffff;
+                    font-weight: 700;
+                    padding: 6px 12px;
+                    margin: 0 4px;
+                    border-radius: 4px;
+                """)
+            
+            # Update RX bytes
             rx = 0
             if hasattr(self.simulator, 'reader') and self.simulator.reader:
                 rx = getattr(self.simulator.reader, 'rx_bytes', 0)
-            def _fmt_bytes(n):
-                for unit in ["B","KB","MB","GB","TB"]:
-                    if n < 1024.0: return f"{n:.0f} {unit}"
-                    n /= 1024.0
-                return f"{n:.0f} PB"
-            self.rx_label.setText(f"RX: {_fmt_bytes(rx)}")
+            
+            if rx < 1024:
+                rx_str = f"{rx:.0f} B"
+            elif rx < 1024 * 1024:
+                rx_str = f"{rx/1024:.1f} KB"
+            elif rx < 1024 * 1024 * 1024:
+                rx_str = f"{rx/(1024*1024):.1f} MB"
+            else:
+                rx_str = f"{rx/(1024*1024*1024):.2f} GB"
+            
+            self.rx_label.setText(f"RX: {rx_str}")
         else:
-            self.conn_label.setText("SOURCE: DUMMY DATA")
-            self.rx_label.setText("RX: 0 B")
+            self.conn_label.setText("DUMMY DATA")
+            self.status_label.setText("SIMULATING")
+            self.status_label.setStyleSheet("""
+                background-color: rgba(33, 150, 243, 0.4);
+                color: #ffffff;
+                font-weight: 700;
+                padding: 6px 12px;
+                margin: 0 4px;
+                border-radius: 4px;
+            """)
+            self.rx_label.setText("RX: N/A")
+        
+        # Update packet count
+        if self.packet_count < 1000:
+            pkt_str = f"{self.packet_count}"
+        elif self.packet_count < 1000000:
+            pkt_str = f"{self.packet_count/1000:.1f}K"
+        else:
+            pkt_str = f"{self.packet_count/1000000:.2f}M"
+        self.packets_label.setText(f"PACKETS: {pkt_str}")
+        
+        # Update rate
+        self.rate_label.setText(f"RATE: {self.packet_rate:.1f}/s")
+        
 
     def _build_welcome_page(self):
         self.welcome_page = QWidget()
