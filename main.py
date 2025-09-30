@@ -58,7 +58,7 @@ from PySide6.QtWidgets import (
     QSpinBox, QStackedWidget # --- NEW ---
 )
 from PySide6.QtCore import QThread, Signal, Qt, QTimer, QByteArray
-from PySide6.QtGui import QFont, QColor, QBrush, QAction
+from PySide6.QtGui import QFont, QColor, QBrush, QAction, QPixmap
 import pyqtgraph as pg
 import numpy as np
 from backend import DataReader
@@ -1724,7 +1724,6 @@ class MainWindow(QMainWindow):
         file_menu = menubar.addMenu("File")
         edit_menu = menubar.addMenu("Edit")
         view_menu = menubar.addMenu("View")
-        help_menu = menubar.addMenu("Help")
 
         new_action = QAction("New Dashboard", self); new_action.triggered.connect(lambda: self.show_phase("setup"))
         load_action = QAction("Load Project...", self); load_action.triggered.connect(self.load_project)
@@ -1749,14 +1748,239 @@ class MainWindow(QMainWindow):
         add_tab_action = QAction("Add Tab", self); add_tab_action.triggered.connect(lambda: self.add_new_tab())
         rename_tab_action = QAction("Rename Current Tab", self); rename_tab_action.triggered.connect(self.rename_current_tab)
         view_menu.addAction(add_tab_action); view_menu.addAction(rename_tab_action)
-        # Data Source menu
-        source_menu = menubar.addMenu("Source")
-        src_backend = QAction("Use Backend", self); src_backend.triggered.connect(self.set_source_backend)
-        src_dummy = QAction("Use Dummy Data", self); src_dummy.triggered.connect(self.set_source_dummy)
-        source_menu.addAction(src_backend); source_menu.addAction(src_dummy)
 
-        about_action = QAction("About", self); about_action.triggered.connect(lambda: QMessageBox.information(self, "About", "Ignition Dashboard Builder\nUltimate flexible dashboard."))
+
+        help_menu = menubar.addMenu("Help")
+        about_action = QAction("About", self); about_action.triggered.connect(self.show_about_dialog)
         help_menu.addAction(about_action)
+    
+    def show_about_dialog(self):
+        """Display the About dialog with team information"""
+        
+        dialog = QDialog(self)
+        dialog.setWindowTitle("About")
+        dialog.setFixedSize(580, 620)
+        
+        # Apply modern styling with MUCH better contrast
+        dialog.setStyleSheet("""
+            QDialog {
+                background-color: #1a1a1a;
+            }
+            QLabel {
+                color: #e0e0e0;
+            }
+            QLabel a {
+                color: #66b3ff;
+                text-decoration: none;
+                font-weight: 500;
+            }
+            QLabel a:hover {
+                color: #99ccff;
+                text-decoration: underline;
+            }
+            QFrame#separator {
+                background-color: #404040;
+                max-height: 1px;
+                min-height: 1px;
+            }
+            QFrame#linkCard {
+                background-color: #2a2a2a;
+                border: 1px solid #3a3a3a;
+                border-radius: 8px;
+            }
+            QPushButton {
+                background-color: #2a2a2a;
+                border: 1px solid #404040;
+                border-radius: 6px;
+                padding: 10px 24px;
+                color: #e0e0e0;
+                font-size: 11px;
+                font-weight: 500;
+            }
+            QPushButton:hover {
+                background-color: #333333;
+                border-color: #66b3ff;
+            }
+            QPushButton:pressed {
+                background-color: #202020;
+            }
+            QLabel#linkText {
+                color: #d0d0d0;
+            }
+        """)
+        
+        layout = QVBoxLayout()
+        layout.setContentsMargins(40, 35, 40, 30)
+        layout.setSpacing(0)
+        
+        # Logo section
+        logo_label = QLabel()
+        logo_path = os.path.join("public", "ign_logo_wht.png")
+        if os.path.exists(logo_path):
+            pixmap = QPixmap(logo_path)
+            scaled_pixmap = pixmap.scaled(140, 140, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation)
+            logo_label.setPixmap(scaled_pixmap)
+        else:
+            logo_label.setText("IGNITION")
+            font = QFont("Arial", 32, QFont.Weight.Bold)
+            logo_label.setFont(font)
+            logo_label.setStyleSheet("color: #66b3ff; letter-spacing: 3px;")
+        logo_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        layout.addWidget(logo_label)
+        layout.addSpacing(24)
+        
+        # App name
+        app_name = QLabel("Dashboard Builder")
+        app_name.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        font = QFont("Arial", 22, QFont.Weight.Bold)
+        app_name.setFont(font)
+        app_name.setStyleSheet("color: #ffffff; letter-spacing: 0.5px;")
+        layout.addWidget(app_name)
+        layout.addSpacing(10)
+        
+        # Version badge
+        version_label = QLabel("v1.0.0")
+        version_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        font = QFont("Arial", 10)
+        version_label.setFont(font)
+        version_label.setStyleSheet("""
+            color: #b0b0b0; 
+            background-color: #2a2a2a; 
+            padding: 4px 12px; 
+            border-radius: 12px;
+        """)
+        version_label.setFixedWidth(80)
+        
+        version_container = QHBoxLayout()
+        version_container.addStretch()
+        version_container.addWidget(version_label)
+        version_container.addStretch()
+        layout.addLayout(version_container)
+        layout.addSpacing(18)
+        
+        # Description
+        description = QLabel("Professional telemetry visualization and\nreal-time monitoring platform")
+        description.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        font = QFont("Arial", 11)
+        description.setFont(font)
+        description.setStyleSheet("color: #b0b0b0; line-height: 1.6;")
+        layout.addWidget(description)
+        layout.addSpacing(28)
+        
+        # Links section in a card - IMPROVED VISIBILITY
+        links_card = QFrame()
+        links_card.setObjectName("linkCard")
+        links_layout = QVBoxLayout(links_card)
+        links_layout.setContentsMargins(24, 20, 24, 20)
+        links_layout.setSpacing(16)
+        
+        # Create clickable link rows with better contrast
+        def create_link_row(icon, text, url):
+            row = QHBoxLayout()
+            row.setSpacing(16)
+            
+            icon_label = QLabel(icon)
+            icon_label.setFixedWidth(28)
+            font = QFont("Arial", 16)
+            icon_label.setFont(font)
+            icon_label.setStyleSheet("color: #ffffff;")
+            
+            link = QLabel(f'<a href="{url}" style="color: #66b3ff; text-decoration: none;">{text}</a>')
+            link.setOpenExternalLinks(True)
+            link.setTextInteractionFlags(Qt.TextInteractionFlag.TextBrowserInteraction)
+            link.setObjectName("linkText")
+            font = QFont("Arial", 12)
+            link.setFont(font)
+            link.setStyleSheet("color: #d0d0d0;")
+            
+            row.addWidget(icon_label)
+            row.addWidget(link)
+            row.addStretch()
+            return row
+        
+        links_layout.addLayout(create_link_row(
+            "⚡", "GitHub Repository", 
+            "https://github.com/teamignitionvitc/Dashboard-Builder"
+        ))
+        links_layout.addLayout(create_link_row(
+            "🌐", "Official Website", 
+            "https://teamignition.space"
+        ))
+        links_layout.addLayout(create_link_row(
+            "📖", "Documentation", 
+            "https://github.com/teamignitionvitc/Dashboard-Builder/blob/main/README.md"
+        ))
+        
+        layout.addWidget(links_card)
+        layout.addSpacing(26)
+        
+        # Social Media section
+        social_container = QVBoxLayout()
+        social_container.setSpacing(10)
+        
+        social_header = QLabel("Connect With Us")
+        social_header.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        font = QFont("Arial", 10, QFont.Weight.Bold)
+        social_header.setFont(font)
+        social_header.setStyleSheet("color: #d0d0d0; text-transform: uppercase; letter-spacing: 1px;")
+        social_container.addWidget(social_header)
+        
+        social_links = QLabel(
+            '<a href="https://x.com/ignitiontech23" style="color: #66b3ff;">Twitter</a>  ·  '
+            '<a href="https://www.linkedin.com/in/teamignition/" style="color: #66b3ff;">LinkedIn</a>  ·  '
+            '<a href="https://www.instagram.com/ignition_vitc" style="color: #66b3ff;">Instagram</a>'
+        )
+        social_links.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        social_links.setOpenExternalLinks(True)
+        social_links.setTextInteractionFlags(Qt.TextInteractionFlag.TextBrowserInteraction)
+        font = QFont("Arial", 11)
+        social_links.setFont(font)
+        social_container.addWidget(social_links)
+        
+        layout.addLayout(social_container)
+        layout.addSpacing(28)
+        
+        # Separator
+        separator = QFrame()
+        separator.setObjectName("separator")
+        layout.addWidget(separator)
+        layout.addSpacing(20)
+        
+        # Copyright footer
+        footer_layout = QVBoxLayout()
+        footer_layout.setSpacing(6)
+        
+        copyright_label = QLabel("© 2025 Team Ignition Software Department")
+        copyright_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        font = QFont("Arial", 9)
+        copyright_label.setFont(font)
+        copyright_label.setStyleSheet("color: #909090;")
+        footer_layout.addWidget(copyright_label)
+        
+        rights_label = QLabel("All rights reserved")
+        rights_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        font = QFont("Arial", 8)
+        rights_label.setFont(font)
+        rights_label.setStyleSheet("color: #707070;")
+        footer_layout.addWidget(rights_label)
+        
+        layout.addLayout(footer_layout)
+        layout.addSpacing(16)
+        
+        # Close button
+        close_btn = QPushButton("Close")
+        close_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        close_btn.clicked.connect(dialog.accept)
+        
+        btn_layout = QHBoxLayout()
+        btn_layout.addStretch()
+        btn_layout.addWidget(close_btn)
+        btn_layout.addStretch()
+        
+        layout.addLayout(btn_layout)
+        
+        dialog.setLayout(layout)
+        dialog.exec()
 
     # Convenience wrappers for Source menu
     def set_source_backend(self):
