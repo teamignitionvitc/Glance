@@ -341,34 +341,57 @@ class ValueCard(QFrame):
         """)
 
 class TimeGraph(QWidget):
-    # (Unchanged)
     def __init__(self, param_configs):
         super().__init__()
-        self.param_configs = param_configs; self.curves = {}; self.last_known_values = {}
+        self.param_configs = param_configs
+        self.curves = {}
+        self.last_known_values = {}
+
         # Toolbar
-        container = QVBoxLayout(self); container.setContentsMargins(0,0,0,0); toolbar = QHBoxLayout(); toolbar.setContentsMargins(0,0,0,0)
-        reset_btn = QPushButton("Reset View"); reset_btn.setObjectName("SecondaryCTA"); toolbar.addStretch(); toolbar.addWidget(reset_btn)
+        container = QVBoxLayout(self)
+        container.setContentsMargins(0, 0, 0, 0)
+        toolbar = QHBoxLayout()
+        toolbar.setContentsMargins(0, 0, 0, 0)
+        reset_btn = QPushButton("Reset View")
+        reset_btn.setObjectName("SecondaryCTA")
+        toolbar.addStretch()
+        toolbar.addWidget(reset_btn)
+
         # Plot
-        self.plot_widget = pg.PlotWidget(); self.plot_widget.setBackground(QColor(12, 12, 12))
-        self.plot_widget.showGrid(x=True, y=True, alpha=0.25); self.plot_widget.setAntialiasing(True)
+        self.plot_widget = pg.PlotWidget()
+        self.plot_widget.setBackground(QColor(12, 12, 12))
+        self.plot_widget.showGrid(x=True, y=True, alpha=0.25)
+        self.plot_widget.setAntialiasing(True)
         self.plot_widget.setLabel('bottom', 'Time (s)', color='#FFFFFF')
-        self.plot_widget.addLegend(offset=(10,10))
+        self.plot_widget.addLegend(offset=(10, 10))
+
         title = ", ".join([p['name'] for p in self.param_configs])
         units = list(set([p['unit'] for p in self.param_configs]))
         unit_label = units[0] if len(units) == 1 else "Multiple Units"
-        self.plot_widget.setTitle(title, color='w', size='12pt'); self.plot_widget.setLabel('left', unit_label, color='#FFFFFF')
+        self.plot_widget.setTitle(title, color='w', size='12pt')
+        self.plot_widget.setLabel('left', unit_label, color='#FFFFFF')
+
         axis_pen = pg.mkPen(color='#FFFFFF', width=1)
-        self.plot_widget.getAxis('left').setPen(axis_pen); self.plot_widget.getAxis('bottom').setPen(axis_pen)
+        self.plot_widget.getAxis('left').setPen(axis_pen)
+        self.plot_widget.getAxis('bottom').setPen(axis_pen)
+
         for p_config in self.param_configs:
             pen = pg.mkPen(p_config['color'], width=2.5)
-            curve = self.plot_widget.plot(pen=pen, name=p_config['name']); self.curves[p_config['id']] = curve
-        container.addLayout(toolbar); container.addWidget(self.plot_widget); self.setLayout(container)
+            curve = self.plot_widget.plot(pen=pen, name=p_config['name'])
+            self.curves[p_config['id']] = curve
+
+        container.addLayout(toolbar)
+        container.addWidget(self.plot_widget)
+        self.setLayout(container)
+
         def _reset():
             try:
                 self.plot_widget.enableAutoRange(axis=pg.ViewBox.XYAxes, enable=True)
             except Exception:
                 pass
+
         reset_btn.clicked.connect(_reset)
+
         self.start_time = time.time()
         self.vLine = pg.InfiniteLine(angle=90, movable=False, pen=pg.mkPen('yellow', style=Qt.DashLine))
         self.hLine = pg.InfiniteLine(angle=0, movable=False, pen=pg.mkPen('yellow', style=Qt.DashLine))
@@ -376,6 +399,7 @@ class TimeGraph(QWidget):
         self.plot_widget.addItem(self.vLine, ignoreBounds=True)
         self.plot_widget.addItem(self.hLine, ignoreBounds=True)
         self.plot_widget.addItem(self.label)
+
         self.proxy = pg.SignalProxy(self.plot_widget.scene().sigMouseMoved, rateLimit=60, slot=self.mouse_moved)
         self.plot_widget.scene().sigMouseClicked.connect(self.mouse_clicked)
 
@@ -389,10 +413,15 @@ class TimeGraph(QWidget):
                 curve.setData(x=timestamps, y=values)
 
     def mouse_moved(self, evt):
+        # --- NEW: Ignore hover interaction if Ctrl is pressed ---
+        if QApplication.keyboardModifiers() & Qt.ControlModifier:
+            return
+
         pos = evt[0]
         if self.plot_widget.sceneBoundingRect().contains(pos):
             mousePoint = self.plot_widget.getPlotItem().vb.mapSceneToView(pos)
-            self.vLine.setPos(mousePoint.x()); self.hLine.setPos(mousePoint.y())
+            self.vLine.setPos(mousePoint.x())
+            self.hLine.setPos(mousePoint.y())
             text = f"Time: {mousePoint.x():.2f}s\n"
             for pid, curve in self.curves.items():
                 x_data, y_data = curve.getData()
@@ -402,14 +431,19 @@ class TimeGraph(QWidget):
                         y_val = y_data[idx]
                         p_name = next(p['name'] for p in self.param_configs if p['id'] == pid)
                         text += f"{p_name}: {y_val:.2f}\n"
-            self.label.setText(text.strip()); self.label.setPos(mousePoint)
+            self.label.setText(text.strip())
+            self.label.setPos(mousePoint)
+
     def mouse_clicked(self, evt):
-        if evt.double(): return
+        if evt.double():
+            return
         pos = self.plot_widget.getPlotItem().vb.mapSceneToView(evt.scenePos())
-        min_dist = float('inf'); nearest_point = None
+        min_dist = float('inf')
+        nearest_point = None
         for pid, curve in self.curves.items():
             x_data, y_data = curve.getData()
-            if x_data is None or len(x_data) == 0: continue
+            if x_data is None or len(x_data) == 0:
+                continue
             for i, (x, y) in enumerate(zip(x_data, y_data)):
                 dist = (x - pos.x())**2 + (y - pos.y())**2
                 if dist < min_dist:
@@ -419,7 +453,13 @@ class TimeGraph(QWidget):
         if nearest_point:
             name, ts, val = nearest_point
             time_str = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(ts))
-            QMessageBox.information(self, "Data Point Selected", f"Parameter: {name}\nValue: {val:.3f}\nTimestamp: {time_str}")
+            QMessageBox.information(
+                self,
+                "Data Point Selected",
+                f"Parameter: {name}\nValue: {val:.3f}\nTimestamp: {time_str}"
+            )
+
+
 
 
 class HistogramWidget(QWidget):
