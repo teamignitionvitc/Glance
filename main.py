@@ -600,6 +600,105 @@ class MapWidget(QWidget):
             self.web = QWebEngineView()
             self.web.setMinimumHeight(200)
             layout.addWidget(self.web)
+            # Embed a lightweight Leaflet map using OSM tiles, with a rocket emoji marker
+            html = """
+                <!DOCTYPE html>
+                <html>
+                <head>
+                <meta charset="utf-8" />
+                <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+                  integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+                <style>
+                  html, body, #map { height: 100%; margin: 0; padding: 0; background: #1e1e1e; }
+                  .leaflet-container { background: #1e1e1e; }
+                  .rocket-icon { font-size: 28px; line-height: 28px; }
+                  .rocket-icon span { filter: drop-shadow(0 0 2px #000); }
+                    /* Make attribution minimally obtrusive while still visible */
+                    .leaflet-control-attribution {
+                      font-size: 10px;
+                      opacity: 0.35;
+                      background: rgba(0,0,0,0.25);
+                      color: #ddd;
+                    }
+                    .leaflet-control-attribution:hover { opacity: 0.85; }
+                    /* Style for custom magnifier control */
+                    .leaflet-bar a.magnifier-btn {
+                      font-size: 16px;
+                      line-height: 26px;
+                      text-align: center;
+                      width: 26px;
+                      height: 26px;
+                      display: block;
+                      text-decoration: none;
+                      background: #fff;
+                      color: #000;
+                    }
+                    .leaflet-bar a.magnifier-btn:hover { background: #f4f4f4; }
+                                  </style>
+                                  <title>Map</title>
+                                  <meta name="referrer" content="no-referrer">
+                                  </head>
+                                  <body>
+                                  <div id="map"></div>
+                                  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+                                    integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+                                  <script>
+                                    const initialLat = 0, initialLon = 0, initialZoom = 2;
+                                    const map = L.map('map', { zoomControl: true }).setView([initialLat, initialLon], initialZoom);
+                                    // Esri World Imagery (satellite) tiles - no API key required
+                                    const tiles = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+                                      maxZoom: 19,
+                                      maxNativeZoom: 19,
+                                      attribution: 'Tiles &copy; Esri — Source: Esri, Maxar, Earthstar Geographics, and the GIS User Community'
+                                    });
+                                    tiles.addTo(map);
+                                    // Prevent over-zooming beyond available data
+                                    const maxAvailableZoom = tiles.options.maxNativeZoom || tiles.options.maxZoom || 19;
+                                    const MAX_SAFE_ZOOM = Math.min(maxAvailableZoom, 17); // conservative cap to avoid empty tiles
+                                    map.setMaxZoom(MAX_SAFE_ZOOM);
+                                  
+                                    const rocketIcon = L.divIcon({ className: 'rocket-icon', html: '<span>🚀</span>', iconSize: [28,28], iconAnchor: [14,14] });
+                                    const marker = L.marker([initialLat, initialLon], { icon: rocketIcon }).addTo(map);
+                                    // Red path line to track rocket trajectory
+                                    const pathLine = L.polyline([], { color: 'red', weight: 3, opacity: 0.9 }).addTo(map);
+                    
+                    // Custom magnifier control: zoom to current rocket position in one click
+                    const focusControl = L.control({ position: 'topleft' });
+                    focusControl.onAdd = function(map) {
+                      const container = L.DomUtil.create('div', 'leaflet-bar');
+                      const btn = L.DomUtil.create('a', 'magnifier-btn', container);
+                      btn.href = '#';
+                      btn.title = 'Zoom to rocket';
+                      btn.innerHTML = '🔍';
+                      L.DomEvent.on(btn, 'click', L.DomEvent.stopPropagation)
+                                .on(btn, 'click', L.DomEvent.preventDefault)
+                                .on(btn, 'click', function() {
+                                  const ll = marker.getLatLng();
+                                  const desiredZoom = Math.max(map.getZoom(), 18);
+                                  const targetZoom = Math.min(desiredZoom, MAX_SAFE_ZOOM);
+                                  map.setView(ll, targetZoom, { animate: true });
+                                });
+                      return container;
+                    };
+                    focusControl.addTo(map);
+                
+                  window.updatePosition = function(lat, lon) {
+                    const ll = [lat, lon];
+                    marker.setLatLng(ll);
+                    // append to path
+                    pathLine.addLatLng(ll);
+                    // zoom conservatively to avoid over-zooming beyond imagery
+                    const desiredZoom = Math.max(map.getZoom(), 16);
+                    const targetZoom = Math.min(desiredZoom, MAX_SAFE_ZOOM);
+                    map.setView(ll, targetZoom, { animate: true });
+                  };
+                </script>
+                </body>
+                </html>
+                """
+            from PySide6.QtCore import QUrl
+            self.web.setHtml(html, baseUrl=QUrl("https://local/"))
         else:
             self.web = None
             self.fallback = QLabel("WebEngine not available.\nShowing coordinates only.")
@@ -632,14 +731,14 @@ class MapWidget(QWidget):
         
         if self.web:
             try:
-                url = f"https://www.openstreetmap.org/#map=16/{lat}/{lon}"
-                from PySide6.QtCore import QUrl
-                self.web.setUrl(QUrl(url))
+                # Update the embedded Leaflet map without reloading a full webpage
+                self.web.page().runJavaScript(f"updatePosition({lat}, {lon});")
             except Exception:
                 pass
         else:
             if hasattr(self, 'fallback'):
                 self.fallback.setText(f"Lat: {lat:.6f}°\nLon: {lon:.6f}°")
+
 
 class LogTable(QWidget):
     # (Unchanged)
