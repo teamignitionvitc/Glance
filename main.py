@@ -615,13 +615,11 @@ class MapWidget(QWidget):
         lat_name = param_configs[0]['name'].replace('GPS(', '').replace(')', '') if param_configs[0]['name'].startswith('GPS(') else param_configs[0]['name']
         lon_name = param_configs[1]['name'].replace('GPS(', '').replace(')', '') if param_configs[1]['name'].startswith('GPS(') else param_configs[1]['name']
         
-        # Coordinates display
+        # Coordinates display (top label hidden when web map is available)
         self.coords_label = QLabel("No GPS data")
         self.coords_label.setFont(QFont("Monospace", 10))
         self.coords_label.setStyleSheet("color: #aaaaaa; padding: 4px;")
         self.coords_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        
-        layout.addWidget(self.coords_label)
         
         # Map widget
         if QWebEngineView:
@@ -663,12 +661,27 @@ class MapWidget(QWidget):
                       color: #000;
                     }
                     .leaflet-bar a.magnifier-btn:hover { background: #f4f4f4; }
+  /* Bottom-left overlay for coordinates */
+  #coordsOverlay {
+    position: absolute;
+    bottom: 8px;
+    left: 8px;
+    z-index: 1000;
+    background: rgba(0, 0, 0, 0.55);
+    color: #eee;
+    padding: 4px 8px;
+    border-radius: 6px;
+    font-family: monospace;
+    font-size: 12px;
+    pointer-events: none;
+  }
                                   </style>
                                   <title>Map</title>
                                   <meta name="referrer" content="no-referrer">
                                   </head>
                                   <body>
-                                  <div id="map"></div>
+                <div id="map"></div>
+                <div id="coordsOverlay">Lat: ---, Lon: ---</div>
                                   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
                                     integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
                                   <script>
@@ -682,14 +695,21 @@ class MapWidget(QWidget):
                                     });
                                     tiles.addTo(map);
                                     // Prevent over-zooming beyond available data
-                                    const maxAvailableZoom = tiles.options.maxNativeZoom || tiles.options.maxZoom || 19;
-                                    const MAX_SAFE_ZOOM = Math.min(maxAvailableZoom, 17); // conservative cap to avoid empty tiles
+                  const maxAvailableZoom = tiles.options.maxNativeZoom || tiles.options.maxZoom || 19;
+                  const MAX_SAFE_ZOOM = Math.min(maxAvailableZoom, 17); // conservative cap to avoid empty tiles
                                     map.setMaxZoom(MAX_SAFE_ZOOM);
                                   
                                     const rocketIcon = L.divIcon({ className: 'rocket-icon', html: '<span>🚀</span>', iconSize: [28,28], iconAnchor: [14,14] });
                                     const marker = L.marker([initialLat, initialLon], { icon: rocketIcon }).addTo(map);
                                     // Red path line to track rocket trajectory
                                     const pathLine = L.polyline([], { color: 'red', weight: 3, opacity: 0.9 }).addTo(map);
+
+                  function setOverlay(lat, lon) {
+                    const el = document.getElementById('coordsOverlay');
+                    if (el) {
+                      el.textContent = `Lat: ${lat.toFixed(6)}, Lon: ${lon.toFixed(6)}`;
+                    }
+                  }
                     
                     // Custom magnifier control: zoom to current rocket position in one click
                     const focusControl = L.control({ position: 'topleft' });
@@ -702,10 +722,10 @@ class MapWidget(QWidget):
                       L.DomEvent.on(btn, 'click', L.DomEvent.stopPropagation)
                                 .on(btn, 'click', L.DomEvent.preventDefault)
                                 .on(btn, 'click', function() {
-                                  const ll = marker.getLatLng();
-                                  const desiredZoom = Math.max(map.getZoom(), 18);
-                                  const targetZoom = Math.min(desiredZoom, MAX_SAFE_ZOOM);
-                                  map.setView(ll, targetZoom, { animate: true });
+                const ll = marker.getLatLng();
+                const desiredZoom = Math.max(map.getZoom(), 18);
+                const targetZoom = Math.min(desiredZoom, MAX_SAFE_ZOOM);
+                map.setView(ll, targetZoom, { animate: true });
                                 });
                       return container;
                     };
@@ -716,6 +736,7 @@ class MapWidget(QWidget):
                     marker.setLatLng(ll);
                     // append to path
                     pathLine.addLatLng(ll);
+                    setOverlay(lat, lon);
                     // zoom conservatively to avoid over-zooming beyond imagery
                     const desiredZoom = Math.max(map.getZoom(), 16);
                     const targetZoom = Math.min(desiredZoom, MAX_SAFE_ZOOM);
@@ -727,6 +748,16 @@ class MapWidget(QWidget):
                 """
             from PySide6.QtCore import QUrl
             self.web.setHtml(html, baseUrl=QUrl("https://local/"))
+            # Hide the top coords label when web map is available
+            self.coords_label.setVisible(False)
+            # Prepare throttled updates every 10 seconds
+            from PySide6.QtCore import QTimer
+            self._last_sent_lat = None
+            self._last_sent_lon = None
+            self._update_timer = QTimer(self)
+            self._update_timer.setInterval(10000)  # 10 seconds
+            self._update_timer.timeout.connect(self._push_position)
+            self._update_timer.start()
         else:
             self.web = None
             self.fallback = QLabel("WebEngine not available.\nShowing coordinates only.")
@@ -754,19 +785,25 @@ class MapWidget(QWidget):
         lon = lon_hist[-1]['value']
         self._last_lat, self._last_lon = lat, lon
         
-        # Update coordinates display
-        self.coords_label.setText(f"Lat: {lat:.6f}° | Lon: {lon:.6f}°")
-        
-        if self.web:
-            try:
-                # Update the embedded Leaflet map without reloading a full webpage
-                self.web.page().runJavaScript(f"updatePosition({lat}, {lon});")
-            except Exception:
-                pass
+        # Update text for fallback only; web overlay is updated in JS push
+        if not self.web:
+            self.coords_label.setText(f"Lat: {lat:.6f}° | Lon: {lon:.6f}°")
         else:
             if hasattr(self, 'fallback'):
                 self.fallback.setText(f"Lat: {lat:.6f}°\nLon: {lon:.6f}°")
 
+    def _push_position(self):
+        # Called by timer every 10 seconds to push latest coords to the map
+        if not self.web: return
+        if self._last_lat is None or self._last_lon is None: return
+        if self._last_sent_lat == self._last_lat and self._last_sent_lon == self._last_lon:
+            return
+        try:
+            self.web.page().runJavaScript(f"updatePosition({self._last_lat}, {self._last_lon});")
+            self._last_sent_lat = self._last_lat
+            self._last_sent_lon = self._last_lon
+        except Exception:
+            pass
 
 class LogTable(QWidget):
     # (Unchanged)
