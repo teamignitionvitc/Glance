@@ -615,24 +615,12 @@ class MapWidget(QWidget):
         lat_name = param_configs[0]['name'].replace('GPS(', '').replace(')', '') if param_configs[0]['name'].startswith('GPS(') else param_configs[0]['name']
         lon_name = param_configs[1]['name'].replace('GPS(', '').replace(')', '') if param_configs[1]['name'].startswith('GPS(') else param_configs[1]['name']
         
-        # Title with icon
-        title_layout = QHBoxLayout()
-        icon_label = QLabel("Map")
-        icon_label.setFont(QFont("Arial", 14))
-        self.title = QLabel(f"{lat_name} + {lon_name}")
-        self.title.setFont(QFont("Arial", 12, QFont.Weight.Bold))
-        self.title.setStyleSheet("color: #ffffff;")
-        title_layout.addWidget(icon_label)
-        title_layout.addWidget(self.title)
-        title_layout.addStretch()
-        
         # Coordinates display
         self.coords_label = QLabel("No GPS data")
         self.coords_label.setFont(QFont("Monospace", 10))
         self.coords_label.setStyleSheet("color: #aaaaaa; padding: 4px;")
         self.coords_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         
-        layout.addLayout(title_layout)
         layout.addWidget(self.coords_label)
         
         # Map widget
