@@ -1386,6 +1386,7 @@ class MainWindow(QMainWindow):
             elif hasattr(widget, 'table'):  # For tables
                 widget.setMinimumSize(500, 300)
             dock = QDockWidget(f"{widget_title} ({config['displayType']})", self)
+            dock.setObjectName(f"dock_{widget_id}")  # Set unique object name
             dock.setWidget(widget)
             dock.setMinimumSize(300, 200)
             # Add right-click context menu
@@ -1994,6 +1995,37 @@ class MainWindow(QMainWindow):
         
         self.setWindowTitle(title)
     
+    def _save_tab_layout_explicit(self, tab_index):
+        """Save dock layout using grid positions"""
+        tab_info = self.tab_data.get(tab_index)
+        if not tab_info:
+            return {}
+        
+        layout_info = {
+            'positions': {},  # widget_id -> (row, col, width, height)
+        }
+        
+        mainwindow = tab_info['mainwindow']
+        
+        # Save each dock's state and relative position
+        for widget_id, dock in tab_info['docks'].items():
+            layout_info['positions'][widget_id] = {
+                'floating': dock.isFloating(),
+                'visible': dock.isVisible(),
+                'geometry': {
+                    'x': dock.x(),
+                    'y': dock.y(),
+                    'width': dock.width(),
+                    'height': dock.height()
+                }
+            }
+        
+        # Save layout_positions from tab_info if it exists
+        if 'layout_positions' in tab_info:
+            layout_info['grid_positions'] = tab_info['layout_positions']
+        
+        return layout_info
+
     def save_project(self):
         """Save project with improved functionality"""
         if not self.current_project_path:
@@ -2007,9 +2039,11 @@ class MainWindow(QMainWindow):
             for index, tab_info in self.tab_data.items():
                 tab_name = self.tab_widget.tabText(index)
                 state = tab_info['mainwindow'].saveState()
+                explicit_layout = self._save_tab_layout_explicit(index)
                 layout_data[tab_name] = {
                     'state': base64.b64encode(state.data()).decode('utf-8'),
-                    'configs': tab_info['configs']
+                    'configs': tab_info['configs'],
+                    'explicit_layout': explicit_layout
                 }
             
             # Include data logging settings
@@ -2039,6 +2073,45 @@ class MainWindow(QMainWindow):
         """Save project with new filename"""
         self.current_project_path = None
         self.save_project()
+
+    def _restore_tab_layout_explicit(self, tab_index, explicit_layout):
+        """Restore dock layout from saved positions"""
+        if not explicit_layout:
+            return
+        
+        tab_info = self.tab_data.get(tab_index)
+        if not tab_info:
+            return
+        
+        # Restore grid positions if available
+        if 'grid_positions' in explicit_layout:
+            tab_info['layout_positions'] = explicit_layout['grid_positions']
+            # Trigger retiling based on saved positions
+            self._retile_positions(tab_index)
+        
+        # Restore individual dock states (floating, geometry)
+        if 'positions' in explicit_layout:
+            from PySide6.QtCore import QTimer
+            
+            def restore_dock_states():
+                for widget_id, pos_info in explicit_layout['positions'].items():
+                    if widget_id not in tab_info['docks']:
+                        continue
+                    
+                    dock = tab_info['docks'][widget_id]
+                    
+                    # Restore floating and geometry
+                    if pos_info['floating']:
+                        dock.setFloating(True)
+                        geom = pos_info['geometry']
+                        dock.setGeometry(geom['x'], geom['y'], geom['width'], geom['height'])
+                    
+                    # Restore visibility
+                    dock.setVisible(pos_info.get('visible', True))
+            
+            # Delay to let Qt finish initial layout
+            QTimer.singleShot(200, restore_dock_states)
+
     def load_project(self):
         """Load project with improved functionality"""
         if self.has_unsaved_changes:
@@ -2100,13 +2173,20 @@ class MainWindow(QMainWindow):
                 self.close_tab(0)
             
             # Load layout data
+            # Load layout data
             layout_data = project_data.get('layout', {})
             for tab_name, tab_layout_data in layout_data.items():
                 index = self.add_new_tab(name=tab_name)
                 for widget_id, config in tab_layout_data.get('configs', {}).items():
                     self.add_widget_to_dashboard(config, index, widget_id)
+                
+                # First try Qt's built-in state restoration
                 state_data = base64.b64decode(tab_layout_data['state'])
                 self.tab_data[index]['mainwindow'].restoreState(QByteArray(state_data))
+                
+                # Then apply explicit layout restoration for better accuracy
+                if 'explicit_layout' in tab_layout_data:
+                    self._restore_tab_layout_explicit(index, tab_layout_data['explicit_layout'])
             
             self.current_project_path = path
             self.mark_as_saved()
