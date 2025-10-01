@@ -1297,6 +1297,21 @@ class MainWindow(QMainWindow):
         # Initialize window title
         self.update_window_title()
 
+    def refresh_setup_serial_ports(self):
+        """Refresh the list of available serial ports in setup page"""
+        current_text = self.setup_serial_port.currentText()
+        self.setup_serial_port.clear()
+        
+        ports = self.list_serial_ports()
+        self.setup_serial_port.addItems(ports)
+        
+        # Try to restore previous selection
+        index = self.setup_serial_port.findText(current_text)
+        if index >= 0:
+            self.setup_serial_port.setCurrentIndex(index)
+        else:
+            self.setup_serial_port.setCurrentText(current_text)
+
     def list_serial_ports(self):
         ports = []
         try:
@@ -1683,6 +1698,10 @@ class MainWindow(QMainWindow):
     # --- HEAVILY MODIFIED: Core logic now processes an array, not a dict ---
     def update_data(self, packet: list):
         timestamp = time.time()
+
+         # Track packets for status bar
+        self.packet_count += 1
+        self.packet_timestamps.append(timestamp)
 
         # Iterate through the user-defined parameters, not the incoming data keys
         for param_meta in self.parameters:
@@ -2570,6 +2589,12 @@ class MainWindow(QMainWindow):
         self.setup_serial_port.setEditable(True)
         self.setup_serial_port.addItems(self.list_serial_ports())
         self.setup_serial_port.setCurrentText(self.connection_settings.get('serial_port','COM4'))
+
+        # Refresh button for serial ports
+        self.setup_refresh_ports_btn = QPushButton("🔄 Refresh")
+        self.setup_refresh_ports_btn.setMaximumWidth(80)
+        self.setup_refresh_ports_btn.clicked.connect(self.refresh_setup_serial_ports)
+
         self.setup_baud = QSpinBox()
         self.setup_baud.setRange(300, 10000000)
         self.setup_baud.setValue(int(self.connection_settings.get('baudrate',115200)))
@@ -2585,7 +2610,11 @@ class MainWindow(QMainWindow):
         self.setup_udp_port.setValue(int(self.connection_settings.get('udp_port',9000)))
         
         conn_form.addRow("Connection Mode:", self.setup_mode_combo)
-        conn_form.addRow("Serial Port:", self.setup_serial_port)
+        # Create horizontal layout for port + refresh button
+        setup_serial_port_layout = QHBoxLayout()
+        setup_serial_port_layout.addWidget(self.setup_serial_port)
+        setup_serial_port_layout.addWidget(self.setup_refresh_ports_btn)
+        conn_form.addRow("Serial Port:", setup_serial_port_layout)
         conn_form.addRow("Baudrate:", self.setup_baud)
         conn_form.addRow("TCP Host:", self.setup_tcp_host)
         conn_form.addRow("TCP Port:", self.setup_tcp_port)
@@ -2655,7 +2684,9 @@ class MainWindow(QMainWindow):
             is_udp = (mode == 'udp')
             
             # Serial fields
+            # Serial fields
             self.setup_serial_port.setVisible(is_serial)
+            self.setup_refresh_ports_btn.setVisible(is_serial)  # Add this line
             self.setup_baud.setVisible(is_serial)
             
             # TCP fields
@@ -3148,6 +3179,12 @@ class ConnectionSettingsDialog(QDialog):
             if ports: self.serial_port_edit.addItems(ports)
         except Exception: pass
         self.serial_port_edit.setCurrentText(self._settings.get('serial_port','COM4'))
+
+        # Refresh button for serial ports
+        self.refresh_ports_btn = QPushButton("🔄 Refresh")
+        self.refresh_ports_btn.setMaximumWidth(80)
+        self.refresh_ports_btn.clicked.connect(self.refresh_serial_ports)
+
         self.baud_spin = QSpinBox(); self.baud_spin.setRange(300, 10000000); self.baud_spin.setValue(int(self._settings.get('baudrate',115200)))
         # TCP fields
         self.tcp_host_edit = QLineEdit(self._settings.get('tcp_host','127.0.0.1'))
@@ -3169,9 +3206,14 @@ class ConnectionSettingsDialog(QDialog):
         self.csv_sep_edit = QLineEdit(self._settings.get('csv_separator',','))
         # Build layout with placeholders for dynamic visibility
         form.addRow("Mode:", self.mode_combo)
-        # Serial
-        self._row_serial_port = form.rowCount(); form.addRow("Serial Port:", self.serial_port_edit)
-        self._row_baud = form.rowCount(); form.addRow("Baudrate:", self.baud_spin)
+        # Serial - Create horizontal layout for port + refresh button
+        serial_port_layout = QHBoxLayout()
+        serial_port_layout.addWidget(self.serial_port_edit)
+        serial_port_layout.addWidget(self.refresh_ports_btn)
+        self._row_serial_port = form.rowCount()
+        form.addRow("Serial Port:", serial_port_layout)
+        self._row_baud = form.rowCount()
+        form.addRow("Baudrate:", self.baud_spin)
         # TCP
         self._row_tcp_host = form.rowCount(); form.addRow("TCP Host:", self.tcp_host_edit)
         self._row_tcp_port = form.rowCount(); form.addRow("TCP Port:", self.tcp_port_spin)
@@ -3198,6 +3240,7 @@ class ConnectionSettingsDialog(QDialog):
             lbl = form.labelForField(self.serial_port_edit)
             if lbl: lbl.setVisible(is_serial)
             self.serial_port_edit.setVisible(is_serial)
+            self.refresh_ports_btn.setVisible(is_serial) 
             lbl = form.labelForField(self.baud_spin)
             if lbl: lbl.setVisible(is_serial)
             self.baud_spin.setVisible(is_serial)
@@ -3231,6 +3274,36 @@ class ConnectionSettingsDialog(QDialog):
         _apply_format(self.format_combo.currentText())
         self.csv_sep_combo.currentTextChanged.connect(_apply_csv_sep)
         _apply_csv_sep(self.csv_sep_combo.currentText())
+
+    def refresh_serial_ports(self):
+        """Refresh the list of available serial ports"""
+        current_text = self.serial_port_edit.currentText()
+        self.serial_port_edit.clear()
+        
+        try:
+            ports = []
+            if _serial_list_ports:
+                ports = [p.device for p in _serial_list_ports.comports()]
+            if ports:
+                self.serial_port_edit.addItems(ports)
+            else:
+                # Add common defaults if none found
+                if sys.platform.startswith('linux'):
+                    ports = ['/dev/ttyUSB0', '/dev/ttyACM0']
+                elif sys.platform.startswith('win'):
+                    ports = ['COM3','COM4','COM5']
+                else:
+                    ports = ['/dev/tty.usbserial', '/dev/tty.usbmodem']
+                self.serial_port_edit.addItems(ports)
+        except Exception as e:
+            QMessageBox.warning(self, "Error", f"Failed to refresh ports: {e}")
+        
+        # Try to restore previous selection
+        index = self.serial_port_edit.findText(current_text)
+        if index >= 0:
+            self.serial_port_edit.setCurrentIndex(index)
+        else:
+            self.serial_port_edit.setCurrentText(current_text)
 
     def get_settings(self):
         return {
