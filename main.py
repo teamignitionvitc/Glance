@@ -1273,7 +1273,14 @@ class MainWindow(QMainWindow):
         self.connection_status_label = QLabel("Not Connected")
         self.pause_button = QPushButton("Pause Stream"); self.pause_button.setCheckable(True)
         self.logging_status_label = QLabel("Logging: OFF")
-        header_layout.addWidget(QLabel("<h2>Dashboard</h2>")); header_layout.addStretch()
+        # Customizable dashboard title
+        self.dashboard_title = QLabel("<h2>Dashboard</h2>")
+        self.dashboard_title.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+        self.dashboard_title.customContextMenuRequested.connect(self._show_title_context_menu)
+        self.dashboard_title_text = "Dashboard"
+        self.dashboard_title_alignment = Qt.AlignmentFlag.AlignLeft
+
+        header_layout.addWidget(self.dashboard_title); header_layout.addStretch()
         header_layout.addWidget(self.connection_status_label)
         header_layout.addWidget(self.stream_status_label)
         header_layout.addWidget(self.logging_status_label)
@@ -1437,6 +1444,82 @@ class MainWindow(QMainWindow):
             for dock in docks[1:]:
                 mainwindow.tabifyDockWidget(docks[0], dock)
 
+    def _show_title_context_menu(self, pos):
+        """Show context menu for dashboard title customization"""
+        from PySide6.QtWidgets import QMenu
+        menu = QMenu(self)
+        
+        # Edit title action
+        edit_action = menu.addAction("Edit Title...")
+        edit_action.triggered.connect(self._edit_dashboard_title)
+        
+        menu.addSeparator()
+        
+        # Alignment submenu
+        align_menu = menu.addMenu("Alignment")
+        
+        left_action = align_menu.addAction("Left")
+        left_action.setCheckable(True)
+        left_action.setChecked(self.dashboard_title_alignment == Qt.AlignmentFlag.AlignLeft)
+        left_action.triggered.connect(lambda: self._set_title_alignment(Qt.AlignmentFlag.AlignLeft))
+        
+        center_action = align_menu.addAction("Center")
+        center_action.setCheckable(True)
+        center_action.setChecked(self.dashboard_title_alignment == Qt.AlignmentFlag.AlignCenter)
+        center_action.triggered.connect(lambda: self._set_title_alignment(Qt.AlignmentFlag.AlignCenter))
+        
+        right_action = align_menu.addAction("Right")
+        right_action.setCheckable(True)
+        right_action.setChecked(self.dashboard_title_alignment == Qt.AlignmentFlag.AlignRight)
+        right_action.triggered.connect(lambda: self._set_title_alignment(Qt.AlignmentFlag.AlignRight))
+        
+        menu.addSeparator()
+        
+        # Reset action
+        reset_action = menu.addAction("Reset to Default")
+        reset_action.triggered.connect(self._reset_dashboard_title)
+        
+        menu.exec(self.dashboard_title.mapToGlobal(pos))
+    
+    def _edit_dashboard_title(self):
+        """Edit the dashboard title text"""
+        new_title, ok = QInputDialog.getText(
+            self, 
+            "Edit Dashboard Title", 
+            "Enter new title:",
+            text=self.dashboard_title_text
+        )
+        if ok and new_title:
+            self.dashboard_title_text = new_title
+            self._update_dashboard_title()
+            self.mark_as_unsaved()
+    
+    def _set_title_alignment(self, alignment):
+        """Set the dashboard title alignment"""
+        self.dashboard_title_alignment = alignment
+        self._update_dashboard_title()
+        self.mark_as_unsaved()
+    
+    def _reset_dashboard_title(self):
+        """Reset dashboard title to default"""
+        self.dashboard_title_text = "Dashboard"
+        self.dashboard_title_alignment = Qt.AlignmentFlag.AlignLeft
+        self._update_dashboard_title()
+        self.mark_as_unsaved()
+    
+    def _update_dashboard_title(self):
+        """Update the dashboard title display"""
+        self.dashboard_title.setText(f"<h2>{self.dashboard_title_text}</h2>")
+        self.dashboard_title.setAlignment(self.dashboard_title_alignment)
+        
+        # Force the label to expand to take up space for alignment to work
+        if self.dashboard_title_alignment == Qt.AlignmentFlag.AlignCenter:
+            self.dashboard_title.setMinimumWidth(300)
+        elif self.dashboard_title_alignment == Qt.AlignmentFlag.AlignRight:
+            self.dashboard_title.setMinimumWidth(300)
+        else:
+            self.dashboard_title.setMinimumWidth(0)
+
     def _show_dock_context_menu(self, dock, pos):
         """Right-click context menu for dock widgets"""
         from PySide6.QtWidgets import QMenu
@@ -1465,6 +1548,39 @@ class MainWindow(QMainWindow):
         else:
             menu.addAction("No actions available")
         menu.exec(dock.mapToGlobal(pos))
+
+        # Edit title action
+        edit_action = menu.addAction("Edit Title...")
+        edit_action.triggered.connect(self._edit_dashboard_title)
+        
+        menu.addSeparator()
+        
+        # Alignment submenu
+        align_menu = menu.addMenu("Alignment")
+        
+        left_action = align_menu.addAction("Left")
+        left_action.setCheckable(True)
+        left_action.setChecked(self.dashboard_title_alignment == Qt.AlignmentFlag.AlignLeft)
+        left_action.triggered.connect(lambda: self._set_title_alignment(Qt.AlignmentFlag.AlignLeft))
+        
+        center_action = align_menu.addAction("Center")
+        center_action.setCheckable(True)
+        center_action.setChecked(self.dashboard_title_alignment == Qt.AlignmentFlag.AlignCenter)
+        center_action.triggered.connect(lambda: self._set_title_alignment(Qt.AlignmentFlag.AlignCenter))
+        
+        right_action = align_menu.addAction("Right")
+        right_action.setCheckable(True)
+        right_action.setChecked(self.dashboard_title_alignment == Qt.AlignmentFlag.AlignRight)
+        right_action.triggered.connect(lambda: self._set_title_alignment(Qt.AlignmentFlag.AlignRight))
+        
+        menu.addSeparator()
+        
+        # Reset action
+        reset_action = menu.addAction("Reset to Default")
+        reset_action.triggered.connect(self._reset_dashboard_title)
+        
+        menu.exec(self.dashboard_title.mapToGlobal(pos))
+    
 
     def _next_grid_position(self, positions):
         """Compute next row,col for a new widget using a nearly square grid."""
@@ -1897,12 +2013,15 @@ class MainWindow(QMainWindow):
                 }
             
             # Include data logging settings
+            # Include data logging settings and dashboard title customization
             project_data = {
                 'parameters': self.parameters,
                 'layout': layout_data,
                 'connection_settings': self.connection_settings,
                 'logging_settings': self.logging_settings,
                 'configured_widgets': getattr(self, 'configured_widgets', []),
+                'dashboard_title_text': self.dashboard_title_text,
+                'dashboard_title_alignment': str(self.dashboard_title_alignment.value),
                 'version': '1.0',
                 'created': datetime.now().isoformat()
             }
@@ -1964,6 +2083,16 @@ class MainWindow(QMainWindow):
             # Load configured widgets
             if 'configured_widgets' in project_data:
                 self.configured_widgets = project_data['configured_widgets']
+            
+            # Load dashboard title customization
+            if 'dashboard_title_text' in project_data:
+                self.dashboard_title_text = project_data['dashboard_title_text']
+            if 'dashboard_title_alignment' in project_data:
+                alignment_val = int(project_data['dashboard_title_alignment'])
+                self.dashboard_title_alignment = Qt.AlignmentFlag(alignment_val)
+            self._update_dashboard_title()
+            
+            # Clear existing tabs and data
             
             # Clear existing tabs and data
             self.data_history.clear()
