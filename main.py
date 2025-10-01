@@ -1550,42 +1550,10 @@ class MainWindow(QMainWindow):
             close_action.triggered.connect(self._close_widget_direct)
             menu.addSeparator()
             tile_action = menu.addAction("Tile Evenly")
-            tile_action.triggered.connect(lambda: self._tile_evenly_safe(current_index))
+            tile_action.triggered.connect(lambda: self._tile_evenly_safe(current_index))  # Pass current_index
         else:
             menu.addAction("No actions available")
         menu.exec(dock.mapToGlobal(pos))
-
-        # Edit title action
-        edit_action = menu.addAction("Edit Title...")
-        edit_action.triggered.connect(self._edit_dashboard_title)
-        
-        menu.addSeparator()
-        
-        # Alignment submenu
-        align_menu = menu.addMenu("Alignment")
-        
-        left_action = align_menu.addAction("Left")
-        left_action.setCheckable(True)
-        left_action.setChecked(self.dashboard_title_alignment == Qt.AlignmentFlag.AlignLeft)
-        left_action.triggered.connect(lambda: self._set_title_alignment(Qt.AlignmentFlag.AlignLeft))
-        
-        center_action = align_menu.addAction("Center")
-        center_action.setCheckable(True)
-        center_action.setChecked(self.dashboard_title_alignment == Qt.AlignmentFlag.AlignCenter)
-        center_action.triggered.connect(lambda: self._set_title_alignment(Qt.AlignmentFlag.AlignCenter))
-        
-        right_action = align_menu.addAction("Right")
-        right_action.setCheckable(True)
-        right_action.setChecked(self.dashboard_title_alignment == Qt.AlignmentFlag.AlignRight)
-        right_action.triggered.connect(lambda: self._set_title_alignment(Qt.AlignmentFlag.AlignRight))
-        
-        menu.addSeparator()
-        
-        # Reset action
-        reset_action = menu.addAction("Reset to Default")
-        reset_action.triggered.connect(self._reset_dashboard_title)
-        
-        menu.exec(self.dashboard_title.mapToGlobal(pos))
     
 
     def _next_grid_position(self, positions):
@@ -1681,55 +1649,93 @@ class MainWindow(QMainWindow):
     def _tile_evenly_safe(self, tab_index):
         """Safely tile widgets in a grid pattern"""
         tab_info = self.tab_data.get(tab_index)
-        if not tab_info or not tab_info.get('docks'): return
+        if not tab_info or not tab_info.get('docks'): 
+            return
         
-        docks = list(tab_info['docks'].values())
-        if len(docks) <= 1: return
+        docks_dict = tab_info['docks']
+        docks = list(docks_dict.values())
+        
+        if len(docks) <= 1: 
+            return
         
         mainwindow = tab_info['mainwindow']
+        
         try:
-            # Remove all docks first
+            # Calculate grid dimensions
+            n = len(docks)
+            cols = int(np.ceil(np.sqrt(n)))
+            
+            # Store visibility and floating state
+            dock_states = {}
+            for dock in docks:
+                dock_states[dock] = {
+                    'visible': dock.isVisible(),
+                    'floating': dock.isFloating()
+                }
+                # Make sure it's not floating for tiling
+                if dock.isFloating():
+                    dock.setFloating(False)
+            
+            # Remove all docks from layout
             for dock in docks:
                 mainwindow.removeDockWidget(dock)
             
-            # Calculate grid dimensions for better layout
-            n = len(docks)
-            cols = int(np.ceil(np.sqrt(n)))
-            rows = int(np.ceil(n / cols))
-            
             # Add first dock
             mainwindow.addDockWidget(Qt.DockWidgetArea.LeftDockWidgetArea, docks[0])
+            docks[0].setVisible(True)
+            docks[0].raise_()
             
-            # Create grid layout
+            # Tile based on count
             if n == 2:
-                # Two widgets: side by side
                 mainwindow.splitDockWidget(docks[0], docks[1], Qt.Orientation.Horizontal)
+                docks[1].setVisible(True)
             elif n == 3:
-                # Three widgets: 2 on top, 1 below
                 mainwindow.splitDockWidget(docks[0], docks[1], Qt.Orientation.Horizontal)
                 mainwindow.splitDockWidget(docks[0], docks[2], Qt.Orientation.Vertical)
+                docks[1].setVisible(True)
+                docks[2].setVisible(True)
             elif n == 4:
-                # Four widgets: 2x2 grid
                 mainwindow.splitDockWidget(docks[0], docks[1], Qt.Orientation.Horizontal)
                 mainwindow.splitDockWidget(docks[0], docks[2], Qt.Orientation.Vertical)
                 mainwindow.splitDockWidget(docks[1], docks[3], Qt.Orientation.Vertical)
+                for dock in docks[1:4]:
+                    dock.setVisible(True)
             else:
-                # More than 4: create rows
+                # More than 4: create grid
                 for i, dock in enumerate(docks[1:], 1):
                     if i < cols:
-                        # First row: split horizontally
+                        # First row: horizontal split
                         mainwindow.splitDockWidget(docks[0], dock, Qt.Orientation.Horizontal)
                     else:
-                        # Subsequent rows: split vertically with dock above
+                        # Subsequent rows: vertical split with dock above
                         above_idx = i - cols
-                        if above_idx < len(docks):
+                        if 0 <= above_idx < len(docks):
                             mainwindow.splitDockWidget(docks[above_idx], dock, Qt.Orientation.Vertical)
-                            
+                    dock.setVisible(True)
+            
+            # Ensure all docks are visible and raised
+            for dock in docks:
+                dock.setVisible(True)
+                dock.raise_()
+            
+            # Force layout update
+            mainwindow.update()
+            QApplication.processEvents()
+            
         except Exception as e:
-            # Fallback: simple arrangement
-            mainwindow.addDockWidget(Qt.DockWidgetArea.LeftDockWidgetArea, docks[0])
-            for dock in docks[1:]:
-                mainwindow.tabifyDockWidget(docks[0], dock)
+            # Emergency fallback - make sure docks are visible
+            print(f"Tiling failed: {e}")
+            import traceback
+            traceback.print_exc()
+            
+            for dock in docks:
+                try:
+                    if not dock.parent():
+                        mainwindow.addDockWidget(Qt.DockWidgetArea.LeftDockWidgetArea, dock)
+                    dock.setVisible(True)
+                    dock.show()
+                except Exception as e2:
+                    print(f"Failed to recover dock: {e2}")
 
     def _toggle_float_widget(self, widget_id):
         tab_info = self.tab_data.get(self.tab_widget.currentIndex())
