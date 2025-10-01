@@ -212,6 +212,236 @@ class DataLogger:
 
 
 # --- 2. DATA SIMULATOR & WIDGETS ---
+# --- 2. RAW TELEMETRY MONITOR ---
+
+class RawTelemetryMonitor(QDialog):
+    """Serial monitor-style window for viewing raw incoming data packets"""
+    
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setWindowTitle("Raw Telemetry Monitor")
+        self.setMinimumSize(800, 600)
+        
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(12, 12, 12, 12)
+        layout.setSpacing(8)
+    
+        # Header with stats
+        header = QWidget()
+        header_layout = QHBoxLayout(header)
+        header_layout.setContentsMargins(8, 8, 8, 8)
+        header_layout.setSpacing(16)
+        
+        self.packet_count_label = QLabel("Packets: 0")
+        self.packet_count_label.setStyleSheet("color: #00ff88; font-weight: bold; font-size: 13px;")
+        self.byte_count_label = QLabel("Bytes: 0")
+        self.byte_count_label.setStyleSheet("color: #00bfff; font-weight: bold; font-size: 13px;")
+        self.rate_label = QLabel("Rate: 0.0/s")
+        self.rate_label.setStyleSheet("color: #ffbf00; font-weight: bold; font-size: 13px;")
+        
+        header_layout.addWidget(QLabel("<b>Raw Telemetry Stream</b>"))
+        header_layout.addStretch()
+        header_layout.addWidget(self.packet_count_label)
+        header_layout.addWidget(self.byte_count_label)
+        header_layout.addWidget(self.rate_label)
+        
+        header.setStyleSheet("background-color: #2a2a2a; border-radius: 6px;")
+        layout.addWidget(header)
+
+
+        # Text display area
+        from PySide6.QtWidgets import QTextEdit
+        self.text_display = QTextEdit()
+        self.text_display.setReadOnly(True)
+        self.text_display.setFont(QFont("Consolas", 10))
+        self.text_display.setStyleSheet("""
+            QTextEdit {
+                background-color: #0c0c0c;
+                color: #00ff88;
+                border: 1px solid #333;
+                border-radius: 6px;
+                padding: 8px;
+            }
+        """)
+        self.text_display.setLineWrapMode(QTextEdit.LineWrapMode.NoWrap)
+        layout.addWidget(self.text_display)
+
+
+        # Control buttons
+        btn_layout = QHBoxLayout()
+        btn_layout.setSpacing(8)
+        
+        self.pause_btn = QPushButton("Pause")
+        self.pause_btn.setCheckable(True)
+        self.pause_btn.clicked.connect(self.toggle_pause)
+        
+        self.clear_btn = QPushButton("Clear")
+        self.clear_btn.clicked.connect(self.clear_display)
+        
+        self.autoscroll_btn = QPushButton("Auto-scroll")
+        self.autoscroll_btn.setCheckable(True)
+        self.autoscroll_btn.setChecked(True)
+        
+        self.hex_btn = QPushButton("Show Hex")
+        self.hex_btn.setCheckable(True)
+        
+        self.save_btn = QPushButton("Save to File...")
+        self.save_btn.clicked.connect(self.save_to_file)
+        
+        close_btn = QPushButton("Close")
+        close_btn.clicked.connect(self.close)
+        
+        btn_layout.addWidget(self.pause_btn)
+        btn_layout.addWidget(self.clear_btn)
+        btn_layout.addWidget(self.autoscroll_btn)
+        btn_layout.addWidget(self.hex_btn)
+        btn_layout.addWidget(self.save_btn)
+        btn_layout.addStretch()
+        btn_layout.addWidget(close_btn)
+        
+        layout.addLayout(btn_layout)
+
+
+        # Statistics
+        self.packet_count = 0
+        self.byte_count = 0
+        self.packet_timestamps = []
+        self.is_paused = False
+        self.max_lines = 1000
+        
+        # Apply styling
+        self.setStyleSheet("""
+            QDialog {
+                background-color: #1e1e1e;
+            }
+            QPushButton {
+                background-color: #2a2a2a;
+                border: 1px solid #404040;
+                border-radius: 4px;
+                padding: 8px 16px;
+                color: #e0e0e0;
+                font-weight: 500;
+            }
+            QPushButton:hover {
+                background-color: #333333;
+                border-color: #66b3ff;
+            }
+            QPushButton:checked {
+                background-color: #0a84ff;
+                border-color: #0a84ff;
+            }
+        """)
+
+    def append_packet(self, packet_data):
+        """Append a new packet to the display"""
+        if self.is_paused:
+            return
+        
+        # Update statistics
+        self.packet_count += 1
+        current_time = time.time()
+        self.packet_timestamps.append(current_time)
+        
+        # Calculate rolling rate (last 5 seconds)
+        self.packet_timestamps = [ts for ts in self.packet_timestamps if current_time - ts < 5.0]
+        if len(self.packet_timestamps) > 1:
+            time_span = current_time - self.packet_timestamps[0]
+            rate = len(self.packet_timestamps) / time_span if time_span > 0 else 0.0
+        else:
+            rate = 0.0
+        
+        # Format packet data
+        timestamp_str = datetime.now().strftime('%H:%M:%S.%f')[:-3]
+        
+        if self.hex_btn.isChecked():
+            # Show as hex
+            if isinstance(packet_data, list):
+                hex_data = ' '.join([f'{int(v):02X}' if v is not None else 'XX' for v in packet_data])
+                data_str = f"[HEX] {hex_data}"
+                self.byte_count += len(packet_data)
+            else:
+                data_str = f"[HEX] {str(packet_data)}"
+                self.byte_count += len(str(packet_data))
+        else:
+            # Show as decimal/json
+            if isinstance(packet_data, list):
+                data_str = f"[{', '.join([f'{v:.2f}' if v is not None else 'NULL' for v in packet_data])}]"
+                self.byte_count += len(packet_data) * 4
+            else:
+                data_str = str(packet_data)
+                self.byte_count += len(str(packet_data))
+        
+        # Create formatted line
+        line = f"<span style='color: #888888;'>{timestamp_str}</span> " \
+               f"<span style='color: #00bfff;'>[PKT {self.packet_count:06d}]</span> " \
+               f"<span style='color: #00ff88;'>{data_str}</span>"
+        
+        # Append to display
+        self.text_display.append(line)
+        
+        # Limit number of lines
+        doc = self.text_display.document()
+        if doc.blockCount() > self.max_lines:
+            cursor = self.text_display.textCursor()
+            cursor.movePosition(cursor.MoveOperation.Start)
+            cursor.select(cursor.SelectionType.LineUnderCursor)
+            cursor.removeSelectedText()
+            cursor.deleteChar()
+        
+        # Auto-scroll to bottom
+        if self.autoscroll_btn.isChecked():
+            scrollbar = self.text_display.verticalScrollBar()
+            scrollbar.setValue(scrollbar.maximum())
+        
+        # Update labels
+        self.packet_count_label.setText(f"Packets: {self.packet_count}")
+        
+        if self.byte_count < 1024:
+            byte_str = f"{self.byte_count} B"
+        elif self.byte_count < 1024 * 1024:
+            byte_str = f"{self.byte_count/1024:.1f} KB"
+        else:
+            byte_str = f"{self.byte_count/(1024*1024):.1f} MB"
+        self.byte_count_label.setText(f"Bytes: {byte_str}")
+        
+        self.rate_label.setText(f"Rate: {rate:.1f}/s")
+
+    def toggle_pause(self):
+        """Toggle pause state"""
+        self.is_paused = self.pause_btn.isChecked()
+        if self.is_paused:
+            self.pause_btn.setText("Resume")
+            self.text_display.append("<span style='color: #ffbf00;'>[PAUSED]</span>")
+        else:
+            self.pause_btn.setText("Pause")
+            self.text_display.append("<span style='color: #00ff88;'>[RESUMED]</span>")
+    
+    def clear_display(self):
+        """Clear the display"""
+        self.text_display.clear()
+        self.packet_count = 0
+        self.byte_count = 0
+        self.packet_timestamps.clear()
+        self.packet_count_label.setText("Packets: 0")
+        self.byte_count_label.setText("Bytes: 0")
+        self.rate_label.setText("Rate: 0.0/s")
+
+    def save_to_file(self):
+        """Save the current display to a file"""
+        path, _ = QFileDialog.getSaveFileName(
+            self, 
+            "Save Raw Telemetry", 
+            f"raw_telemetry_{datetime.now().strftime('%Y%m%d_%H%M%S')}.txt",
+            "Text Files (*.txt);;All Files (*)"
+        )
+        if path:
+            try:
+                with open(path, 'w', encoding='utf-8') as f:
+                    f.write(self.text_display.toPlainText())
+                QMessageBox.information(self, "Saved", f"Raw telemetry saved to:\n{path}")
+            except Exception as e:
+                QMessageBox.critical(self, "Error", f"Failed to save file:\n{str(e)}")
+
 
 # --- MODIFIED: Now works with an array/list of data ---
 class DataSimulator(QThread):
@@ -1024,6 +1254,9 @@ class MainWindow(QMainWindow):
         # Initialize data logger
         self.data_logger = DataLogger()
         self.logging_settings = None
+
+        # Raw telemetry monitor
+        self.raw_tlm_monitor = None
         
         # Track unsaved changes
         self.has_unsaved_changes = False
@@ -1492,6 +1725,10 @@ class MainWindow(QMainWindow):
         if self.data_logger.is_logging:
             self.data_logger.log_data(packet, self.data_history)
 
+        # Send to raw telemetry monitor if open
+        if self.raw_tlm_monitor and self.raw_tlm_monitor.isVisible():
+            self.raw_tlm_monitor.append_packet(packet)
+
     def restart_simulator(self):
         if self.simulator: 
             self.simulator.stop()
@@ -1762,12 +1999,21 @@ class MainWindow(QMainWindow):
 
         add_tab_action = QAction("Add Tab", self); add_tab_action.triggered.connect(lambda: self.add_new_tab())
         rename_tab_action = QAction("Rename Current Tab", self); rename_tab_action.triggered.connect(self.rename_current_tab)
-        view_menu.addAction(add_tab_action); view_menu.addAction(rename_tab_action)
-
+        raw_tlm_action = QAction("Raw Telemetry Monitor...", self); raw_tlm_action.triggered.connect(self.open_raw_telemetry_monitor)
+        view_menu.addAction(add_tab_action); view_menu.addAction(rename_tab_action); view_menu.addSeparator(); view_menu.addAction(raw_tlm_action)
 
         help_menu = menubar.addMenu("Help")
         about_action = QAction("About", self); about_action.triggered.connect(self.show_about_dialog)
         help_menu.addAction(about_action)
+    
+    def open_raw_telemetry_monitor(self):
+        """Open the raw telemetry monitor window"""
+        if self.raw_tlm_monitor is None or not self.raw_tlm_monitor.isVisible():
+            self.raw_tlm_monitor = RawTelemetryMonitor(self)
+            self.raw_tlm_monitor.show()
+        else:
+            self.raw_tlm_monitor.raise_()
+            self.raw_tlm_monitor.activateWindow()
     
     def show_about_dialog(self):
         """Display the About dialog with team information"""
