@@ -297,8 +297,13 @@ class DataLoggingDialog(QDialog):
         
         # File path
         path_layout = QHBoxLayout()
-        self.file_path_edit = QLineEdit()
-        self.file_path_edit.setPlaceholderText("Leave empty for auto-generated filename")
+        self.file_path_edit = QLineEdit()  # Fixed: was self.path_edit
+        if current_settings and current_settings.get('file_path'):  # Fixed: was settings
+            self.file_path_edit.setText(current_settings['file_path'])
+        else:
+            # Show default location hint
+            self.file_path_edit.setPlaceholderText("Leave empty for auto-generated file in logs/ folder")
+
         browse_btn = QPushButton("Browse...")
         browse_btn.clicked.connect(self.browse_file)
         path_layout.addWidget(self.file_path_edit)
@@ -356,17 +361,29 @@ class DataLoggingDialog(QDialog):
         if current_settings:
             self.load_settings(current_settings)
     
-    def browse_file(self):
-        """Browse for log file location"""
-        format_ext = "csv" if self.format_combo.currentText() == "CSV" else "json"
-        file_path, _ = QFileDialog.getSaveFileName(
-            self, 
-            "Select Log File Location", 
-            f"dashboard_data.{format_ext}",
-            f"{format_ext.upper()} Files (*.{format_ext})"
+    def browse_file(self):  # Fixed: added self parameter
+        # Ensure logs directory exists
+        logs_dir = "logs"
+        if not os.path.exists(logs_dir):
+            os.makedirs(logs_dir)
+        
+        # Start file dialog in logs directory
+        default_name = f"dashboard_data_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+        if self.format_combo.currentText().lower() == 'csv':
+            default_name += ".csv"
+            file_filter = "CSV Files (*.csv);;All Files (*)"
+        else:
+            default_name += ".json"
+            file_filter = "JSON Files (*.json);;All Files (*)"
+        
+        path, _ = QFileDialog.getSaveFileName(
+            self,
+            "Select Log File Location",
+            os.path.join(logs_dir, default_name),
+            file_filter
         )
-        if file_path:
-            self.file_path_edit.setText(file_path)
+        if path:
+            self.file_path_edit.setText(path)  # Fixed: was self.path_edit
     
     def select_all_params(self):
         """Select all parameters"""

@@ -112,12 +112,17 @@ class DataLogger:
         if file_path:
             self.log_file_path = file_path
         else:
-            # Generate default filename with timestamp
+            # Create logs directory if it doesn't exist
+            logs_dir = "logs"
+            if not os.path.exists(logs_dir):
+                os.makedirs(logs_dir)
+            
+            # Generate default filename with timestamp in logs folder
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
             if format_type == 'csv':
-                self.log_file_path = f"dashboard_data_{timestamp}.csv"
+                self.log_file_path = os.path.join(logs_dir, f"dashboard_data_{timestamp}.csv")
             else:
-                self.log_file_path = f"dashboard_data_{timestamp}.json"
+                self.log_file_path = os.path.join(logs_dir, f"dashboard_data_{timestamp}.json")
     
     def start_logging(self):
         """Start data logging"""
@@ -1894,16 +1899,54 @@ class MainWindow(QMainWindow):
             selection = dialog.get_selection()
             if selection: self.add_widget_to_dashboard(selection, index)
     def remove_selected_display(self):
-        index = self.tab_widget.currentIndex();
-        if index < 0: return
-        selected_items = self.active_displays_list.selectedItems()
-        if not selected_items: return
-        widget_id = selected_items[0].data(Qt.ItemDataRole.UserRole)
-        tab_info = self.tab_data[index]
-        if widget_id in tab_info['docks']: tab_info['docks'][widget_id].deleteLater(); del tab_info['docks'][widget_id]
-        if widget_id in tab_info['widgets']: del tab_info['widgets'][widget_id]
-        if widget_id in tab_info['configs']: del tab_info['configs'][widget_id]
-        self.refresh_active_displays_list()
+        """Remove a widget via dialog selection"""
+        index = self.tab_widget.currentIndex()
+        if index < 0: 
+            QMessageBox.warning(self, "No Tab", "No active tab.")
+            return
+        
+        tab_info = self.tab_data.get(index)
+        if not tab_info or not tab_info['configs']:
+            QMessageBox.information(self, "No Widgets", "No widgets to remove in current tab.")
+            return
+        
+        # Create a selection dialog
+        widget_names = []
+        widget_ids = []
+        for widget_id, config in tab_info['configs'].items():
+            param_names = [p['name'] for p in self.parameters if p['id'] in config['param_ids']]
+            display_name = f"{', '.join(param_names)} ({config['displayType']})"
+            widget_names.append(display_name)
+            widget_ids.append(widget_id)
+        
+        item, ok = QInputDialog.getItem(
+            self, 
+            "Remove Widget", 
+            "Select widget to remove:",
+            widget_names,
+            0,
+            False
+        )
+        
+        if ok and item:
+            # Find the widget_id for the selected item
+            selected_index = widget_names.index(item)
+            widget_id = widget_ids[selected_index]
+            
+            # Remove the widget
+            if widget_id in tab_info['docks']:
+                tab_info['docks'][widget_id].deleteLater()
+                del tab_info['docks'][widget_id]
+            if widget_id in tab_info['widgets']:
+                del tab_info['widgets'][widget_id]
+            if widget_id in tab_info['configs']:
+                del tab_info['configs'][widget_id]
+            if 'layout_positions' in tab_info and widget_id in tab_info['layout_positions']:
+                del tab_info['layout_positions'][widget_id]
+            
+            self.refresh_active_displays_list()
+            self.mark_as_unsaved()
+
     def refresh_active_displays_list(self):
         self.active_displays_list.clear(); index = self.tab_widget.currentIndex()
         if index < 0 or index not in self.tab_data: return
@@ -2244,229 +2287,265 @@ class MainWindow(QMainWindow):
             self.raw_tlm_monitor.activateWindow()
     
     def show_about_dialog(self):
-        """Display the About dialog with team information"""
+        """Display the About dialog with comprehensive team and project information"""
         
         dialog = QDialog(self)
-        dialog.setWindowTitle("About")
-        dialog.setFixedSize(580, 620)
+        dialog.setWindowTitle("About Dashboard Builder")
+        dialog.setFixedSize(650, 700)
         
-        # Apply modern styling with MUCH better contrast
+        # Modern professional styling with excellent contrast
         dialog.setStyleSheet("""
             QDialog {
                 background-color: #1a1a1a;
             }
             QLabel {
-                color: #e0e0e0;
+                color: #e8e8e8;
+            }
+            QLabel#sectionHeader {
+                color: #ffffff;
+                font-weight: 600;
+                font-size: 13px;
+                padding: 8px 0 4px 0;
             }
             QLabel a {
-                color: #66b3ff;
+                color: #4a9eff;
                 text-decoration: none;
-                font-weight: 500;
             }
             QLabel a:hover {
-                color: #99ccff;
+                color: #6bb3ff;
                 text-decoration: underline;
             }
             QFrame#separator {
-                background-color: #404040;
+                background-color: #3a3a3a;
                 max-height: 1px;
                 min-height: 1px;
             }
-            QFrame#linkCard {
-                background-color: #2a2a2a;
-                border: 1px solid #3a3a3a;
-                border-radius: 8px;
+            QFrame#card {
+                background-color: #242424;
+                border: 1px solid #333333;
+                border-radius: 6px;
+                padding: 12px;
             }
             QPushButton {
-                background-color: #2a2a2a;
+                background-color: #2d2d2d;
                 border: 1px solid #404040;
-                border-radius: 6px;
-                padding: 10px 24px;
-                color: #e0e0e0;
+                border-radius: 5px;
+                padding: 9px 20px;
+                color: #e8e8e8;
                 font-size: 11px;
                 font-weight: 500;
             }
             QPushButton:hover {
-                background-color: #333333;
-                border-color: #66b3ff;
+                background-color: #383838;
+                border-color: #4a9eff;
             }
             QPushButton:pressed {
-                background-color: #202020;
+                background-color: #252525;
             }
-            QLabel#linkText {
-                color: #d0d0d0;
+            QScrollArea {
+                border: none;
+                background-color: transparent;
+            }
+            QScrollBar:vertical {
+                background: #2a2a2a;
+                width: 10px;
+                border-radius: 5px;
+            }
+            QScrollBar::handle:vertical {
+                background: #4a4a4a;
+                border-radius: 5px;
+            }
+            QScrollBar::handle:vertical:hover {
+                background: #5a5a5a;
             }
         """)
         
         layout = QVBoxLayout()
-        layout.setContentsMargins(40, 35, 40, 30)
+        layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(0)
         
-        # Logo section
+        # Scrollable content
+        from PySide6.QtWidgets import QScrollArea
+        scroll = QScrollArea()
+        scroll.setWidgetResizable(True)
+        scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        
+        content = QWidget()
+        content_layout = QVBoxLayout(content)
+        content_layout.setContentsMargins(32, 28, 32, 28)
+        content_layout.setSpacing(20)
+        
+        # Logo and title section
         logo_label = QLabel()
         logo_path = os.path.join("public", "ign_logo_wht.png")
         if os.path.exists(logo_path):
             pixmap = QPixmap(logo_path)
-            scaled_pixmap = pixmap.scaled(140, 140, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation)
+            scaled_pixmap = pixmap.scaled(100, 100, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation)
             logo_label.setPixmap(scaled_pixmap)
         else:
             logo_label.setText("IGNITION")
-            font = QFont("Arial", 32, QFont.Weight.Bold)
+            font = QFont("Arial", 24, QFont.Weight.Bold)
             logo_label.setFont(font)
-            logo_label.setStyleSheet("color: #66b3ff; letter-spacing: 3px;")
+            logo_label.setStyleSheet("color: #4a9eff;")
         logo_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        layout.addWidget(logo_label)
-        layout.addSpacing(24)
+        content_layout.addWidget(logo_label)
         
-        # App name
         app_name = QLabel("Dashboard Builder")
         app_name.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        font = QFont("Arial", 22, QFont.Weight.Bold)
-        app_name.setFont(font)
-        app_name.setStyleSheet("color: #ffffff; letter-spacing: 0.5px;")
-        layout.addWidget(app_name)
-        layout.addSpacing(10)
+        app_name.setFont(QFont("Arial", 20, QFont.Weight.Bold))
+        app_name.setStyleSheet("color: #ffffff; padding: 8px 0;")
+        content_layout.addWidget(app_name)
         
-        # Version badge
-        version_label = QLabel("v1.0.0")
+        version_label = QLabel("Version 2.0.0")
         version_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        font = QFont("Arial", 10)
-        version_label.setFont(font)
-        version_label.setStyleSheet("""
-            color: #b0b0b0; 
-            background-color: #2a2a2a; 
-            padding: 4px 12px; 
-            border-radius: 12px;
-        """)
-        version_label.setFixedWidth(80)
-        
-        version_container = QHBoxLayout()
-        version_container.addStretch()
-        version_container.addWidget(version_label)
-        version_container.addStretch()
-        layout.addLayout(version_container)
-        layout.addSpacing(18)
+        version_label.setFont(QFont("Arial", 10))
+        version_label.setStyleSheet("color: #9a9a9a; padding-bottom: 4px;")
+        content_layout.addWidget(version_label)
         
         # Description
-        description = QLabel("Professional telemetry visualization and\nreal-time monitoring platform")
-        description.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        font = QFont("Arial", 11)
-        description.setFont(font)
-        description.setStyleSheet("color: #b0b0b0; line-height: 1.6;")
-        layout.addWidget(description)
-        layout.addSpacing(28)
+        desc = QLabel("Professional real-time telemetry visualization and monitoring platform for aerospace applications, embedded systems, and data acquisition.")
+        desc.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        desc.setWordWrap(True)
+        desc.setFont(QFont("Arial", 10))
+        desc.setStyleSheet("color: #b8b8b8; line-height: 1.5; padding: 0 16px;")
+        content_layout.addWidget(desc)
         
-        # Links section in a card - IMPROVED VISIBILITY
+        content_layout.addSpacing(12)
+        
+        # Team Ignition section
+        team_header = QLabel("About Team Ignition")
+        team_header.setObjectName("sectionHeader")
+        content_layout.addWidget(team_header)
+        
+        team_card = QFrame()
+        team_card.setObjectName("card")
+        team_layout = QVBoxLayout(team_card)
+        team_layout.setContentsMargins(12, 12, 12, 12)
+        team_layout.setSpacing(8)
+        
+        team_info = QLabel(
+            "Official student rocketry team of <b>Vellore Institute of Technology, Chennai</b>. "
+            "We design, build, and launch experimental rockets while developing all subsystems in-house — "
+            "from propulsion and avionics to recovery systems and ground support equipment."
+        )
+        team_info.setWordWrap(True)
+        team_info.setFont(QFont("Arial", 10))
+        team_info.setStyleSheet("color: #d0d0d0; line-height: 1.5;")
+        team_layout.addWidget(team_info)
+        
+        content_layout.addWidget(team_card)
+        content_layout.addSpacing(8)
+        
+        # Links section
+        links_header = QLabel("Resources & Community")
+        links_header.setObjectName("sectionHeader")
+        content_layout.addWidget(links_header)
+        
         links_card = QFrame()
-        links_card.setObjectName("linkCard")
+        links_card.setObjectName("card")
         links_layout = QVBoxLayout(links_card)
-        links_layout.setContentsMargins(24, 20, 24, 20)
-        links_layout.setSpacing(16)
+        links_layout.setContentsMargins(12, 10, 12, 10)
+        links_layout.setSpacing(10)
         
-        # Create clickable link rows with better contrast
-        def create_link_row(icon, text, url):
+        def create_link(icon, text, url):
             row = QHBoxLayout()
-            row.setSpacing(16)
-            
-            icon_label = QLabel(icon)
-            icon_label.setFixedWidth(28)
-            font = QFont("Arial", 16)
-            icon_label.setFont(font)
-            icon_label.setStyleSheet("color: #ffffff;")
-            
-            link = QLabel(f'<a href="{url}" style="color: #66b3ff; text-decoration: none;">{text}</a>')
-            link.setOpenExternalLinks(True)
-            link.setTextInteractionFlags(Qt.TextInteractionFlag.TextBrowserInteraction)
-            link.setObjectName("linkText")
-            font = QFont("Arial", 12)
-            link.setFont(font)
-            link.setStyleSheet("color: #d0d0d0;")
-            
-            row.addWidget(icon_label)
-            row.addWidget(link)
+            row.setSpacing(12)
+            icon_lbl = QLabel(icon)
+            icon_lbl.setFixedWidth(24)
+            icon_lbl.setFont(QFont("Arial", 14))
+            icon_lbl.setStyleSheet("color: #e8e8e8;")
+            link_lbl = QLabel(f'<a href="{url}">{text}</a>')
+            link_lbl.setOpenExternalLinks(True)
+            link_lbl.setFont(QFont("Arial", 10))
+            row.addWidget(icon_lbl)
+            row.addWidget(link_lbl)
             row.addStretch()
             return row
         
-        links_layout.addLayout(create_link_row(
-            "⚡", "GitHub Repository", 
-            "https://github.com/teamignitionvitc/Dashboard-Builder"
-        ))
-        links_layout.addLayout(create_link_row(
-            "🌐", "Official Website", 
-            "https://teamignition.space"
-        ))
-        links_layout.addLayout(create_link_row(
-            "📖", "Documentation", 
-            "https://github.com/teamignitionvitc/Dashboard-Builder/blob/main/README.md"
-        ))
+        links_layout.addLayout(create_link("📦", "GitHub Repository", "https://github.com/teamignitionvitc/Dashboard-Builder"))
+        links_layout.addLayout(create_link("📖", "Documentation", "https://github.com/teamignitionvitc/Dashboard-Builder#readme"))
+        links_layout.addLayout(create_link("🌐", "Team Website", "https://teamignition.space"))
+        links_layout.addLayout(create_link("🐛", "Report Issues", "https://github.com/teamignitionvitc/Dashboard-Builder/issues"))
         
-        layout.addWidget(links_card)
-        layout.addSpacing(26)
+        content_layout.addWidget(links_card)
+        content_layout.addSpacing(8)
         
-        # Social Media section
-        social_container = QVBoxLayout()
-        social_container.setSpacing(10)
+        # Contributing section
+        contrib_header = QLabel("Contributing")
+        contrib_header.setObjectName("sectionHeader")
+        content_layout.addWidget(contrib_header)
         
+        contrib_card = QFrame()
+        contrib_card.setObjectName("card")
+        contrib_layout = QVBoxLayout(contrib_card)
+        contrib_layout.setContentsMargins(12, 12, 12, 12)
+        contrib_layout.setSpacing(8)
+        
+        contrib_text = QLabel(
+            "We welcome contributions from the community! Whether it's bug fixes, new features, "
+            "documentation improvements, or testing — your help makes this project better.<br><br>"
+            "To contribute: Fork the repository, create a feature branch, commit your changes, "
+            "and submit a pull request. Check our GitHub for contribution guidelines."
+        )
+        contrib_text.setWordWrap(True)
+        contrib_text.setFont(QFont("Arial", 10))
+        contrib_text.setStyleSheet("color: #d0d0d0; line-height: 1.5;")
+        contrib_layout.addWidget(contrib_text)
+        
+        content_layout.addWidget(contrib_card)
+        content_layout.addSpacing(8)
+        
+        # Social media
         social_header = QLabel("Connect With Us")
-        social_header.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        font = QFont("Arial", 10, QFont.Weight.Bold)
-        social_header.setFont(font)
-        social_header.setStyleSheet("color: #d0d0d0; text-transform: uppercase; letter-spacing: 1px;")
-        social_container.addWidget(social_header)
+        social_header.setObjectName("sectionHeader")
+        content_layout.addWidget(social_header)
         
         social_links = QLabel(
-            '<a href="https://x.com/ignitiontech23" style="color: #66b3ff;">Twitter</a>  ·  '
-            '<a href="https://www.linkedin.com/in/teamignition/" style="color: #66b3ff;">LinkedIn</a>  ·  '
-            '<a href="https://www.instagram.com/ignition_vitc" style="color: #66b3ff;">Instagram</a>'
+            '<a href="https://x.com/ignitiontech23">Twitter/X</a>  •  '
+            '<a href="https://www.linkedin.com/in/teamignition/">LinkedIn</a>  •  '
+            '<a href="https://www.instagram.com/ignition_vitc">Instagram</a>'
         )
         social_links.setAlignment(Qt.AlignmentFlag.AlignCenter)
         social_links.setOpenExternalLinks(True)
-        social_links.setTextInteractionFlags(Qt.TextInteractionFlag.TextBrowserInteraction)
-        font = QFont("Arial", 11)
-        social_links.setFont(font)
-        social_container.addWidget(social_links)
+        social_links.setFont(QFont("Arial", 10))
+        social_links.setStyleSheet("padding: 6px 0;")
+        content_layout.addWidget(social_links)
         
-        layout.addLayout(social_container)
-        layout.addSpacing(28)
+        content_layout.addSpacing(12)
         
-        # Separator
-        separator = QFrame()
-        separator.setObjectName("separator")
-        layout.addWidget(separator)
-        layout.addSpacing(20)
+        # License section
+        license_header = QLabel("License")
+        license_header.setObjectName("sectionHeader")
+        content_layout.addWidget(license_header)
         
-        # Copyright footer
-        footer_layout = QVBoxLayout()
-        footer_layout.setSpacing(6)
+        license_text = QLabel(
+            "GNU General Public License v3.0 with additional restrictions<br>"
+            "© 2025 Team Ignition Software Department"
+        )
+        license_text.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        license_text.setFont(QFont("Arial", 9))
+        license_text.setStyleSheet("color: #888888; line-height: 1.4;")
+        content_layout.addWidget(license_text)
         
-        copyright_label = QLabel("© 2025 Team Ignition Software Department")
-        copyright_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        font = QFont("Arial", 9)
-        copyright_label.setFont(font)
-        copyright_label.setStyleSheet("color: #909090;")
-        footer_layout.addWidget(copyright_label)
+        scroll.setWidget(content)
+        layout.addWidget(scroll)
         
-        rights_label = QLabel("All rights reserved")
-        rights_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        font = QFont("Arial", 8)
-        rights_label.setFont(font)
-        rights_label.setStyleSheet("color: #707070;")
-        footer_layout.addWidget(rights_label)
+        # Close button at bottom
+        button_container = QWidget()
+        button_container.setStyleSheet("background-color: #1e1e1e; border-top: 1px solid #2a2a2a;")
+        button_layout = QHBoxLayout(button_container)
+        button_layout.setContentsMargins(16, 12, 16, 12)
         
-        layout.addLayout(footer_layout)
-        layout.addSpacing(16)
-        
-        # Close button
         close_btn = QPushButton("Close")
+        close_btn.setMinimumWidth(100)
         close_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         close_btn.clicked.connect(dialog.accept)
         
-        btn_layout = QHBoxLayout()
-        btn_layout.addStretch()
-        btn_layout.addWidget(close_btn)
-        btn_layout.addStretch()
+        button_layout.addStretch()
+        button_layout.addWidget(close_btn)
+        button_layout.addStretch()
         
-        layout.addLayout(btn_layout)
+        layout.addWidget(button_container)
         
         dialog.setLayout(layout)
         dialog.exec()
@@ -2482,124 +2561,256 @@ class MainWindow(QMainWindow):
         self.update_status_bar()
 
     def _build_status_bar(self):
-            sb = self.statusBar()
-            sb.setStyleSheet("""
-                QStatusBar {
-                    background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
-                        stop:0 #1565c0, stop:1 #1976d2);
-                    border-top: 1px solid #2196f3;
-                    color: #ffffff;
-                    padding: 8px 16px;
-                    font-size: 12px;
-                    font-weight: 600;
-                }
-                QStatusBar QLabel {
-                    padding: 6px 12px;
-                    margin: 0 4px;
-                    border-radius: 4px;
-                    background-color: rgba(0, 0, 0, 0.2);
-                    color: #ffffff;
-                    font-weight: 600;
-                }
-                QStatusBar QLabel#SBClock {
-                    font-family: 'Consolas', 'Courier New', monospace;
-                    font-size: 12px;
-                    letter-spacing: 0.3px;
-                    background-color: rgba(0, 0, 0, 0.25);
-                }
-                QStatusBar QLabel#SBConn {
-                    background-color: rgba(0, 0, 0, 0.25);
-                }
-                QStatusBar QLabel#SBStatus {
-                    background-color: rgba(76, 175, 80, 0.35);
-                    font-weight: 700;
-                }
-                QStatusBar QLabel#SBMetric {
-                    background-color: rgba(0, 0, 0, 0.2);
-                    min-width: 85px;
-                }
-                QStatusBar QLabel#Separator {
-                    background-color: transparent;
-                    color: rgba(255, 255, 255, 0.3);
-                    font-weight: normal;
-                    padding: 0 2px;
-                    margin: 0;
-                }
-            """)
+        sb = self.statusBar()
+        sb.setStyleSheet("""
+            QStatusBar {
+                background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
+                    stop:0 #1565c0, stop:1 #1976d2);
+                border-top: 1px solid #2196f3;
+                color: #ffffff;
+                padding: 6px 20px;
+                font-size: 11px;
+                font-weight: 600;
+            }
+            QStatusBar QLabel {
+                color: #ffffff;
+                padding: 0 12px;
+                margin: 0;
+                background: transparent;
+                border: none;
+                font-weight: 600;
+            }
+            QStatusBar QLabel#SBClock {
+                font-family: 'Consolas', 'Courier New', monospace;
+                color: #ffffff;
+                font-size: 11px;
+                letter-spacing: 0.5px;
+                font-weight: 700;
+            }
+            QStatusBar QLabel#SBConnected {
+                color: #ffffff;
+                font-weight: 700;
+            }
+            QStatusBar QLabel#SBDisconnected {
+                color: #ffcdd2;
+                font-weight: 700;
+            }
+            QStatusBar QLabel#SBStreaming {
+                color: #ffffff;
+                font-weight: 700;
+            }
+            QStatusBar QLabel#SBPaused {
+                color: #ffe0b2;
+                font-weight: 700;
+            }
+            QStatusBar QLabel#SBValue {
+                color: #e3f2fd;
+                font-family: 'Consolas', 'Courier New', monospace;
+                font-size: 10px;
+                font-weight: 600;
+            }
+            QStatusBar QLabel#Separator {
+                color: rgba(255, 255, 255, 0.4);
+                padding: 0 4px;
+                font-weight: normal;
+            }
+            QStatusBar QPushButton {
+                background: rgba(255, 255, 255, 0.15);
+                border: 1px solid rgba(255, 255, 255, 0.3);
+                border-radius: 4px;
+                color: #ffffff;
+                padding: 4px 12px;
+                font-size: 10px;
+                font-weight: 600;
+                margin: 0 8px;
+            }
+            QStatusBar QPushButton:hover {
+                background: rgba(255, 255, 255, 0.25);
+                border-color: rgba(255, 255, 255, 0.5);
+            }
+            QStatusBar QPushButton:pressed {
+                background: rgba(255, 255, 255, 0.1);
+            }
+            QStatusBar QPushButton#LoggingActive {
+                background: rgba(76, 175, 80, 0.3);
+                border-color: rgba(129, 199, 132, 0.6);
+            }
+            QStatusBar QPushButton#LoggingActive:hover {
+                background: rgba(76, 175, 80, 0.4);
+            }
+        """)
+        
+        # Clock - always visible
+        self.clock_label = QLabel("")
+        self.clock_label.setObjectName("SBClock")
+        self.clock_label.setToolTip("Current Time")
+        
+        # Connection status - hidden initially
+        self.conn_label = QLabel("")
+        self.conn_label.setToolTip("Connection Status")
+        self.conn_label.setVisible(False)
+        
+        # Stream status - hidden initially
+        self.status_label = QLabel("")
+        self.status_label.setToolTip("Stream Status")
+        self.status_label.setVisible(False)
+        
+        # Logging button - hidden initially
+        self.logging_btn = QPushButton("Start Logging")
+        self.logging_btn.setToolTip("Click to start/stop data logging")
+        self.logging_btn.clicked.connect(self.toggle_logging_from_statusbar)
+        self.logging_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.logging_btn.setVisible(False)
+        
+        # Metrics - hidden initially
+        self.uptime_label = QLabel("")
+        self.uptime_label.setObjectName("SBValue")
+        self.uptime_label.setToolTip("Dashboard Uptime")
+        self.uptime_label.setVisible(False)
+        
+        self.packets_label = QLabel("")
+        self.packets_label.setObjectName("SBValue")
+        self.packets_label.setToolTip("Packets Received")
+        self.packets_label.setVisible(False)
+        
+        self.rate_label = QLabel("")
+        self.rate_label.setObjectName("SBValue")
+        self.rate_label.setToolTip("Data Rate")
+        self.rate_label.setVisible(False)
+        
+        self.rx_label = QLabel("")
+        self.rx_label.setObjectName("SBValue")
+        self.rx_label.setToolTip("Total Data Received")
+        self.rx_label.setVisible(False)
+        
+        # Separators - hidden initially
+        self.sep1 = QLabel("•")
+        self.sep1.setObjectName("Separator")
+        self.sep1.setVisible(False)
+        
+        self.sep2 = QLabel("•")
+        self.sep2.setObjectName("Separator")
+        self.sep2.setVisible(False)
+        
+        self.sep3 = QLabel("•")
+        self.sep3.setObjectName("Separator")
+        self.sep3.setVisible(False)
+        
+        self.sep4 = QLabel("•")
+        self.sep4.setObjectName("Separator")
+        self.sep4.setVisible(False)
+        
+        # Layout - Left side
+        sb.addWidget(self.clock_label)
+        sb.addWidget(self.sep1)
+        sb.addWidget(self.conn_label)
+        sb.addWidget(self.sep2)
+        sb.addWidget(self.status_label)
+        sb.addWidget(self.logging_btn)
+        
+        # Right side - use addPermanentWidget for right alignment
+        sb.addPermanentWidget(self.uptime_label)
+        sb.addPermanentWidget(self.sep3)
+        sb.addPermanentWidget(self.packets_label)
+        sb.addPermanentWidget(self.sep4)
+        sb.addPermanentWidget(self.rate_label)
+        sb.addPermanentWidget(self.rx_label)
+        
+        # Initialize tracking
+        self.start_time = time.time()
+        self.packet_count = 0
+        self.packet_rate = 0.0
+        self.packet_timestamps = []
+        
+        # Update timer
+        self.clock_timer = QTimer(self)
+        self.clock_timer.timeout.connect(self.update_status_bar)
+        self.clock_timer.start(1000)
+
+    def toggle_logging_from_statusbar(self):
+        """Toggle data logging from status bar button"""
+        if self.data_logger.is_logging:
+            # Stop logging
+            self.stop_logging()
+        else:
+            # Start logging - check if configured first
+            if not self.logging_settings:
+                # Open configuration dialog
+                reply = QMessageBox.question(
+                    self, 
+                    "Configure Logging", 
+                    "Data logging is not configured. Would you like to configure it now?",
+                    QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
+                )
+                if reply == QMessageBox.StandardButton.Yes:
+                    self.open_logging_config()
+                    # After configuration, ask if they want to start
+                    if self.logging_settings:
+                        start_reply = QMessageBox.question(
+                            self, 
+                            "Start Logging", 
+                            "Configuration saved. Start logging now?",
+                            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
+                        )
+                        if start_reply == QMessageBox.StandardButton.Yes:
+                            self.start_logging()
+            else:
+                # Configuration exists, start logging
+                self.start_logging()
+        
+        # Update button appearance
+        self.update_logging_button()
+
+    def update_logging_button(self):
+        """Update logging button text and style based on state"""
+        if self.data_logger.is_logging:
+            self.logging_btn.setText("Stop Logging")
+            self.logging_btn.setObjectName("LoggingActive")
+            self.logging_btn.setStyleSheet("")  # Reset to apply new object name
             
-            # Clock
-            self.clock_label = QLabel("")
-            self.clock_label.setObjectName("SBClock")
-            self.clock_label.setToolTip("System Time")
+            # Update header status
+            filename = os.path.basename(self.data_logger.log_file_path) if self.data_logger.log_file_path else "unknown"
+            self.logging_status_label.setText(f"Logging: ON ({filename})")
+            self.logging_status_label.setStyleSheet("color: #21b35a; font-weight: bold;")
+        else:
+            self.logging_btn.setText("Start Logging")
+            self.logging_btn.setObjectName("")  # Remove object name
+            self.logging_btn.setStyleSheet("")  # Reset styling
             
-            # Connection status
-            self.conn_label = QLabel("NOT CONNECTED")
-            self.conn_label.setObjectName("SBConn")
-            self.conn_label.setToolTip("Connection Details")
-            
-            # Stream status
-            self.status_label = QLabel("READY")
-            self.status_label.setObjectName("SBStatus")
-            self.status_label.setToolTip("Stream Status")
-            
-            # Metrics
-            self.uptime_label = QLabel("UPTIME: 00:00:00")
-            self.uptime_label.setObjectName("SBMetric")
-            self.uptime_label.setToolTip("Dashboard Runtime")
-            
-            self.rx_label = QLabel("RX: 0 B")
-            self.rx_label.setObjectName("SBMetric")
-            self.rx_label.setToolTip("Total Bytes Received")
-            
-            self.packets_label = QLabel("PACKETS: 0")
-            self.packets_label.setObjectName("SBMetric")
-            self.packets_label.setToolTip("Total Packets")
-            
-            self.rate_label = QLabel("RATE: 0/s")
-            self.rate_label.setObjectName("SBMetric")
-            self.rate_label.setToolTip("Packet Rate")
-            
-            # Separators
-            sep1 = QLabel("|")
-            sep1.setObjectName("Separator")
-            sep2 = QLabel("|")
-            sep2.setObjectName("Separator")
-            
-            # Layout
-            sb.addWidget(self.clock_label)
-            sb.addWidget(sep1)
-            sb.addWidget(self.conn_label)
-            sb.addWidget(self.status_label)
-            sb.addWidget(sep2)
-            sb.addPermanentWidget(self.uptime_label)
-            sb.addPermanentWidget(self.rx_label)
-            sb.addPermanentWidget(self.packets_label)
-            sb.addPermanentWidget(self.rate_label)
-            
-            # Initialize tracking
-            self.start_time = time.time()
-            self.packet_count = 0
-            self.packet_rate = 0.0
-            self.packet_timestamps = []
-            
-            # Update timer
-            self.clock_timer = QTimer(self)
-            self.clock_timer.timeout.connect(self.update_status_bar)
-            self.clock_timer.start(1000)
+            # Update header status
+            self.logging_status_label.setText("Logging: OFF")
+            self.logging_status_label.setStyleSheet("color: #888888; font-weight: bold;")
+
+    def update_status_bar_visibility(self, phase):
+        """Show/hide status bar elements based on current phase"""
+        is_dashboard = (phase == "dashboard")
+        
+        # Show all elements only in dashboard phase
+        self.conn_label.setVisible(is_dashboard)
+        self.status_label.setVisible(is_dashboard)
+        self.logging_btn.setVisible(is_dashboard)
+        self.uptime_label.setVisible(is_dashboard)
+        self.rx_label.setVisible(is_dashboard)
+        self.packets_label.setVisible(is_dashboard)
+        self.rate_label.setVisible(is_dashboard)
+        self.sep1.setVisible(is_dashboard)
+        self.sep2.setVisible(is_dashboard)
+        self.sep3.setVisible(is_dashboard)
+        self.sep4.setVisible(is_dashboard)
 
     def update_status_bar(self):
         # Update clock
         current_time = datetime.now()
-        self.clock_label.setText(current_time.strftime('%H:%M:%S • %d %b %Y'))
+        self.clock_label.setText(current_time.strftime('%H:%M:%S'))
         
         # Update uptime
         uptime_seconds = int(time.time() - self.start_time)
         hours = uptime_seconds // 3600
         minutes = (uptime_seconds % 3600) // 60
         seconds = uptime_seconds % 60
-        self.uptime_label.setText(f"UPTIME: {hours:02d}:{minutes:02d}:{seconds:02d}")
+        self.uptime_label.setText(f"{hours:02d}:{minutes:02d}:{seconds:02d}")
         
-        # Calculate packet rate (rolling 5-second average)
+        # Calculate packet rate
         current_time_ts = time.time()
         self.packet_timestamps = [ts for ts in self.packet_timestamps if current_time_ts - ts < 5.0]
         
@@ -2617,38 +2828,27 @@ class MainWindow(QMainWindow):
             
             if mode == 'serial':
                 port = cs.get('serial_port', 'N/A')
-                baud = cs.get('baudrate', 'N/A')
-                self.conn_label.setText(f"SERIAL: {port} @ {baud:,} bps")
+                self.conn_label.setText(f"Serial {port}")
             elif mode == 'tcp':
                 host = cs.get('tcp_host', 'N/A')
                 port = cs.get('tcp_port', 'N/A')
-                self.conn_label.setText(f"TCP: {host}:{port}")
+                self.conn_label.setText(f"TCP {host}:{port}")
             elif mode == 'udp':
                 host = cs.get('udp_host', 'N/A')
                 port = cs.get('udp_port', 'N/A')
-                self.conn_label.setText(f"UDP: {host}:{port}")
+                self.conn_label.setText(f"UDP {host}:{port}")
+            
+            self.conn_label.setObjectName("SBConnected")
+            self.conn_label.setStyleSheet("")  # Reset to apply new object name
             
             # Update stream status
             if self.simulator._is_paused:
-                self.status_label.setText("PAUSED")
-                self.status_label.setStyleSheet("""
-                    background-color: rgba(255, 152, 0, 0.4);
-                    color: #ffffff;
-                    font-weight: 700;
-                    padding: 6px 12px;
-                    margin: 0 4px;
-                    border-radius: 4px;
-                """)
+                self.status_label.setText("Paused")
+                self.status_label.setObjectName("SBPaused")
             else:
-                self.status_label.setText("STREAMING")
-                self.status_label.setStyleSheet("""
-                    background-color: rgba(76, 175, 80, 0.35);
-                    color: #ffffff;
-                    font-weight: 700;
-                    padding: 6px 12px;
-                    margin: 0 4px;
-                    border-radius: 4px;
-                """)
+                self.status_label.setText("Streaming")
+                self.status_label.setObjectName("SBStreaming")
+            self.status_label.setStyleSheet("")  # Reset to apply new object name
             
             # Update RX bytes
             rx = 0
@@ -2656,7 +2856,7 @@ class MainWindow(QMainWindow):
                 rx = getattr(self.simulator.reader, 'rx_bytes', 0)
             
             if rx < 1024:
-                rx_str = f"{rx:.0f} B"
+                rx_str = f"{rx} B"
             elif rx < 1024 * 1024:
                 rx_str = f"{rx/1024:.1f} KB"
             elif rx < 1024 * 1024 * 1024:
@@ -2664,31 +2864,29 @@ class MainWindow(QMainWindow):
             else:
                 rx_str = f"{rx/(1024*1024*1024):.2f} GB"
             
-            self.rx_label.setText(f"RX: {rx_str}")
+            self.rx_label.setText(rx_str)
         else:
-            self.conn_label.setText("DUMMY DATA")
-            self.status_label.setText("SIMULATING")
-            self.status_label.setStyleSheet("""
-                background-color: rgba(33, 150, 243, 0.4);
-                color: #ffffff;
-                font-weight: 700;
-                padding: 6px 12px;
-                margin: 0 4px;
-                border-radius: 4px;
-            """)
-            self.rx_label.setText("RX: N/A")
+            self.conn_label.setText("Dummy Data")
+            self.conn_label.setObjectName("SBConnected")
+            self.conn_label.setStyleSheet("")
+            
+            self.status_label.setText("Simulating")
+            self.status_label.setObjectName("SBStreaming")
+            self.status_label.setStyleSheet("")
+            
+            self.rx_label.setText("")
         
         # Update packet count
         if self.packet_count < 1000:
-            pkt_str = f"{self.packet_count}"
+            pkt_str = f"{self.packet_count} pkts"
         elif self.packet_count < 1000000:
-            pkt_str = f"{self.packet_count/1000:.1f}K"
+            pkt_str = f"{self.packet_count/1000:.1f}K pkts"
         else:
-            pkt_str = f"{self.packet_count/1000000:.2f}M"
-        self.packets_label.setText(f"PACKETS: {pkt_str}")
+            pkt_str = f"{self.packet_count/1000000:.2f}M pkts"
+        self.packets_label.setText(pkt_str)
         
         # Update rate
-        self.rate_label.setText(f"RATE: {self.packet_rate:.1f}/s")
+        self.rate_label.setText(f"{self.packet_rate:.1f} Hz")
         
 
     def _build_welcome_page(self):
@@ -3199,17 +3397,29 @@ class MainWindow(QMainWindow):
         dialog = DataLoggingDialog(self.parameters, self.logging_settings, self)
         if dialog.exec() == QDialog.DialogCode.Accepted:
             self.logging_settings = dialog.get_settings()
+            
+            # Get file path (empty means auto-generate in logs folder)
+            file_path = self.logging_settings.get('file_path', '') or None  # Fixed: handle None case
+            if file_path:
+                file_path = file_path.strip()
+                if not file_path:  # If empty after strip
+                    file_path = None
+            
             # Configure the data logger
             selected_params = [p for p in self.parameters if p['id'] in self.logging_settings['selected_params']]
             self.data_logger.configure(
                 format_type=self.logging_settings['format'],
-                file_path=self.logging_settings['file_path'],
+                file_path=file_path,
                 parameters=selected_params,
                 buffer_size=self.logging_settings['buffer_size']
             )
             self.mark_as_unsaved()
+            
+            # Show where the file will be saved
+            log_location = self.data_logger.log_file_path
             QMessageBox.information(self, "Logging Configured", 
-                                  f"Data logging configured for {len(selected_params)} parameters.")
+                                f"Data logging configured for {len(selected_params)} parameters.\n\n"
+                                f"Log file will be saved to:\n{log_location}")
 
     def start_logging(self):
         """Start data logging"""
@@ -3219,10 +3429,12 @@ class MainWindow(QMainWindow):
         
         try:
             self.data_logger.start_logging()
-            self.logging_status_label.setText(f"Logging: ON ({os.path.basename(self.data_logger.log_file_path)})")
-            self.logging_status_label.setStyleSheet("color: #21b35a; font-weight: bold;")
+            self.update_logging_button()
+            
+            # Show success notification
+            filename = os.path.basename(self.data_logger.log_file_path)
             QMessageBox.information(self, "Logging Started", 
-                                  f"Data logging started to: {self.data_logger.log_file_path}")
+                                f"Data logging started to:\n{filename}")
         except Exception as e:
             QMessageBox.critical(self, "Logging Error", f"Failed to start logging: {str(e)}")
 
@@ -3230,10 +3442,9 @@ class MainWindow(QMainWindow):
         """Stop data logging"""
         if self.data_logger.is_logging:
             self.data_logger.stop_logging()
-            self.logging_status_label.setText("Logging: OFF")
-            self.logging_status_label.setStyleSheet("color: #888888;")
+            self.update_logging_button()
             QMessageBox.information(self, "Logging Stopped", "Data logging has been stopped.")
-
+            
     def update_connection_status(self):
         """Update connection status display"""
         if not self.simulator:
@@ -3288,6 +3499,10 @@ class MainWindow(QMainWindow):
             self.control_dock.setVisible(is_dashboard)
         if hasattr(self, 'header_dock') and self.header_dock:
             self.header_dock.setVisible(is_dashboard)
+        
+        # Update status bar visibility
+        self.update_status_bar_visibility(which)
+        
         if which == "welcome":
             self.stack.setCurrentWidget(self.welcome_page)
         elif which == "setup":
