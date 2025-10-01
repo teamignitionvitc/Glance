@@ -1,0 +1,775 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard Builder Documentation</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary: #0a84ff;
+            --primary-dark: #0969c3;
+            --bg-dark: #1e1e1e;
+            --bg-darker: #161616;
+            --bg-light: #2a2a2a;
+            --text-primary: #e0e0e0;
+            --text-secondary: #a0a0a0;
+            --border: #3a3a3a;
+            --accent: #21b35a;
+            --warning: #ffbf00;
+            --danger: #ff3131;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: var(--bg-dark);
+            color: var(--text-primary);
+            line-height: 1.6;
+        }
+
+        .container {
+            display: flex;
+            min-height: 100vh;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            width: 280px;
+            background: var(--bg-darker);
+            border-right: 1px solid var(--border);
+            position: fixed;
+            height: 100vh;
+            overflow-y: auto;
+            z-index: 100;
+        }
+
+        .sidebar::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .sidebar::-webkit-scrollbar-track {
+            background: var(--bg-darker);
+        }
+
+        .sidebar::-webkit-scrollbar-thumb {
+            background: var(--border);
+            border-radius: 3px;
+        }
+
+        .logo {
+            padding: 24px 20px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .logo h1 {
+            font-size: 18px;
+            color: var(--primary);
+            margin-bottom: 4px;
+        }
+
+        .logo p {
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+
+        .nav {
+            padding: 16px 0;
+        }
+
+        .nav-section {
+            margin-bottom: 24px;
+        }
+
+        .nav-section-title {
+            padding: 8px 20px;
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--text-secondary);
+        }
+
+        .nav-item {
+            display: block;
+            padding: 10px 20px;
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-size: 14px;
+            transition: all 0.2s;
+            border-left: 3px solid transparent;
+        }
+
+        .nav-item:hover {
+            background: var(--bg-light);
+            color: var(--text-primary);
+        }
+
+        .nav-item.active {
+            background: var(--bg-light);
+            color: var(--primary);
+            border-left-color: var(--primary);
+        }
+
+        .nav-sub-item {
+            padding: 8px 20px 8px 40px;
+            font-size: 13px;
+        }
+
+        /* Content */
+        .content {
+            margin-left: 280px;
+            flex: 1;
+            padding: 40px 60px;
+            max-width: 1200px;
+        }
+
+        .content h1 {
+            font-size: 36px;
+            margin-bottom: 16px;
+            color: var(--text-primary);
+        }
+
+        .content h2 {
+            font-size: 28px;
+            margin: 48px 0 20px 0;
+            padding-bottom: 12px;
+            border-bottom: 1px solid var(--border);
+            color: var(--text-primary);
+        }
+
+        .content h3 {
+            font-size: 22px;
+            margin: 32px 0 16px 0;
+            color: var(--text-primary);
+        }
+
+        .content h4 {
+            font-size: 18px;
+            margin: 24px 0 12px 0;
+            color: var(--text-primary);
+        }
+
+        .content p {
+            margin-bottom: 16px;
+            color: var(--text-secondary);
+        }
+
+        .content ul, .content ol {
+            margin: 16px 0 16px 24px;
+            color: var(--text-secondary);
+        }
+
+        .content li {
+            margin-bottom: 8px;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 600;
+            margin-left: 8px;
+        }
+
+        .badge-version {
+            background: var(--primary);
+            color: white;
+        }
+
+        .badge-new {
+            background: var(--accent);
+            color: white;
+        }
+
+        .info-box {
+            background: var(--bg-light);
+            border-left: 4px solid var(--primary);
+            padding: 16px 20px;
+            margin: 24px 0;
+            border-radius: 4px;
+        }
+
+        .info-box.warning {
+            border-left-color: var(--warning);
+        }
+
+        .info-box.danger {
+            border-left-color: var(--danger);
+        }
+
+        .info-box.success {
+            border-left-color: var(--accent);
+        }
+
+        .info-box p {
+            margin: 0;
+        }
+
+        code {
+            background: var(--bg-light);
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 13px;
+            color: #ce9178;
+        }
+
+        pre {
+            background: var(--bg-darker);
+            padding: 20px;
+            border-radius: 6px;
+            overflow-x: auto;
+            margin: 20px 0;
+            border: 1px solid var(--border);
+        }
+
+        pre code {
+            background: none;
+            padding: 0;
+            color: var(--text-primary);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 24px 0;
+            background: var(--bg-light);
+            border-radius: 6px;
+            overflow: hidden;
+        }
+
+        th {
+            background: var(--bg-darker);
+            padding: 12px;
+            text-align: left;
+            font-weight: 600;
+            border-bottom: 2px solid var(--border);
+        }
+
+        td {
+            padding: 12px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        tr:last-child td {
+            border-bottom: none;
+        }
+
+        .btn {
+            display: inline-block;
+            padding: 10px 20px;
+            background: var(--primary);
+            color: white;
+            text-decoration: none;
+            border-radius: 6px;
+            font-weight: 500;
+            transition: background 0.2s;
+        }
+
+        .btn:hover {
+            background: var(--primary-dark);
+        }
+
+        .feature-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin: 32px 0;
+        }
+
+        .feature-card {
+            background: var(--bg-light);
+            padding: 24px;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+        }
+
+        .feature-card h4 {
+            margin-top: 0;
+            color: var(--primary);
+        }
+
+        @media (max-width: 768px) {
+            .sidebar {
+                width: 100%;
+                position: relative;
+                height: auto;
+            }
+
+            .content {
+                margin-left: 0;
+                padding: 24px 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Sidebar Navigation -->
+        <aside class="sidebar">
+            <div class="logo">
+                <h1>Dashboard Builder</h1>
+                <p>Team Ignition VIT-C</p>
+            </div>
+            
+            <nav class="nav">
+                <div class="nav-section">
+                    <div class="nav-section-title">Getting Started</div>
+                    <a href="#overview" class="nav-item active">Overview</a>
+                    <a href="#features" class="nav-item">Features</a>
+                    <a href="#requirements" class="nav-item">System Requirements</a>
+                    <a href="#installation" class="nav-item">Installation</a>
+                    <a href="#quickstart" class="nav-item">Quick Start Guide</a>
+                </div>
+
+                <div class="nav-section">
+                    <div class="nav-section-title">User Guide</div>
+                    <a href="#interface" class="nav-item">Dashboard Interface</a>
+                    <a href="#parameters" class="nav-item">Managing Parameters</a>
+                    <a href="#widgets" class="nav-item">Working with Widgets</a>
+                    <a href="#tabs" class="nav-item">Tabs & Layout</a>
+                    <a href="#stream-control" class="nav-item">Stream Control</a>
+                </div>
+
+                <div class="nav-section">
+                    <div class="nav-section-title">Configuration</div>
+                    <a href="#connection" class="nav-item">Connection Settings</a>
+                    <a href="#data-formats" class="nav-item">Data Formats</a>
+                    <a href="#data-logging" class="nav-item">Data Logging</a>
+                    <a href="#project-files" class="nav-item">Project Files</a>
+                </div>
+
+                <div class="nav-section">
+                    <div class="nav-section-title">Troubleshooting</div>
+                    <a href="#connection-issues" class="nav-item">Connection Issues</a>
+                    <a href="#data-issues" class="nav-item">Data Display Issues</a>
+                    <a href="#performance" class="nav-item">Performance</a>
+                </div>
+
+                <div class="nav-section">
+                    <div class="nav-section-title">Reference</div>
+                    <a href="#widget-types" class="nav-item">Widget Types</a>
+                    <a href="#keyboard" class="nav-item">Keyboard Shortcuts</a>
+                    <a href="#api" class="nav-item">API Reference</a>
+                </div>
+            </nav>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="content">
+            <section id="overview">
+                <h1>Dashboard Builder <span class="badge badge-version">v2.0.0</span></h1>
+                <p>Professional Real-Time Telemetry Visualization Platform for monitoring and analyzing sensor data, system metrics, and telemetry streams.</p>
+                
+                <div class="info-box success">
+                    <p><strong>Developed by Team Ignition Software Department</strong> at Vellore Institute of Technology, Chennai</p>
+                </div>
+
+                <p>Dashboard Builder is a professional-grade telemetry visualization platform designed for real-time monitoring of sensor data from rockets, drones, embedded systems, and other data-acquisition applications.</p>
+            </section>
+
+            <section id="features">
+                <h2>Features</h2>
+                
+                <div class="feature-grid">
+                    <div class="feature-card">
+                        <h4>Real-time Visualization</h4>
+                        <p>Stream and visualize sensor data in real-time from multiple sources including Serial, TCP, UDP, and built-in simulators.</p>
+                    </div>
+                    
+                    <div class="feature-card">
+                        <h4>Multiple Widget Types</h4>
+                        <p>7+ widget types including graphs, gauges, tables, LED indicators, and GPS maps for comprehensive data monitoring.</p>
+                    </div>
+                    
+                    <div class="feature-card">
+                        <h4>Data Logging</h4>
+                        <p>Comprehensive data logging to CSV and JSON formats with configurable buffer sizes and parameter selection.</p>
+                    </div>
+                    
+                    <div class="feature-card">
+                        <h4>Professional UI</h4>
+                        <p>Industry-ready dark theme interface with customizable layouts, dockable widgets, and multi-tab support.</p>
+                    </div>
+                </div>
+
+                <h3>Widget Types</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Widget</th>
+                            <th>Description</th>
+                            <th>Use Case</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>Value Card</strong></td>
+                            <td>Large numeric display with alarm states</td>
+                            <td>Critical parameters (temperature, pressure)</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Time Graph</strong></td>
+                            <td>Multi-parameter line chart with time axis</td>
+                            <td>Trend analysis over time</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Gauge</strong></td>
+                            <td>Circular gauge with threshold indicators</td>
+                            <td>Visual ranges (speed, altitude)</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Histogram</strong></td>
+                            <td>Distribution visualization</td>
+                            <td>Statistical analysis</td>
+                        </tr>
+                        <tr>
+                            <td><strong>LED Indicator</strong></td>
+                            <td>Status light with color-coded states</td>
+                            <td>Binary or threshold-based status</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Log Table</strong></td>
+                            <td>Scrolling tabular data</td>
+                            <td>Detailed data inspection</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Map Widget</strong></td>
+                            <td>GPS coordinate visualization</td>
+                            <td>Location tracking</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </section>
+
+            <section id="requirements">
+                <h2>System Requirements</h2>
+                
+                <h3>Minimum Requirements</h3>
+                <ul>
+                    <li><strong>OS:</strong> Windows 10/11, Linux (Ubuntu 20.04+), macOS 10.15+</li>
+                    <li><strong>Python:</strong> 3.8 or higher</li>
+                    <li><strong>RAM:</strong> 4 GB</li>
+                    <li><strong>Display:</strong> 1280x720 resolution</li>
+                </ul>
+
+                <h3>Recommended Requirements</h3>
+                <ul>
+                    <li><strong>OS:</strong> Windows 11, Linux (Ubuntu 22.04+), macOS 12+</li>
+                    <li><strong>Python:</strong> 3.10 or higher</li>
+                    <li><strong>RAM:</strong> 8 GB or more</li>
+                    <li><strong>Display:</strong> 1920x1080 or higher resolution</li>
+                    <li><strong>Network:</strong> Ethernet for TCP/UDP sources</li>
+                </ul>
+            </section>
+
+            <section id="installation">
+                <h2>Installation</h2>
+                
+                <h3>Step 1: Install Python</h3>
+                <p>Ensure Python 3.8+ is installed on your system:</p>
+                <pre><code>python --version</code></pre>
+
+                <h3>Step 2: Clone Repository</h3>
+                <pre><code>git clone https://github.com/teamignitionvitc/Dashboard-Builder.git
+cd Dashboard-Builder</code></pre>
+
+                <h3>Step 3: Install Dependencies</h3>
+                <pre><code>pip install -r requirements.txt</code></pre>
+
+                <div class="info-box">
+                    <p><strong>Required packages:</strong> PySide6, pyqtgraph, numpy, pyserial</p>
+                </div>
+
+                <h3>Step 4: Verify Installation</h3>
+                <pre><code>python main.py</code></pre>
+            </section>
+
+            <section id="quickstart">
+                <h2>Quick Start Guide</h2>
+                
+                <h3>1. Launch Application</h3>
+                <pre><code>python main.py</code></pre>
+
+                <h3>2. Create New Dashboard</h3>
+                <ol>
+                    <li>Click <strong>"Create New Dashboard"</strong> on the welcome screen</li>
+                    <li>Enter the 4-phase dashboard creation wizard</li>
+                </ol>
+
+                <h3>3. Configure Connection</h3>
+                
+                <h4>For Testing (No Hardware):</h4>
+                <ul>
+                    <li>Select <strong>Connection Mode:</strong> <code>dummy</code></li>
+                    <li>Click <strong>"Start Dashboard"</strong></li>
+                </ul>
+
+                <h4>For Serial Hardware:</h4>
+                <ul>
+                    <li>Select <strong>Connection Mode:</strong> <code>serial</code></li>
+                    <li>Choose <strong>Serial Port</strong> from dropdown</li>
+                    <li>Set <strong>Baudrate</strong> (e.g., 115200)</li>
+                    <li>Configure <strong>Data Format</strong> (e.g., json_array)</li>
+                    <li>Set <strong>Channel Count</strong></li>
+                </ul>
+
+                <h3>4. Configure Parameters</h3>
+                <ol>
+                    <li>Go to <strong>Edit → Manage Parameters</strong></li>
+                    <li>Click <strong>"Add..."</strong> to create new parameter</li>
+                    <li>Fill in parameter details (ID, Name, Array Index, Unit, Thresholds)</li>
+                    <li>Click <strong>OK</strong> to save</li>
+                </ol>
+
+                <h3>5. Add Widgets</h3>
+                <ol>
+                    <li>Click <strong>"Add Widget..."</strong> button</li>
+                    <li>Select widget type</li>
+                    <li>Choose parameters to display</li>
+                    <li>Configure widget options</li>
+                    <li>Click <strong>OK</strong></li>
+                </ol>
+            </section>
+
+            <section id="interface">
+                <h2>Dashboard Interface</h2>
+                
+                <h3>Top Bar (Header)</h3>
+                <ul>
+                    <li><strong>Dashboard Title:</strong> Customizable title (right-click to edit)</li>
+                    <li><strong>Connection Status:</strong> Real-time connection indicator</li>
+                    <li><strong>Stream Status:</strong> STREAMING, PAUSED, or AWAITING PARAMETERS</li>
+                    <li><strong>Logging Status:</strong> Shows if data logging is active</li>
+                    <li><strong>Pause Button:</strong> Pause/resume data stream</li>
+                </ul>
+
+                <h3>Status Bar (Bottom)</h3>
+                <ul>
+                    <li><strong>System Clock:</strong> Current date and time</li>
+                    <li><strong>Connection Details:</strong> Active connection information</li>
+                    <li><strong>Uptime:</strong> Dashboard runtime</li>
+                    <li><strong>RX:</strong> Total bytes received</li>
+                    <li><strong>Packets:</strong> Total packet count</li>
+                    <li><strong>Rate:</strong> Packets per second</li>
+                </ul>
+
+                <div class="info-box">
+                    <p><strong>Tip:</strong> Right-click on any widget for quick actions like rename, float/dock, or close.</p>
+                </div>
+            </section>
+
+            <section id="parameters">
+                <h2>Managing Parameters</h2>
+                
+                <h3>Parameter Properties</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Property</th>
+                            <th>Description</th>
+                            <th>Example</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>ID</strong></td>
+                            <td>Unique identifier (no spaces)</td>
+                            <td>accel_x</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Name</strong></td>
+                            <td>Display name</td>
+                            <td>Acceleration X</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Array Index</strong></td>
+                            <td>Position in data packet</td>
+                            <td>3</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Unit</strong></td>
+                            <td>Measurement unit</td>
+                            <td>m/s²</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Thresholds</strong></td>
+                            <td>Alarm levels</td>
+                            <td>Low: -20, High: 20</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <h3>Adding Parameters</h3>
+                <ol>
+                    <li>Navigate to <strong>Edit → Manage Parameters → Add...</strong></li>
+                    <li>Fill in all required fields</li>
+                    <li>Set threshold values in ascending order</li>
+                    <li>Click <strong>OK</strong></li>
+                </ol>
+
+                <div class="info-box warning">
+                    <p><strong>Important:</strong> Ensure Array Index matches the position of your data in the incoming packet.</p>
+                </div>
+            </section>
+
+            <section id="data-logging">
+                <h2>Data Logging</h2>
+                
+                <h3>Configuring Data Logging</h3>
+                <ol>
+                    <li>Go to <strong>Data Logging → Configure Logging...</strong></li>
+                    <li>Select format (CSV or JSON)</li>
+                    <li>Choose output file path</li>
+                    <li>Select parameters to log</li>
+                    <li>Set buffer size (10-1000)</li>
+                </ol>
+
+                <h3>Buffer Size Recommendations</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Data Rate</th>
+                            <th>Buffer Size</th>
+                            <th>Write Frequency</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>1-10 Hz</td>
+                            <td>100</td>
+                            <td>Every 10-100 seconds</td>
+                        </tr>
+                        <tr>
+                            <td>10-50 Hz</td>
+                            <td>200-500</td>
+                            <td>Every 4-50 seconds</td>
+                        </tr>
+                        <tr>
+                            <td>50+ Hz</td>
+                            <td>500-1000</td>
+                            <td>Every 10-20 seconds</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <div class="info-box">
+                    <p><strong>Note:</strong> Larger buffers reduce disk I/O but increase memory usage and potential data loss on crash.</p>
+                </div>
+            </section>
+
+            <section id="connection-issues">
+                <h2>Troubleshooting: Connection Issues</h2>
+                
+                <h3>Serial Port Not Found</h3>
+                <p><strong>Solutions:</strong></p>
+                <ul>
+                    <li>Check device is connected</li>
+                    <li>Install device drivers</li>
+                    <li>Check port permissions (Linux: <code>sudo usermod -a -G dialout $USER</code>)</li>
+                    <li>Click "Refresh" button to update port list</li>
+                </ul>
+
+                <h3>Network Connection Issues</h3>
+                <p><strong>Solutions:</strong></p>
+                <ul>
+                    <li>Verify IP address and port</li>
+                    <li>Check firewall settings</li>
+                    <li>Ping host to verify connectivity</li>
+                    <li>For UDP: Ensure device is sending to correct port</li>
+                    <li>For TCP: Verify server is listening</li>
+                </ul>
+
+                <div class="info-box danger">
+                    <p><strong>Critical:</strong> Always stop the data stream before changing connection settings to avoid errors.</p>
+                </div>
+            </section>
+
+            <section id="keyboard">
+                <h2>Keyboard Shortcuts</h2>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Shortcut</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><code>Space</code></td>
+                            <td>Pause/Resume stream</td>
+                        </tr>
+                        <tr>
+                            <td><code>Ctrl + S</code></td>
+                            <td>Save project</td>
+                        </tr>
+                        <tr>
+                            <td><code>Ctrl + O</code></td>
+                            <td>Open project</td>
+                        </tr>
+                        <tr>
+                            <td><code>Ctrl + W</code></td>
+                            <td>Close current widget</td>
+                        </tr>
+                        <tr>
+                            <td><code>Ctrl + Hold + Drag</code></td>
+                            <td>Pan graph while hovering</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </section>
+
+            <footer style="margin-top: 80px; padding-top: 40px; border-top: 1px solid var(--border); text-align: center; color: var(--text-secondary);">
+                <p>&copy; 2025 Team Ignition Software Department, VIT Chennai</p>
+                <p style="margin-top: 8px;">
+                    <a href="https://github.com/teamignitionvitc/Dashboard-Builder" class="btn" target="_blank">View on GitHub</a>
+                </p>
+            </footer>
+        </main>
+    </div>
+
+    <script>
+        // Smooth scrolling for navigation
+        document.querySelectorAll('.nav-item').forEach(link => {
+            link.addEventListener('click', (e) => {
+                e.preventDefault();
+                const target = document.querySelector(link.getAttribute('href'));
+                if (target) {
+                    target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    
+                    // Update active state
+                    document.querySelectorAll('.nav-item').forEach(item => item.classList.remove('active'));
+                    link.classList.add('active');
+                }
+            });
+        });
+
+        // Update active nav on scroll
+        const sections = document.querySelectorAll('section[id]');
+        const navItems = document.querySelectorAll('.nav-item');
+
+        window.addEventListener('scroll', () => {
+            let current = '';
+            sections.forEach(section => {
+                const sectionTop = section.offsetTop;
+                if (window.pageYOffset >= sectionTop - 100) {
+                    current = section.getAttribute('id');
+                }
+            });
+
+            navItems.forEach(item => {
+                item.classList.remove('active');
+                if (item.getAttribute('href') === `#${current}`) {
+                    item.classList.add('active');
+                }
+            });
+        });
+    </script>
+</body>
+</html>
