@@ -83,7 +83,7 @@ try:
     from serial.tools import list_ports as _serial_list_ports  # type: ignore
 except Exception:
     _serial_list_ports = None
-
+import webbrowser
 ####################################################################################################
 
 
@@ -2274,9 +2274,130 @@ class MainWindow(QMainWindow):
         view_menu.addAction(add_tab_action); view_menu.addAction(rename_tab_action); view_menu.addSeparator(); view_menu.addAction(raw_tlm_action)
 
         help_menu = menubar.addMenu("Help")
+        documentation_action = QAction("Documentation", self); documentation_action.triggered.connect(self.show_documentation)
         about_action = QAction("About", self); about_action.triggered.connect(self.show_about_dialog)
+        help_menu.addAction(documentation_action)
         help_menu.addAction(about_action)
-    
+
+    def show_documentation(self):
+        """Show the documentation in a viewer window"""
+        # Check if documentation exists
+        doc_path = os.path.join("Documentation", "index.html")
+        
+        if not os.path.exists(doc_path):
+            QMessageBox.warning(
+                self, 
+                "Documentation Not Found", 
+                f"Documentation file not found at:\n{doc_path}\n\n"
+                "Please ensure the Documentation folder exists and contains index.html"
+            )
+            return
+        
+        # Create documentation viewer dialog
+        doc_dialog = QDialog(self)
+        doc_dialog.setWindowTitle("Dashboard Builder Documentation")
+        doc_dialog.setMinimumSize(1000, 700)
+        
+        layout = QVBoxLayout(doc_dialog)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(0)  # Remove spacing between widgets
+        
+        # Try to use QWebEngineView if available
+        try:
+            from PySide6.QtWebEngineWidgets import QWebEngineView
+            from PySide6.QtCore import QUrl
+            
+            web_view = QWebEngineView()
+            web_view.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)  # Make it expand
+            
+            # Load the documentation
+            abs_path = os.path.abspath(doc_path)
+            web_view.setUrl(QUrl.fromLocalFile(abs_path))
+            
+            layout.addWidget(web_view, 1)  # Add stretch factor of 1 to make it fill space
+            
+            # Add close button at bottom
+            button_container = QWidget()
+            button_container.setStyleSheet("background-color: #1e1e1e; border-top: 1px solid #2a2a2a;")
+            button_layout = QHBoxLayout(button_container)
+            button_layout.setContentsMargins(12, 8, 12, 8)
+            
+            close_btn = QPushButton("Close")
+            close_btn.setMinimumWidth(100)
+            close_btn.clicked.connect(doc_dialog.accept)
+            
+            button_layout.addStretch()
+            button_layout.addWidget(close_btn)
+            button_layout.addStretch()
+            
+            layout.addWidget(button_container, 0)  # No stretch, fixed height
+            
+        except ImportError:
+            # Fallback: Show message with option to open in browser
+            msg_container = QWidget()
+            msg_container.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
+            msg_layout = QVBoxLayout(msg_container)
+            msg_layout.setContentsMargins(40, 40, 40, 40)
+            msg_layout.setSpacing(20)
+            
+            info_label = QLabel(
+                "<h3>Documentation Viewer</h3>"
+                "<p>The built-in documentation viewer requires PySide6-WebEngine.</p>"
+                "<p>You can:</p>"
+                "<ul>"
+                "<li>Install it with: <code>pip install PySide6-WebEngine</code></li>"
+                "<li>Or open the documentation in your web browser</li>"
+                "</ul>"
+            )
+            info_label.setWordWrap(True)
+            msg_layout.addWidget(info_label)
+            msg_layout.addStretch()
+            
+            button_layout = QHBoxLayout()
+            browser_btn = QPushButton("Open in Browser")
+            browser_btn.clicked.connect(lambda: self.open_documentation_in_browser(doc_path))
+            close_btn = QPushButton("Close")
+            close_btn.clicked.connect(doc_dialog.accept)
+            
+            button_layout.addStretch()
+            button_layout.addWidget(browser_btn)
+            button_layout.addWidget(close_btn)
+            button_layout.addStretch()
+            
+            msg_layout.addLayout(button_layout)
+            
+            layout.addWidget(msg_container, 1)
+        
+        doc_dialog.setStyleSheet("""
+            QDialog {
+                background-color: #1e1e1e;
+            }
+            QPushButton {
+                background-color: #2a2a2a;
+                border: 1px solid #404040;
+                border-radius: 5px;
+                padding: 8px 16px;
+                color: #e8e8e8;
+                font-weight: 500;
+            }
+            QPushButton:hover {
+                background-color: #383838;
+                border-color: #4a9eff;
+            }
+            QLabel {
+                color: #e8e8e8;
+            }
+        """)
+        
+        doc_dialog.exec()
+
+    def open_documentation_in_browser(self, doc_path):
+        """Open documentation in default web browser"""
+        import webbrowser
+        abs_path = os.path.abspath(doc_path)
+        webbrowser.open(f'file://{abs_path}')
+        QMessageBox.information(self, "Documentation Opened", "Documentation opened in your default web browser.")
+
     def open_raw_telemetry_monitor(self):
         """Open the raw telemetry monitor window"""
         if self.raw_tlm_monitor is None or not self.raw_tlm_monitor.isVisible():
