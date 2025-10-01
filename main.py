@@ -1227,7 +1227,7 @@ class MainWindow(QMainWindow):
         super().__init__(); self.setWindowTitle("Ignition Dashboard (PySide6)")
         # Improved initial sizing and centering
         self.setMinimumSize(1200, 720)
-        self.resize(1600, 950)
+        self.resize(1200, 720)
         try:
             screen = self.screen() or QApplication.primaryScreen()
             if screen:
