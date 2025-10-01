@@ -2704,17 +2704,15 @@ class MainWindow(QMainWindow):
         try:
             from PySide6.QtGui import QPixmap
             logo = QLabel("")
-            pix = QPixmap("public/ign_logo_wht.png")
+            pix = QPixmap("public/Glance_nobg.png")
             if not pix.isNull():
-                logo.setPixmap(pix.scaledToWidth(120, Qt.SmoothTransformation))
+                logo.setPixmap(pix.scaledToWidth(300, Qt.SmoothTransformation))
                 logo.setAlignment(Qt.AlignmentFlag.AlignCenter)
                 logo_layout.addWidget(logo)
         except Exception:
             pass
         
         # Title and subtitle
-        title = QLabel("<h1 style='color: #ffffff; margin: 0;'>Ignition Dashboard Builder</h1>")
-        title.setAlignment(Qt.AlignmentFlag.AlignCenter)
         subtitle = QLabel("<p style='color: #cccccc; font-size: 14px; margin: 8px 0;'>Professional industrial data visualization and monitoring</p>")
         subtitle.setAlignment(Qt.AlignmentFlag.AlignCenter)
         subtitle.setWordWrap(True)
@@ -2754,7 +2752,6 @@ class MainWindow(QMainWindow):
         v.addStretch()
         v.addWidget(logo_container)
         v.addSpacing(16)
-        v.addWidget(title)
         v.addWidget(subtitle)
         v.addSpacing(24)
         v.addWidget(features)
