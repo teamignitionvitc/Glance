@@ -128,16 +128,24 @@
 
 <div align="center">
 
+### Home Screen
+![Welcome Screen](public/Doc%20Images/HomeScreen.png)
+*Home Screen*
+
 ### Dashboard View
+![Dashboard View](public/Doc%20Images/dashboard.png)
 *Real-time telemetry visualization with multiple widgets*
 
 ### Parameter Management
+![Parameter Management](public/Doc%20Images/parameters.png)
 *Intuitive parameter configuration interface*
 
 ### Connection Settings
+![Connection Settings](public/Doc%20Images/Connection.png)
 *Flexible data source configuration*
 
 ### Data Logging
+![Data Logging](public/Doc%20Images/logging.png)
 *Comprehensive logging with format selection*
 
 </div>
@@ -320,18 +328,18 @@ Click **"Add Widget..."** and configure:
 ┌─────────────────────────────────────────────────────────┐
 │ Dashboard Title │ Connection │ Status │ Logging │ Pause │ ← Header Bar
 ├─────────────────────────────────────────────────────────┤
-│                                                           │
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐  │
-│  │  Widget 1    │  │  Widget 2    │  │  Widget 3    │  │
-│  │              │  │              │  │              │  │
-│  │   (Graph)    │  │   (Gauge)    │  │   (Table)    │  │
-│  └──────────────┘  └──────────────┘  └──────────────┘  │ ← Main Area
-│                                                           │
-│  ┌──────────────────────────────────────────────────┐  │
-│  │            Widget 4 (Map)                        │  │
-│  │                                                    │  │
-│  └──────────────────────────────────────────────────┘  │
-│                                                           │
+│                                                         │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐   │
+│  │  Widget 1    │  │  Widget 2    │  │  Widget 3    │   │
+│  │              │  │              │  │              │   │
+│  │   (Graph)    │  │   (Gauge)    │  │   (Table)    │   │
+│  └──────────────┘  └──────────────┘  └──────────────┘   │ ← Main Area
+│                                                         │
+│  ┌──────────────────────────────────────────────────┐   │
+│  │            Widget 4 (Map)                        │   │
+│  │                                                  │   │
+│  └──────────────────────────────────────────────────┘   │
+│                                                         │
 ├─────────────────────────────────────────────────────────┤
 │ Clock │ Connection │ Uptime │ Packets │ Rate │ RX Bytes │ ← Status Bar
 └─────────────────────────────────────────────────────────┘
