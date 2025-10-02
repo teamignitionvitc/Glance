@@ -1,6 +1,6 @@
 <div align="center">
 
-![Dashboard Builder Logo](public/Glance_nobg.png)
+![Dashboard Builder Logo](public/Glance.png)
 
 # Dashboard Builder
 
