@@ -13,7 +13,7 @@
 
 *A sophisticated data visualization dashboard for monitoring real-time sensor data, telemetry streams, and system metrics*
 
-[Features](#-features) • [Installation](#-installation) • [Quick Start](#-quick-start) • [Documentation](#-documentation) • [Contributing](#-contributing)
+[Features](#-features) • [Installation](#-installation) • [Quick Start](#-quick-start) • [Documentation](https://glance.teamignition.space/) • [Contributing](#-contributing)
 
 ---
 
@@ -1061,6 +1061,6 @@ Attach relevant files
 
 Made with ❤️ by Team Ignition Software Department
 
-[Report Bug](https://github.com/teamignitionvitc/Dashboard-Builder/issues) • [Request Feature](https://github.com/teamignitionvitc/Dashboard-Builder/issues) • [Documentation](https://github.com/teamignitionvitc/Dashboard-Builder#readme)
+[Report Bug](https://github.com/teamignitionvitc/Dashboard-Builder/issues) • [Request Feature](https://github.com/teamignitionvitc/Dashboard-Builder/issues) • [Documentation](https://glance.teamignition.space/)
 
 </div>
