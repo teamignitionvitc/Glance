@@ -3009,7 +3009,7 @@ class MainWindow(QMainWindow):
     def show_documentation(self):
         """Show the documentation in a viewer window"""
         # Check if documentation exists
-        doc_path = os.path.join("Documentation", "index.html")
+        doc_path = os.path.join("docs", "index.html")
         
         if not os.path.exists(doc_path):
             QMessageBox.warning(
