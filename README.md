@@ -1,137 +1,237 @@
+<div align="center">
+
+![Dashboard Builder Logo](public/Glance_nobg.png)
+
 # Dashboard Builder
 
-**Professional Real-Time Telemetry Visualization Platform**
+### Professional Real-Time Telemetry Visualization Platform
 
-A sophisticated data visualization dashboard application built with PySide6 (Qt6) for monitoring and analyzing real-time sensor data, system metrics, and telemetry streams. Developed by **Team Ignition Software Department** at Vellore Institute of Technology, Chennai.
+[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
+[![Python Version](https://img.shields.io/badge/python-3.8%2B-blue)](https://www.python.org/downloads/)
+[![PySide6](https://img.shields.io/badge/GUI-PySide6-green)](https://pypi.org/project/PySide6/)
+[![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20Linux%20%7C%20macOS-lightgrey)](https://github.com/teamignitionvitc/Dashboard-Builder)
 
----
+*A sophisticated data visualization dashboard for monitoring real-time sensor data, telemetry streams, and system metrics*
 
-## Table of Contents
-
-1. [About](#about)
-2. [Features](#features)
-3. [System Requirements](#system-requirements)
-4. [Installation](#installation)
-5. [Quick Start Guide](#quick-start-guide)
-6. [User Guide](#user-guide)
-7. [Configuration Reference](#configuration-reference)
-8. [Data Logging](#data-logging)
-9. [Troubleshooting](#troubleshooting)
-10. [Development](#development)
-11. [About Team Ignition](#about-team-ignition)
-12. [License](#license)
+[Features](#-features) • [Installation](#-installation) • [Quick Start](#-quick-start) • [Documentation](#-documentation) • [Contributing](#-contributing)
 
 ---
 
-## About
+![Team Ignition Logo](public/ign_logo_wht.png)
 
-Dashboard Builder is a professional-grade telemetry visualization platform designed for real-time monitoring of sensor data from rockets, drones, embedded systems, and other data-acquisition applications. The application provides a flexible, widget-based dashboard system with support for multiple data sources and comprehensive logging capabilities.
+**Developed by Team Ignition Software Department**  
+*Vellore Institute of Technology, Chennai*
+
+</div>
+
+---
+
+## 📋 Table of Contents
+
+- [About](#-about)
+- [Features](#-features)
+- [Screenshots](#-screenshots)
+- [System Requirements](#-system-requirements)
+- [Installation](#-installation)
+- [Quick Start](#-quick-start)
+- [User Guide](#-user-guide)
+- [Data Sources](#-data-sources)
+- [Widget Types](#-widget-types)
+- [Data Logging](#-data-logging)
+- [Configuration](#-configuration)
+- [Troubleshooting](#-troubleshooting)
+- [Development](#-development)
+- [About Team Ignition](#-about-team-ignition)
+- [License](#-license)
+- [Support](#-support)
+
+---
+
+## 🚀 About
+
+**Dashboard Builder** is a professional-grade telemetry visualization platform designed for real-time monitoring of sensor data from rockets, drones, embedded systems, and data-acquisition applications. Built with **PySide6 (Qt6)**, it provides a flexible, widget-based dashboard system with comprehensive data logging and multi-source support.
 
 ### Key Capabilities
 
-- **Real-time visualization** of sensor data streams
-- **Multiple data source support** (Serial, TCP, UDP, Dummy)
-- **Customizable widget system** with 7+ widget types
-- **Comprehensive data logging** (CSV, JSON)
-- **Professional UI/UX** with dark theme
-- **Project save/load** for reusable configurations
+- ⚡ **Real-time visualization** of multi-channel sensor data
+- 🔌 **Multiple data sources**: Serial, TCP, UDP, Dummy simulation
+- 🎨 **7+ widget types**: Graphs, gauges, tables, maps, and more
+- 💾 **Comprehensive logging**: CSV and JSON with configurable buffers
+- 🎯 **Professional UI/UX**: Modern dark theme with intuitive controls
+- 💼 **Project management**: Save and reload complete configurations
 
 ---
 
-## Features
+## ✨ Features
 
-### Widget Types
+<table>
+<tr>
+<td width="50%">
 
-| Widget | Description | Use Case |
-|--------|-------------|----------|
-| **Value Card** | Large numeric display with alarm states | Critical parameters (temperature, pressure) |
-| **Time Graph** | Multi-parameter line chart with time axis | Trend analysis over time |
-| **Gauge** | Circular gauge with threshold indicators | Visual ranges (speed, altitude) |
-| **Histogram** | Distribution visualization | Statistical analysis |
-| **LED Indicator** | Status light with color-coded states | Binary or threshold-based status |
-| **Log Table** | Scrolling tabular data | Detailed data inspection |
-| **Map Widget** | GPS coordinate visualization | Location tracking |
+### 📊 Visualization
 
-### Data Sources
+- Multi-parameter time-series graphs
+- Real-time value cards with alarm states
+- Circular gauges with threshold indicators
+- Statistical histograms
+- LED status indicators
+- GPS mapping (with optional WebEngine)
+- Searchable data tables
 
-- **Serial (RS232/RS485)**: Direct hardware connections
-- **TCP/IP**: Network-based remote monitoring
-- **UDP**: Fast, real-time streaming
-- **Dummy Data**: Built-in simulator for testing
+</td>
+<td width="50%">
 
-### Data Formats
+### 🔧 Technical
 
-- JSON arrays: `[23.5, 65.2, 1013.25, ...]`
-- CSV: `23.5,65.2,1013.25,...`
-- Raw bytes: Binary data interpretation
-- Custom: User-defined parsing
+- Serial (RS232/RS485) communication
+- TCP/IP and UDP network protocols
+- JSON, CSV, and raw binary parsing
+- Configurable data formats
+- Buffer management for performance
+- Automatic port detection
+- Raw telemetry monitoring
+
+</td>
+</tr>
+<tr>
+<td width="50%">
+
+### 📝 Data Management
+
+- CSV and JSON data logging
+- Configurable buffer sizes
+- Parameter-selective logging
+- Auto-generated filenames
+- Timestamped entries
+- Buffer flushing controls
+
+</td>
+<td width="50%">
+
+### 🎨 User Experience
+
+- 4-phase dashboard wizard
+- Drag-and-drop widget arrangement
+- Multi-tab dashboard support
+- Customizable dashboard titles
+- Floating and docked widgets
+- Right-click context menus
+- Comprehensive keyboard shortcuts
+
+</td>
+</tr>
+</table>
 
 ---
 
-## System Requirements
+## 📸 Screenshots
+
+<div align="center">
+
+### Dashboard View
+*Real-time telemetry visualization with multiple widgets*
+
+### Parameter Management
+*Intuitive parameter configuration interface*
+
+### Connection Settings
+*Flexible data source configuration*
+
+### Data Logging
+*Comprehensive logging with format selection*
+
+</div>
+
+---
+
+## 💻 System Requirements
 
 ### Minimum Requirements
 
-- **OS**: Windows 10/11, Linux (Ubuntu 20.04+), macOS 10.15+
-- **Python**: 3.8 or higher
-- **RAM**: 4 GB
-- **Display**: 1280x720 resolution
+| Component | Requirement |
+|-----------|-------------|
+| **Operating System** | Windows 10/11, Linux (Ubuntu 20.04+), macOS 10.15+ |
+| **Python** | 3.8 or higher |
+| **RAM** | 4 GB |
+| **Display** | 1280x720 resolution |
+| **Storage** | 500 MB free space |
 
 ### Recommended Requirements
 
-- **OS**: Windows 11, Linux (Ubuntu 22.04+), macOS 12+
-- **Python**: 3.10 or higher
-- **RAM**: 8 GB or more
-- **Display**: 1920x1080 or higher resolution
-- **Network**: Ethernet for TCP/UDP sources
+| Component | Requirement |
+|-----------|-------------|
+| **Operating System** | Windows 11, Linux (Ubuntu 22.04+), macOS 12+ |
+| **Python** | 3.10 or higher |
+| **RAM** | 8 GB or more |
+| **Display** | 1920x1080 or higher |
+| **Network** | Ethernet for TCP/UDP sources |
+| **Storage** | 1 GB+ for data logging |
 
 ---
 
-## Installation
+## 📦 Installation
 
-### Step 1: Install Python
-
-Ensure Python 3.8+ is installed on your system:
+### Method 1: Standard Installation
 
 ```bash
-python --version
-```
-
-If not installed, download from [python.org](https://www.python.org/downloads/).
-
-### Step 2: Clone Repository
-
-```bash
+# Clone the repository
 git clone https://github.com/teamignitionvitc/Dashboard-Builder.git
 cd Dashboard-Builder
-```
 
-### Step 3: Install Dependencies
-
-```bash
+# Install dependencies
 pip install -r requirements.txt
-```
 
-**Required packages:**
-- `PySide6` - Qt6 bindings for UI
-- `pyqtgraph` - High-performance plotting
-- `numpy` - Numerical computing
-- `pyserial` - Serial communication (optional)
-
-**Optional packages:**
-- `PySide6-WebEngine` - For GPS map widgets
-
-### Step 4: Verify Installation
-
-```bash
+# Launch application
 python main.py
 ```
 
-The application should launch with the welcome screen.
+### Method 2: Virtual Environment (Recommended)
+
+```bash
+# Clone repository
+git clone https://github.com/teamignitionvitc/Dashboard-Builder.git
+cd Dashboard-Builder
+
+# Create virtual environment
+python -m venv venv
+
+# Activate virtual environment
+# On Windows:
+venv\Scripts\activate
+# On Linux/macOS:
+source venv/bin/activate
+
+# Install dependencies
+pip install -r requirements.txt
+
+# Launch application
+python main.py
+```
+
+### Required Dependencies
+
+```
+PySide6>=6.4.0          # Qt6 bindings for UI
+pyqtgraph>=0.13.0       # High-performance plotting
+numpy>=1.21.0           # Numerical computing
+pyserial>=3.5           # Serial communication (optional)
+```
+
+### Optional Dependencies
+
+```
+PySide6-WebEngine       # For GPS map widgets (recommended)
+```
+
+To install optional dependencies:
+
+```bash
+pip install PySide6-WebEngine
+```
 
 ---
 
-## Quick Start Guide
+## 🚀 Quick Start
 
 ### 1. Launch Application
 
@@ -139,548 +239,552 @@ The application should launch with the welcome screen.
 python main.py
 ```
 
-### 2. Create New Dashboard
+### 2. Choose Your Path
 
-1. Click **"Create New Dashboard"** on the welcome screen
-2. You'll enter the **4-phase dashboard creation wizard**
+**For First-Time Users:**
+- Click **"Create New Dashboard"**
+- Follow the 4-phase setup wizard
 
-### 3. Configure Connection (Setup Phase)
+**For Returning Users:**
+- Click **"Load Project..."**
+- Select your saved `.json` configuration
 
-#### For Testing (No Hardware):
-- Select **Connection Mode**: `dummy`
-- Click **"Start Dashboard"**
+### 3. Configure Connection
 
-#### For Serial Hardware:
-- Select **Connection Mode**: `serial`
-- Choose **Serial Port** from dropdown (auto-detected)
-- Set **Baudrate** (e.g., `115200`)
-- Configure **Data Format** (e.g., `json_array`)
-- Set **Channel Count** (e.g., `32`)
-- Click **"Start Dashboard"**
+#### Testing Without Hardware (Dummy Mode)
+```
+Connection Mode: dummy
+Data Format: json_array
+Channel Count: 32
+```
+Click **"Start Dashboard"**
 
-#### For Network Sources:
-- Select **Connection Mode**: `tcp` or `udp`
-- Enter **Host** (e.g., `192.168.1.100`)
-- Enter **Port** (e.g., `9000`)
-- Configure **Data Format**
-- Click **"Start Dashboard"**
+#### Serial Hardware Connection
+```
+Connection Mode: serial
+Serial Port: COM4 (auto-detected)
+Baudrate: 115200
+Data Format: json_array
+Channel Count: 32
+```
+Click **"Start Dashboard"**
 
-### 4. Configure Parameters
+#### Network Connection (TCP/UDP)
+```
+Connection Mode: tcp (or udp)
+Host: 192.168.1.100
+Port: 9000
+Data Format: json_array
+Channel Count: 32
+```
+Click **"Start Dashboard"**
 
-Before or after starting the dashboard:
-1. Go to **Edit** → **Manage Parameters**
-2. Click **"Add..."** to create a new parameter
-3. Fill in parameter details:
-   - **ID**: Unique identifier (e.g., `temp_sensor`)
-   - **Name**: Display name (e.g., `Temperature`)
-   - **Array Index**: Position in data array (e.g., `0`)
-   - **Unit**: Measurement unit (e.g., `°C`)
-   - **Thresholds**: Alarm levels
-4. Click **OK** to save
-5. Repeat for all parameters
-6. Click **Close**
+### 4. Define Parameters
+
+Navigate to **Edit → Manage Parameters**
+
+Example parameter configuration:
+```
+ID: temp_sensor
+Name: Temperature
+Array Index: 0
+Sensor Group: Environmental
+Unit: °C
+Description: Ambient temperature sensor
+
+Thresholds:
+  Low Critical: -10
+  Low Warning: 0
+  High Warning: 80
+  High Critical: 100
+```
 
 ### 5. Add Widgets
 
-1. Click **"Add Widget..."** button or use **Edit** → **Add Widget**
-2. Select **Widget Type** from dropdown
-3. Choose **Parameters** to display
-4. Configure widget-specific options
-5. Click **OK**
+Click **"Add Widget..."** and configure:
+- Select widget type (Value Card, Time Graph, etc.)
+- Choose parameters to display
+- Configure widget-specific options
 
-The widget will appear in your dashboard and automatically update with live data.
+### 6. Save Your Work
 
-### 6. Save Project
-
-1. Go to **File** → **Save Project**
-2. Choose location and filename (`.json` extension)
-3. Click **Save**
-
-Your dashboard configuration is now saved and can be reloaded anytime.
+**File → Save Project** to preserve your configuration
 
 ---
 
-## User Guide
+## 📖 User Guide
 
 ### Dashboard Interface
 
-#### Top Bar (Header)
-- **Dashboard Title**: Customizable title (right-click to edit)
-- **Connection Status**: Real-time connection indicator
-- **Stream Status**: STREAMING, PAUSED, or AWAITING PARAMETERS
-- **Logging Status**: Shows if data logging is active
-- **Pause Button**: Pause/resume data stream
-
-#### Status Bar (Bottom)
-- **System Clock**: Current date and time
-- **Connection Details**: Active connection information
-- **Uptime**: Dashboard runtime
-- **RX**: Total bytes received
-- **Packets**: Total packet count
-- **Rate**: Packets per second
-
-#### Main Area
-- **Tabbed Dashboard**: Multiple dashboard views
-- **Dockable Widgets**: Drag to rearrange
-- **Context Menus**: Right-click on widgets for options
+```
+┌─────────────────────────────────────────────────────────┐
+│ Dashboard Title │ Connection │ Status │ Logging │ Pause │ ← Header Bar
+├─────────────────────────────────────────────────────────┤
+│                                                           │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐  │
+│  │  Widget 1    │  │  Widget 2    │  │  Widget 3    │  │
+│  │              │  │              │  │              │  │
+│  │   (Graph)    │  │   (Gauge)    │  │   (Table)    │  │
+│  └──────────────┘  └──────────────┘  └──────────────┘  │ ← Main Area
+│                                                           │
+│  ┌──────────────────────────────────────────────────┐  │
+│  │            Widget 4 (Map)                        │  │
+│  │                                                    │  │
+│  └──────────────────────────────────────────────────┘  │
+│                                                           │
+├─────────────────────────────────────────────────────────┤
+│ Clock │ Connection │ Uptime │ Packets │ Rate │ RX Bytes │ ← Status Bar
+└─────────────────────────────────────────────────────────┘
+```
 
 ### Working with Parameters
 
-#### Parameter Properties
+Parameters define the data channels you want to monitor. Each parameter maps to an index in your incoming data array.
+
+**Parameter Properties:**
 
 | Property | Description | Example |
 |----------|-------------|---------|
 | **ID** | Unique identifier (no spaces) | `accel_x` |
-| **Name** | Display name | `Acceleration X` |
-| **Array Index** | Position in data packet | `3` |
-| **Sensor Group** | Categorization | `IMU` |
+| **Name** | Human-readable display name | `Acceleration X` |
+| **Array Index** | Position in data packet (0-based) | `3` |
+| **Sensor Group** | Category for organization | `IMU` |
 | **Unit** | Measurement unit | `m/s²` |
-| **Description** | Detailed info | `X-axis acceleration from IMU` |
-| **Thresholds** | Alarm levels | Low Crit: -20, High Crit: 20 |
+| **Description** | Detailed information | `X-axis acceleration from IMU` |
+| **Thresholds** | Alarm level definitions | See below |
 
-#### Managing Parameters
+**Threshold Configuration:**
 
-**To Add a Parameter:**
-1. **Edit** → **Manage Parameters** → **Add...**
-2. Fill in all fields
-3. Set threshold values in ascending order
-4. Click **OK**
+Thresholds must be in ascending order:
+```
+Low Critical < Low Warning < High Warning < High Critical
+    -20    <     -10     <      10      <      20
+```
 
-**To Edit a Parameter:**
-1. **Edit** → **Manage Parameters**
-2. Select parameter from list
-3. Click **Edit...**
-4. Modify fields
-5. Click **OK**
+### Widget Configuration Guide
 
-**To Delete a Parameter:**
-1. **Edit** → **Manage Parameters**
-2. Select parameter
-3. Click **Remove**
-4. Confirm deletion
+#### 1. Value Card
+```
+Purpose: Display single parameter with large numeric value
+Parameters: 1
+Options: Priority (High/Medium/Low)
+Best For: Critical parameters needing constant monitoring
+```
 
-### Working with Widgets
+#### 2. Time Graph
+```
+Purpose: Multi-parameter line chart over time
+Parameters: 1+
+Options: Auto-assigned colors per parameter
+Best For: Trend analysis, comparing related parameters
+Features: Zoom, pan, auto-scale, crosshair cursor
+```
 
-#### Adding Widgets
+#### 3. Gauge Widget
+```
+Purpose: Visual representation with threshold zones
+Parameters: 1
+Options: Min/max values, threshold indicators
+Best For: Parameters with defined operational ranges
+```
 
-**Method 1: Menu**
-1. **Edit** → **Add Widget...**
-2. Select widget type
-3. Choose parameters
-4. Configure options
-5. Click **OK**
+#### 4. Histogram
+```
+Purpose: Statistical distribution visualization
+Parameters: 1
+Options: Bin count (10-100)
+Best For: Analyzing data distribution patterns
+```
 
-**Method 2: Toolbar Button**
-1. Click **"Add Widget"** button
-2. Follow same steps as above
-
-#### Widget Configuration
-
-**Value Card:**
-- Select **1 parameter**
-- Choose **priority** (High, Medium, Low)
-- Sets border color based on priority
-
-**Time Graph:**
-- Select **1+ parameters**
-- Each parameter gets unique color
-- Auto-scaling Y-axis
-- Zoomable and pannable
-
-**Gauge Widget:**
-- Select **1 parameter**
-- Configure min/max values
-- Set threshold indicators
-
-**Histogram:**
-- Select **1 parameter**
-- Choose bin count (10-100)
-- Shows distribution of recent values
-
-**LED Indicator:**
-- Select **1 parameter**
-- Color changes based on thresholds:
+#### 5. LED Indicator
+```
+Purpose: Binary or threshold-based status display
+Parameters: 1
+Color States:
   - Blue: Below low_warn
-  - Green: Normal range
-  - Yellow: High warning
-  - Red: Critical
+  - Green: Normal range (low_warn to high_warn)
+  - Yellow: High warning (high_warn to high_crit)
+  - Red: Critical (above high_crit or below low_crit)
+Best For: Quick status monitoring
+```
 
-**Log Table:**
-- Select **1+ parameters**
-- Shows timestamped data
-- Search and highlight functionality
+#### 6. Log Table
+```
+Purpose: Timestamped tabular data display
+Parameters: 1+
+Features: Search, highlight, scrolling history
+Best For: Detailed data inspection, debugging
+```
 
-**Map Widget:**
-- Select **exactly 2 parameters** (Latitude, Longitude)
-- Real-time position tracking
-- Zoom controls
-- Requires `PySide6-WebEngine`
+#### 7. Map Widget
+```
+Purpose: GPS coordinate visualization
+Parameters: Exactly 2 (Latitude, Longitude)
+Requirements: PySide6-WebEngine
+Features: Real-time tracking, zoom, satellite view
+Best For: Location monitoring, trajectory tracking
+```
 
-#### Managing Widgets
+---
 
-**Rename Widget:**
-1. Right-click on widget title bar
-2. Select **"Rename Widget"**
-3. Enter new name
-4. Click **OK**
+## 🔌 Data Sources
 
-**Float/Dock Widget:**
-1. Right-click on widget
-2. Select **"Float / Dock"**
-3. Widget toggles between floating window and docked state
+### Serial Communication
 
-**Close Widget:**
-1. Right-click on widget
-2. Select **"Close Widget"**
-3. Widget is removed from dashboard
+**Use Case**: Direct hardware connections via RS232, RS485, USB-Serial
 
-**Tile Widgets Evenly:**
-1. Right-click on any widget
-2. Select **"Tile Evenly"**
-3. All widgets arrange in grid layout
+**Configuration:**
+```python
+Mode: serial
+Port: COM4 (Windows) or /dev/ttyUSB0 (Linux)
+Baudrate: 9600, 115200, 230400, etc.
+Timeout: 1.0 seconds
+```
 
-### Working with Tabs
+**Common Issues:**
+- Port access denied → Check permissions (Linux: add user to dialout group)
+- No data → Verify baudrate matches device
+- Corrupted data → Check cable quality, try lower baudrate
 
-#### Creating Tabs
+### TCP/IP
 
-1. **View** → **Add Tab**
-2. Enter tab name
-3. Click **OK**
+**Use Case**: Network-based remote monitoring, Ethernet connections
 
-New tab appears with empty dashboard.
+**Configuration:**
+```python
+Mode: tcp
+Host: 192.168.1.100 (device IP)
+Port: 9000 (application port)
+Timeout: 1.0 seconds
+```
 
-#### Renaming Tabs
+**Common Issues:**
+- Connection refused → Verify server is listening on specified port
+- No data → Check firewall settings
+- Intermittent connection → Network stability, cable quality
 
-1. **View** → **Rename Current Tab**
-2. Enter new name
-3. Click **OK**
+### UDP
 
-#### Closing Tabs
+**Use Case**: Fast, real-time streaming where packet loss is acceptable
 
-Click **X** button on tab (if closable).
+**Configuration:**
+```python
+Mode: udp
+Host: 0.0.0.0 (listen on all interfaces)
+Port: 9000 (listening port)
+Timeout: 1.0 seconds
+```
 
-**Note**: First tab is usually not closable by default.
+**Common Issues:**
+- No packets received → Check firewall, verify sender configuration
+- Packet loss → Expected with UDP; use TCP if critical
+- Wrong data → Verify sender is transmitting to correct IP/port
 
-### Data Stream Control
+### Dummy Data
 
-#### Pause/Resume Stream
-
-**Method 1**: Click **"Pause Stream"** button in header
-**Method 2**: Press **Space** bar
-
-When paused:
-- Data stops updating
-- Button changes to **"Resume Stream"**
-- Status shows **PAUSED**
-
-#### Raw Telemetry Monitor
-
-View raw incoming data packets:
-
-1. **View** → **Raw Telemetry Monitor**
-2. Monitor window opens showing:
-   - Packet timestamps
-   - Packet numbers
-   - Raw data values
-   - Packet rate statistics
+**Use Case**: Testing, demonstrations, development
 
 **Features:**
-- **Pause**: Stop display updates
-- **Clear**: Clear display buffer
-- **Auto-scroll**: Automatically scroll to newest data
-- **Show Hex**: Toggle hex/decimal display
-- **Save to File**: Export raw data log
+- Simulates 32-channel sensor array
+- Sine wave patterns with random noise
+- No external hardware required
+- Configurable from 1-1024 channels
 
 ---
 
-## Configuration Reference
+## 📊 Widget Types
 
-### Connection Settings
+### Value Card
 
-Access via **File** → **Connection Settings...**
+<table>
+<tr>
+<td width="30%">
 
-#### Serial Configuration
+**Features:**
+- Large numeric display
+- Alarm state colors
+- Priority border
+- Unit display
 
+</td>
+<td width="70%">
+
+**Alarm States:**
+- 🟢 **Nominal**: Green background, value within normal range
+- 🟡 **Warning**: Yellow background, approaching limits
+- 🔴 **Critical**: Red background, exceeded safe limits
+
+**Priority Levels:**
+- High: Red border
+- Medium: Blue border
+- Low: No border
+
+</td>
+</tr>
+</table>
+
+### Time Graph
+
+**Advanced Features:**
+- **Zoom**: Mouse wheel or drag-select
+- **Pan**: Click and drag
+- **Crosshair**: Hover for value inspection
+- **Legend**: Shows all plotted parameters
+- **Auto-scale**: Y-axis adjusts to data range
+- **Reset View**: Toolbar button to restore defaults
+
+**Keyboard Shortcuts:**
+- **Ctrl + Mouse Wheel**: Zoom Y-axis only
+- **Shift + Mouse Wheel**: Zoom X-axis only
+- **Right-click + Drag**: Pan view
+- **Double-click**: Auto-scale to fit all data
+
+### Gauge Widget
+
+**Zones:**
+- Red zone: Critical (beyond high_crit or below low_crit)
+- Yellow zone: Warning (between warning and critical)
+- Green zone: Normal (between low_warn and high_warn)
+- Blue zone: Low (below low_warn)
+
+**Visual Elements:**
+- Needle indicator with smooth animation
+- Colored arc segments
+- Current value display
+- Min/max labels
+
+### Log Table
+
+**Search Functionality:**
 ```
-Mode: serial
-Serial Port: COM4 (Windows) or /dev/ttyUSB0 (Linux)
-Baudrate: 115200
-Timeout: 1.0 seconds
-Data Format: json_array
-Channel Count: 32
-Sample Width: 2 bytes
-Endianness: little
+1. Select parameter from dropdown
+2. Choose comparison operator (=, >, <, >=, <=)
+3. Enter target value
+4. Click "Search Last"
+5. Matching row highlights in blue
 ```
 
-#### TCP Configuration
-
-```
-Mode: tcp
-TCP Host: 192.168.1.100
-TCP Port: 9000
-Timeout: 1.0 seconds
-Data Format: json_array
-Channel Count: 32
-```
-
-#### UDP Configuration
-
-```
-Mode: udp
-UDP Host: 0.0.0.0 (listen all interfaces)
-UDP Port: 9000
-Timeout: 1.0 seconds
-Data Format: json_array
-Channel Count: 32
-```
-
-### Data Format Configuration
-
-#### JSON Array Format
-```json
-[23.5, 65.2, 1013.25, 9.8, 0.5, -1.2, ...]
-```
-- Array of numeric values
-- Index maps to parameter array_index
-- Most flexible format
-
-#### CSV Format
-```
-23.5,65.2,1013.25,9.8,0.5,-1.2,...
-```
-- Comma-separated values
-- Configure custom separator if needed
-- Good for simple logging
-
-#### Raw Bytes Format
-- Binary data interpretation
-- Configure sample width (1-8 bytes)
-- Configure endianness (little/big)
-- Useful for compact transmission
-
-### Project File Structure
-
-Project files (`.json`) contain:
-
-```json
-{
-  "parameters": [...],
-  "layout": {...},
-  "connection_settings": {...},
-  "logging_settings": {...},
-  "configured_widgets": [...],
-  "dashboard_title_text": "Dashboard",
-  "dashboard_title_alignment": "1",
-  "version": "1.0",
-  "created": "2025-01-15T10:30:00"
-}
-```
+**Features:**
+- 500-row history buffer
+- Automatic scrolling
+- Timestamped entries
+- Multi-parameter display
 
 ---
 
-## Data Logging
+## 💾 Data Logging
 
-### Configuring Data Logging
+### Configuration
 
-1. **Data Logging** → **Configure Logging...**
-2. Configure settings:
-   - **Format**: CSV or JSON
-   - **File Path**: Output location (auto-generated if blank)
-   - **Parameters**: Select which parameters to log
-   - **Buffer Size**: 10-1000 (higher = less frequent disk writes)
-3. Click **OK**
+Navigate to **Data Logging → Configure Logging...**
 
-### Starting/Stopping Logging
+**Settings:**
 
-**Start Logging:**
-- **Data Logging** → **Start Logging**
-- Status bar shows: **Logging: ON (filename)**
+| Setting | Description | Options |
+|---------|-------------|---------|
+| **Format** | Output file format | CSV, JSON |
+| **File Path** | Output location | Auto-generated or custom |
+| **Parameters** | Data to log | Select from configured parameters |
+| **Buffer Size** | Entries before disk write | 10-1000 |
 
-**Stop Logging:**
-- **Data Logging** → **Stop Logging**
-- Data flushed to disk
-- Status bar shows: **Logging: OFF**
-
-### Log File Formats
+### Format Comparison
 
 #### CSV Format
 
+**Advantages:**
+- Easy to import into Excel, MATLAB, Python
+- Human-readable
+- Widely supported
+
+**Structure:**
 ```csv
 timestamp,elapsed_time,temp_sensor_Temperature,humidity_Humidity
 2025-01-15 10:30:00.123,0.000,23.500,65.200
 2025-01-15 10:30:01.223,1.100,23.600,65.100
-2025-01-15 10:30:02.323,2.200,23.700,65.000
 ```
-
-**Columns:**
-- `timestamp`: ISO 8601 formatted timestamp
-- `elapsed_time`: Seconds since logging started
-- `{param_id}_{param_name}`: One column per logged parameter
 
 #### JSON Format
 
-```json
-# Dashboard Data Log
-# Format: JSON Lines (one JSON object per line)
-# Parameters: temp_sensor, humidity
-# Start Time: 2025-01-15T10:30:00
+**Advantages:**
+- Structured data format
+- Easy to parse programmatically
+- Self-documenting
 
+**Structure:**
+```json
 {"timestamp": "2025-01-15T10:30:00.123", "elapsed_time": 0.0, "parameters": {"temp_sensor": 23.5, "humidity": 65.2}}
 {"timestamp": "2025-01-15T10:30:01.223", "elapsed_time": 1.1, "parameters": {"temp_sensor": 23.6, "humidity": 65.1}}
 ```
 
-**Format:** JSON Lines (one object per line)
+### Buffer Size Guidelines
 
-### Buffer Size Recommendations
+| Data Rate | Recommended Buffer | Write Frequency |
+|-----------|-------------------|-----------------|
+| 1-10 Hz | 100 | Every 10-100 sec |
+| 10-50 Hz | 200-500 | Every 4-50 sec |
+| 50-100 Hz | 500-1000 | Every 10-20 sec |
+| 100+ Hz | 1000 | Every 10 sec |
 
-| Data Rate | Buffer Size | Disk Write Frequency |
-|-----------|-------------|---------------------|
-| 1-10 Hz | 100 | Every 10-100 seconds |
-| 10-50 Hz | 200-500 | Every 4-50 seconds |
-| 50+ Hz | 500-1000 | Every 10-20 seconds |
-
-**Note**: Larger buffers reduce disk I/O but increase memory usage and potential data loss on crash.
+**Tradeoffs:**
+- **Larger buffer**: Less disk I/O, higher memory usage, more data lost if crash
+- **Smaller buffer**: More frequent writes, lower memory, safer
 
 ---
 
-## Troubleshooting
+## ⚙️ Configuration
 
-### Connection Issues
+### Project File Structure
 
-#### Serial Port Not Found
+Project files (`.json`) contain complete dashboard state:
 
-**Symptoms**: Port doesn't appear in dropdown
+```json
+{
+  "version": "1.0",
+  "created": "2025-01-15T10:30:00",
+  "parameters": [
+    {
+      "id": "temp_sensor",
+      "name": "Temperature",
+      "array_index": 0,
+      "unit": "°C",
+      "threshold": {
+        "low_crit": -10,
+        "low_warn": 0,
+        "high_warn": 80,
+        "high_crit": 100
+      }
+    }
+  ],
+  "connection_settings": {
+    "mode": "serial",
+    "serial_port": "COM4",
+    "baudrate": 115200,
+    "data_format": "json_array"
+  },
+  "layout": {
+    "Main View": {
+      "configs": {
+        "widget_id": {
+          "displayType": "Time Graph",
+          "param_ids": ["temp_sensor"]
+        }
+      }
+    }
+  },
+  "logging_settings": {
+    "format": "csv",
+    "selected_params": ["temp_sensor"],
+    "buffer_size": 100
+  }
+}
+```
 
-**Solutions**:
-1. Check device is connected
-2. Install device drivers
-3. Check port permissions (Linux: `sudo usermod -a -G dialout $USER`)
-4. Click "Refresh" button to update port list
-5. Try manual entry of port name
+### Data Format Examples
 
-#### Serial Connection Failed
+#### JSON Array
+```json
+[23.5, 65.2, 1013.25, 9.8, 0.5, -1.2, 12.3, 45.6]
+```
 
-**Symptoms**: "Disconnected (Serial)" status
+#### CSV
+```
+23.5,65.2,1013.25,9.8,0.5,-1.2,12.3,45.6
+```
 
-**Solutions**:
-1. Verify baud rate matches device
-2. Close other applications using the port
-3. Check cable connection
-4. Try different timeout value
-5. Verify data format matches device output
+#### Raw Bytes (Binary)
+```
+Configure:
+  Sample Width: 2 bytes
+  Endianness: little
+  Channel Count: 8
 
-#### Network Connection Issues
+Incoming: 0x17 0x5C 0x04 0x19 ...
+Parsed: [23.5, 65.2, ...]
+```
 
-**Symptoms**: "Disconnected (TCP/UDP)" status
+---
 
-**Solutions**:
-1. Verify IP address and port
-2. Check firewall settings
-3. Ping host to verify connectivity
-4. For UDP: Ensure device is sending to correct port
-5. For TCP: Verify server is listening
+## 🔧 Troubleshooting
 
-### Data Display Issues
+### Quick Diagnostic Checklist
 
-#### No Data Appearing in Widgets
+```
+☐ Connection shows "Connected"
+☐ Stream shows "STREAMING" (not paused)
+☐ Parameters properly configured
+☐ Array indices correct
+☐ Data format matches device
+☐ Check Raw Telemetry Monitor
+☐ Verify firewall settings
+☐ Check cable connections
+```
 
-**Checklist**:
-- [ ] Connection status shows "Connected"
-- [ ] Stream status shows "STREAMING" (not paused)
-- [ ] Parameters are properly configured
-- [ ] Array indices match data structure
-- [ ] Data format matches incoming data
-- [ ] Check Raw Telemetry Monitor for incoming packets
+### Common Issues
 
-#### Incorrect Data Values
+<details>
+<summary><b>Serial Port Not Detected</b></summary>
 
-**Solutions**:
-1. Verify array index mapping
-2. Check data format configuration
-3. Verify endianness for raw bytes
-4. Check for parameter ID conflicts
-5. Inspect raw data in Telemetry Monitor
+**Solutions:**
+1. Click "Refresh" button in port selection
+2. On Linux: `sudo usermod -a -G dialout $USER` (logout/login required)
+3. On Windows: Check Device Manager for COM port number
+4. Verify USB cable supports data (not just charging)
+5. Try different USB port
+6. Reinstall device drivers
 
-#### Widgets Not Updating
+</details>
 
-**Solutions**:
-1. Check if stream is paused
-2. Verify parameter IDs in widget configuration
-3. Restart application
-4. Check system resources (CPU/memory)
+<details>
+<summary><b>No Data Appearing</b></summary>
 
-### Performance Issues
+**Diagnostic Steps:**
+1. Open **View → Raw Telemetry Monitor** to verify incoming packets
+2. Check connection status indicator (should be green)
+3. Verify stream is not paused
+4. Check parameter array indices match data structure
+5. Verify data format configuration
+6. Test with dummy data mode first
 
-#### High CPU Usage
+</details>
 
-**Solutions**:
-1. Reduce number of active widgets
+<details>
+<summary><b>High CPU/Memory Usage</b></summary>
+
+**Optimizations:**
+1. Reduce number of active widgets (remove unused)
 2. Increase data logging buffer size
-3. Use simpler widget types (Value Cards vs. Graphs)
+3. Use simpler widget types (Value Cards vs Graphs)
 4. Close unused tabs
-5. Reduce graph history length
+5. Limit graph history depth
+6. Reduce data rate if possible
 
-#### High Memory Usage
+</details>
 
-**Solutions**:
-1. Clear old data periodically (restart application)
-2. Reduce data logging buffer size
-3. Limit number of parameters
-4. Close unused widgets
-5. Monitor with Task Manager/Activity Monitor
+<details>
+<summary><b>Data Logging Not Working</b></summary>
 
-#### Slow UI Response
+**Checklist:**
+1. Configure logging first (**Data Logging → Configure**)
+2. Select at least one parameter
+3. Check write permissions to output directory
+4. Verify sufficient disk space
+5. Close log file if open in another program
+6. Stop logging to flush buffer before checking file
 
-**Solutions**:
-1. Reduce widget update frequency
-2. Simplify dashboard layout
-3. Close background applications
-4. Upgrade hardware if possible
+</details>
 
-### Data Logging Issues
+### Error Messages
 
-#### Cannot Start Logging
-
-**Symptoms**: Error message when starting
-
-**Solutions**:
-1. Configure logging first (Data Logging → Configure)
-2. Check write permissions to output directory
-3. Verify disk space available
-4. Close file if open in another application
-5. Try different output location
-
-#### Missing Data in Log Files
-
-**Solutions**:
-1. Ensure logging was started
-2. Stop logging to flush buffer before checking file
-3. Verify parameters are selected in configuration
-4. Check buffer size isn't too large
-5. Verify disk space didn't run out
-
-### Application Crashes
-
-#### On Startup
-
-**Solutions**:
-1. Check Python version (3.8+)
-2. Reinstall dependencies: `pip install -r requirements.txt --force-reinstall`
-3. Delete config files in user directory
-4. Check console for error messages
-
-#### During Operation
-
-**Solutions**:
-1. Check console for error messages
-2. Verify data format matches incoming data
-3. Check for corrupted project file
-4. Monitor system resources
-5. Report issue with error log
+| Error | Cause | Solution |
+|-------|-------|----------|
+| `Port access denied` | Insufficient permissions | Linux: add user to dialout group<br>Windows: close other programs using port |
+| `Connection refused` | Server not listening | Verify IP/port, check firewall |
+| `Module not found` | Missing dependency | Run `pip install -r requirements.txt` |
+| `Invalid data format` | Format mismatch | Check device output format, adjust settings |
 
 ---
 
-## Development
+## 👨‍💻 Development
 
 ### Project Structure
 
@@ -689,84 +793,129 @@ Dashboard-Builder/
 ├── main.py                      # Application entry point
 ├── backend.py                   # Data reader and parser
 ├── requirements.txt             # Python dependencies
-├── README.md                    # This documentation
-├── LICENSE                      # License file
+├── README.md                    # Documentation
+├── LICENSE                      # GPL v3.0 license
 ├── app/
 │   ├── __init__.py
-│   ├── widgets.py               # Custom widget implementations
+│   ├── widgets.py               # Widget implementations
 │   ├── dialogs.py               # Dialog windows
 │   └── ui/
 │       ├── __init__.py
-│       └── main_window.py       # Main window implementation
+│       └── main_window.py       # Main window
 ├── public/
+│   ├── Glance_nobg.png          # App logo
 │   └── ign_logo_wht.png         # Team logo
-└── examples/
-    └── preset1.json             # Example configuration
+├── examples/
+│   └── preset1.json             # Example configuration
+└── Documentation/
+    └── index.html               # Built-in documentation
 ```
 
 ### Adding Custom Widgets
 
-1. Create widget class in `app/widgets.py`
-2. Inherit from `QWidget` or `QFrame`
-3. Implement `update_value()` or `update_data()` method
-4. Add to `AddWidgetDialog` in `app/dialogs.py`
-5. Update `add_widget_to_dashboard()` in `main.py`
+1. **Create widget class** in `app/widgets.py`:
 
-### Adding Data Formats
+```python
+class CustomWidget(QWidget):
+    def __init__(self, param_config):
+        super().__init__()
+        self.param = param_config
+        # Initialize UI
+    
+    def update_value(self, value):
+        # Update display with new data
+        pass
+```
 
-1. Update `backend.py` `DataReader` class
-2. Add format to `parse_line()` method
-3. Update connection settings dialog
-4. Document format in README
+2. **Register in `AddWidgetDialog`** (`app/dialogs.py`)
+
+3. **Add handler** in `MainWindow.add_widget_to_dashboard()` (`main.py`)
 
 ### Building Executable
 
-#### Using PyInstaller
-
 ```bash
+# Install PyInstaller
 pip install pyinstaller
-pyinstaller --onefile --windowed --name "Dashboard Builder" main.py
+
+# Build Windows executable
+pyinstaller --onefile --windowed --name "Dashboard Builder" \
+    --icon=public/Glance_nobg.png \
+    --add-data "public:public" \
+    --add-data "Documentation:Documentation" \
+    main.py
+
+# Output in dist/ directory
 ```
 
-Executable will be in `dist/` directory.
+### Code Style
+
+- **PEP 8** compliance
+- Type hints where applicable
+- Docstrings for public methods
+- Descriptive variable names
+
+### Testing
+
+```bash
+# Run with dummy data for testing
+python main.py
+# Select "dummy" mode in connection settings
+```
 
 ---
 
-## About Team Ignition
+## 🏆 About Team Ignition
 
-**Team Ignition** is the official student rocketry team of **Vellore Institute of Technology, Chennai**, founded with the vision of advancing aerospace innovation through hands-on learning and experimentation.
+<div align="center">
+
+![Team Ignition Logo](public/ign_logo_wht.png)
+
+**Official Student Rocketry Team**  
+Vellore Institute of Technology, Chennai
+
+</div>
 
 ### Our Mission
 
-We design, build, and launch model and experimental rockets, developing every subsystem in-house — from **propulsion and avionics to payloads and recovery systems**. Our projects range from solid and hybrid rocket motor development to **flight computers, payloads like CubeSats and CanSats, and ground-support software applications**.
+Team Ignition is dedicated to advancing aerospace innovation through hands-on learning and experimentation. We design, build, and launch experimental rockets while developing every subsystem in-house — from **propulsion and avionics to recovery systems and ground-support equipment**.
 
 ### What We Do
 
-By combining engineering rigor with creativity, we actively participate in **national and international rocketry competitions**, while also conducting workshops, seminars, and outreach programs to inspire future engineers.
+- 🚀 **Design & Launch** model and experimental rockets
+- 🔧 **Develop In-House** propulsion, avionics, payloads, and recovery systems
+- 🏅 **Compete** in national and international rocketry competitions
+- 📚 **Educate** through workshops, seminars, and outreach programs
+- 💡 **Innovate** with cutting-edge aerospace technology
 
-As a **student-led, self-funded team**, we place strong emphasis on innovation, collaboration, and technical excellence. Every project we take on — whether hardware or software — contributes to our goal of pushing boundaries in rocketry and aerospace research, while also equipping our members with practical, industry-relevant skills.
+### Our Projects
+
+- Solid and hybrid rocket motor development
+- Flight computers and telemetry systems
+- CubeSat and CanSat payloads
+- Ground-support software applications
+- Launch pad and recovery systems
 
 ### Connect With Us
 
-- **Website**: [teamignition.space](https://teamignition.space)
-- **GitHub**: [github.com/teamignitionvitc](https://github.com/teamignitionvitc)
-- **Twitter**: [@ignitiontech23](https://x.com/ignitiontech23)
-- **LinkedIn**: [Team Ignition](https://www.linkedin.com/in/teamignition/)
-- **Instagram**: [@ignition_vitc](https://www.instagram.com/ignition_vitc)
+<div align="center">
 
-### Software Department
+[![Website](https://img.shields.io/badge/Website-teamignition.space-blue?style=for-the-badge)](https://teamignition.space)
+[![GitHub](https://img.shields.io/badge/GitHub-teamignitionvitc-black?style=for-the-badge&logo=github)](https://github.com/teamignitionvitc)
+[![Twitter](https://img.shields.io/badge/Twitter-@ignitiontech23-blue?style=for-the-badge&logo=twitter)](https://x.com/ignitiontech23)
+[![LinkedIn](https://img.shields.io/badge/LinkedIn-Team%20Ignition-blue?style=for-the-badge&logo=linkedin)](https://www.linkedin.com/in/teamignition/)
+[![Instagram](https://img.shields.io/badge/Instagram-@ignition__vitc-E4405F?style=for-the-badge&logo=instagram)](https://www.instagram.com/ignition_vitc)
 
-This Dashboard Builder was developed by the **Software Department** of Team Ignition as part of our ground-support equipment suite for rocket telemetry and monitoring.
+</div>
 
 ---
 
-## License
+## 📄 License
 
 This project is licensed under the **GNU General Public License v3.0** with additional restrictions.
 
 ### Additional Restriction
 
-This software may not be used for commercial purposes without explicit written permission from the authors (Team Ignition Software Department).
+⚠️ **This software may not be used for commercial purposes without explicit written permission from the authors (Team Ignition Software Department).**
 
 ### Full License
 
@@ -790,72 +939,121 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 ---
 
-## Support and Contributions
+## 🤝 Contributing
 
-### Getting Help
+We welcome contributions from the community! Whether you're fixing bugs, adding features, improving documentation, or testing — your help is valuable.
 
-1. Check this README documentation
-2. Review [Troubleshooting](#troubleshooting) section
-3. Check existing GitHub issues
-4. Create new issue with:
-   - System information (OS, Python version)
-   - Steps to reproduce problem
-   - Error messages/logs
-   - Screenshots if applicable
+### How to Contribute
 
-### Contributing
+1. **Fork** the repository
+2. **Create** a feature branch (`git checkout -b feature/AmazingFeature`)
+3. **Commit** your changes (`git commit -m 'Add AmazingFeature'`)
+4. **Push** to the branch (`git push origin feature/AmazingFeature`)
+5. **Open** a Pull Request
 
-We welcome contributions! To contribute:
+### Contribution Guidelines
 
-1. Fork the repository
-2. Create feature branch (`git checkout -b feature/AmazingFeature`)
-3. Commit changes (`git commit -m 'Add AmazingFeature'`)
-4. Push to branch (`git push origin feature/AmazingFeature`)
-5. Open Pull Request
+- Follow existing code style (PEP 8)
+- Add tests for new features
+- Update documentation as needed
+- Write clear commit messages
+- Keep pull requests focused
 
-### Issue Reporting
+### Reporting Issues
 
 Please report issues on GitHub with:
-- Clear description
+- Clear, descriptive title
 - Steps to reproduce
 - Expected vs actual behavior
-- System information
+- System information (OS, Python version)
 - Relevant logs/screenshots
 
 ---
 
-## Acknowledgments
+## 📞 Support
 
-- Built with PySide6 (Qt6)
-- Plotting powered by pyqtgraph
-- Serial communication via pyserial
-- Developed by Team Ignition Software Department
-- Tested by Team Ignition members during rocket ground operations
+### Getting Help
+
+1. **Check Documentation**: Read this README and built-in docs
+2. **Search Issues**: Look for similar problems on GitHub
+3. **Ask Community**: Open a GitHub discussion
+4. **Report Bugs**: Create a new issue with details
+
+### Issue Template
+
+```markdown
+**System Information:**
+- OS: Windows 11 / Ubuntu 22.04 / macOS 12
+- Python Version: 3.10.5
+- Application Version: 2.0.0
+
+**Description:**
+Clear description of the issue
+
+**Steps to Reproduce:**
+1. Step one
+2. Step two
+3. Step three
+
+**Expected Behavior:**
+What should happen
+
+**Actual Behavior:**
+What actually happens
+
+**Screenshots/Logs:**
+Attach relevant files
+```
 
 ---
 
-## Version History
+## 🙏 Acknowledgments
 
-### v2.0.0 (Current)
-- Complete UI/UX redesign with 4-phase wizard
-- Enhanced parameter management system
-- Comprehensive data logging (CSV/JSON)
-- Raw telemetry monitor
-- Connection status monitoring
-- Professional dark theme
-- Improved widget configuration
-- Better error handling and validation
-- Dashboard title customization
-- Performance optimizations
+- Built with **PySide6** (Qt6) for professional UI
+- Plotting powered by **pyqtgraph** for high performance
+- Serial communication via **pyserial**
+- Developed by **Team Ignition Software Department**
+- Tested during rocket ground operations by Team Ignition
 
-### v1.0.0
-- Initial release
+---
+
+## 📊 Version History
+
+### v2.0.0 (Current Release)
+
+**Major Improvements:**
+- ✨ Complete UI/UX redesign with 4-phase wizard
+- 🔧 Enhanced parameter management system
+- 💾 Comprehensive data logging (CSV/JSON)
+- 📡 Raw telemetry monitor
+- 📊 Real-time connection status monitoring
+- 🎨 Professional dark theme
+- ⚡ Performance optimizations
+- 🔍 Better error handling and validation
+- 📝 Dashboard title customization
+- 🌐 Improved GPS mapping
+
+### v1.0.0 (Initial Release)
+
 - Basic dashboard functionality
 - Serial and network data sources
-- Core widget types
+- Core widget types (graphs, gauges, tables)
 - Simple parameter configuration
+- Project save/load
 
 ---
 
-**Dashboard Builder** - Professional telemetry visualization by Team Ignition
+<div align="center">
+
+### ⭐ Star this repository if you find it useful!
+
+**Dashboard Builder** - Professional telemetry visualization by Team Ignition  
 *Advancing aerospace innovation through software excellence*
+
+---
+
+Made with ❤️ by Team Ignition Software Department
+
+[Report Bug](https://github.com/teamignitionvitc/Dashboard-Builder/issues) • [Request Feature](https://github.com/teamignitionvitc/Dashboard-Builder/issues) • [Documentation](https://github.com/teamignitionvitc/Dashboard-Builder#readme)
+
+</div>
