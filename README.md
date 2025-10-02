@@ -127,6 +127,8 @@
 ## 📸 Screenshots
 
 <div align="center">
+
+### Home Screen
 ![Welcome Screen](public/Doc%20Images/HomeScreen.png)
 *Home Screen*
 
