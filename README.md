@@ -127,17 +127,23 @@
 ## 📸 Screenshots
 
 <div align="center">
+![Welcome Screen](public/Doc%20Images/HomeScreen.png)
+*Home Screen*
 
 ### Dashboard View
+![Dashboard View](public/Doc%20Images/dashboard.png)
 *Real-time telemetry visualization with multiple widgets*
 
 ### Parameter Management
+![Parameter Management](public/Doc%20Images/parameters.png)
 *Intuitive parameter configuration interface*
 
 ### Connection Settings
+![Connection Settings](public/Doc%20Images/Connection.png)
 *Flexible data source configuration*
 
 ### Data Logging
+![Data Logging](public/Doc%20Images/logging.png)
 *Comprehensive logging with format selection*
 
 </div>
