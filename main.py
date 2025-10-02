@@ -70,7 +70,7 @@ from PySide6.QtWidgets import (
     QTableWidget, QTableWidgetItem, QHeaderView, QGroupBox, QTabWidget,
     QDialog, QFormLayout, QDialogButtonBox, QDoubleSpinBox, QDockWidget,
     QSizePolicy, QInputDialog, QMessageBox, QTabBar, QAbstractItemView,
-    QSpinBox, QStackedWidget # --- NEW ---
+    QSpinBox, QStackedWidget, QCheckBox # --- NEW ---
 )
 from PySide6.QtCore import QThread, Signal, Qt, QTimer, QByteArray
 from PySide6.QtGui import QFont, QColor, QBrush, QAction, QPixmap
@@ -290,6 +290,10 @@ class RawTelemetryMonitor(QDialog):
         self.hex_btn = QPushButton("Show Hex")
         self.hex_btn.setCheckable(True)
         
+        self.ascii_btn = QPushButton("Show ASCII")
+        self.ascii_btn.setCheckable(True)
+
+
         self.save_btn = QPushButton("Save to File...")
         self.save_btn.clicked.connect(self.save_to_file)
         
@@ -300,6 +304,7 @@ class RawTelemetryMonitor(QDialog):
         btn_layout.addWidget(self.clear_btn)
         btn_layout.addWidget(self.autoscroll_btn)
         btn_layout.addWidget(self.hex_btn)
+        btn_layout.addWidget(self.ascii_btn)
         btn_layout.addWidget(self.save_btn)
         btn_layout.addStretch()
         btn_layout.addWidget(close_btn)
@@ -358,8 +363,37 @@ class RawTelemetryMonitor(QDialog):
         # Format packet data
         timestamp_str = datetime.now().strftime('%H:%M:%S.%f')[:-3]
         
-        if self.hex_btn.isChecked():
-            # Show as hex
+        # Helper function to convert byte to printable ASCII
+        def byte_to_ascii(val):
+            try:
+                byte_val = int(val) & 0xFF  # Ensure it's in byte range
+                if 32 <= byte_val <= 126:  # Printable ASCII range
+                    return chr(byte_val)
+                elif byte_val == 0:
+                    return '\\0'
+                elif byte_val == 9:
+                    return '\\t'
+                elif byte_val == 10:
+                    return '\\n'
+                elif byte_val == 13:
+                    return '\\r'
+                else:
+                    return '.'  # Non-printable
+            except Exception:
+                return '?'
+        
+        if self.hex_btn.isChecked() and self.ascii_btn.isChecked():
+            # Show both hex and ASCII
+            if isinstance(packet_data, list):
+                hex_data = ' '.join([f'{int(v):02X}' if v is not None else 'XX' for v in packet_data])
+                ascii_data = ''.join([byte_to_ascii(v) if v is not None else '?' for v in packet_data])
+                data_str = f"[HEX] {hex_data}\n      [ASC] {ascii_data}"
+                self.byte_count += len(packet_data)
+            else:
+                data_str = f"[HEX+ASC] {str(packet_data)}"
+                self.byte_count += len(str(packet_data))
+        elif self.hex_btn.isChecked():
+            # Show as hex only
             if isinstance(packet_data, list):
                 hex_data = ' '.join([f'{int(v):02X}' if v is not None else 'XX' for v in packet_data])
                 data_str = f"[HEX] {hex_data}"
@@ -367,8 +401,17 @@ class RawTelemetryMonitor(QDialog):
             else:
                 data_str = f"[HEX] {str(packet_data)}"
                 self.byte_count += len(str(packet_data))
+        elif self.ascii_btn.isChecked():
+            # Show as ASCII only
+            if isinstance(packet_data, list):
+                ascii_data = ''.join([byte_to_ascii(v) if v is not None else '?' for v in packet_data])
+                data_str = f"[ASC] {ascii_data}"
+                self.byte_count += len(packet_data)
+            else:
+                data_str = f"[ASC] {str(packet_data)}"
+                self.byte_count += len(str(packet_data))
         else:
-            # Show as decimal/json
+            # Show as decimal/json (default)
             if isinstance(packet_data, list):
                 data_str = f"[{', '.join([f'{v:.2f}' if v is not None else 'NULL' for v in packet_data])}]"
                 self.byte_count += len(packet_data) * 4
@@ -378,8 +421,8 @@ class RawTelemetryMonitor(QDialog):
         
         # Create formatted line
         line = f"<span style='color: #888888;'>{timestamp_str}</span> " \
-               f"<span style='color: #00bfff;'>[PKT {self.packet_count:06d}]</span> " \
-               f"<span style='color: #00ff88;'>{data_str}</span>"
+            f"<span style='color: #00bfff;'>[PKT {self.packet_count:06d}]</span> " \
+            f"<span style='color: #00ff88;'>{data_str}</span>"
         
         # Append to display
         self.text_display.append(line)
@@ -3098,106 +3141,55 @@ class MainWindow(QMainWindow):
         
         # Title
         title = QLabel("<h2 style='color: #ffffff; margin: 0 0 16px 0;'>Dashboard Configuration</h2>")
+        subtitle = QLabel("<p style='color: #aaaaaa;'>Configure your connection and data format settings.</p>")
         main_layout.addWidget(title)
+        main_layout.addWidget(subtitle)
         
-        # Create scrollable content
-        scroll = QWidget()
-        scroll_layout = QVBoxLayout(scroll)
-        scroll_layout.setContentsMargins(0, 0, 0, 0)
+        # Create embedded tab widget (reuse the improved dialog's structure)
+        self.setup_tabs = QTabWidget()
+        self.setup_tabs.setStyleSheet("""
+            QTabWidget::pane {
+                border: 1px solid #3a3a3a;
+                background: #1e1e1e;
+            }
+            QTabBar::tab {
+                background: #2a2a2a;
+                color: #d4d4d4;
+                padding: 10px 20px;
+                border: 1px solid #3a3a3a;
+                border-bottom: none;
+                margin-right: 2px;
+            }
+            QTabBar::tab:selected {
+                background: #1e1e1e;
+                border-bottom: 2px solid #0a84ff;
+            }
+            QTabBar::tab:hover {
+                background: #333333;
+            }
+        """)
         
-        # Connection settings group
-        conn_group = QGroupBox("Connection Settings")
-        conn_group.setStyleSheet("QGroupBox { font-weight: bold; margin-top: 10px; }")
-        conn_form = QFormLayout(conn_group)
-        conn_form.setSpacing(12)
+        # Build tabs (reuse the improved dialog methods inline)
+        self._build_setup_basic_tab()
+        self._build_setup_format_tab()
+        self._build_setup_advanced_tab()
         
-        self.setup_mode_combo = QComboBox()
-        self.setup_mode_combo.addItems(["dummy", "serial", "tcp", "udp"])
-        self.setup_mode_combo.setCurrentText(self.connection_settings.get('mode','dummy'))
+        main_layout.addWidget(self.setup_tabs)
         
-        # Serial settings
-        self.setup_serial_port = QComboBox()
-        self.setup_serial_port.setEditable(True)
-        self.setup_serial_port.addItems(self.list_serial_ports())
-        self.setup_serial_port.setCurrentText(self.connection_settings.get('serial_port','COM4'))
-
-        # Refresh button for serial ports
-        self.setup_refresh_ports_btn = QPushButton("🔄 Refresh")
-        self.setup_refresh_ports_btn.setMaximumWidth(80)
-        self.setup_refresh_ports_btn.clicked.connect(self.refresh_setup_serial_ports)
-
-        self.setup_baud = QSpinBox()
-        self.setup_baud.setRange(300, 10000000)
-        self.setup_baud.setValue(int(self.connection_settings.get('baudrate',115200)))
-        
-        # TCP/UDP settings
-        self.setup_tcp_host = QLineEdit(self.connection_settings.get('tcp_host','127.0.0.1'))
-        self.setup_tcp_port = QSpinBox()
-        self.setup_tcp_port.setRange(1, 65535)
-        self.setup_tcp_port.setValue(int(self.connection_settings.get('tcp_port',9000)))
-        self.setup_udp_host = QLineEdit(self.connection_settings.get('udp_host','0.0.0.0'))
-        self.setup_udp_port = QSpinBox()
-        self.setup_udp_port.setRange(1, 65535)
-        self.setup_udp_port.setValue(int(self.connection_settings.get('udp_port',9000)))
-        
-        conn_form.addRow("Connection Mode:", self.setup_mode_combo)
-        # Create horizontal layout for port + refresh button
-        setup_serial_port_layout = QHBoxLayout()
-        setup_serial_port_layout.addWidget(self.setup_serial_port)
-        setup_serial_port_layout.addWidget(self.setup_refresh_ports_btn)
-        conn_form.addRow("Serial Port:", setup_serial_port_layout)
-        conn_form.addRow("Baudrate:", self.setup_baud)
-        conn_form.addRow("TCP Host:", self.setup_tcp_host)
-        conn_form.addRow("TCP Port:", self.setup_tcp_port)
-        conn_form.addRow("UDP Host:", self.setup_udp_host)
-        conn_form.addRow("UDP Port:", self.setup_udp_port)
-        
-        # Data format group
-        format_group = QGroupBox("Data Format")
-        format_group.setStyleSheet("QGroupBox { font-weight: bold; margin-top: 10px; }")
-        format_form = QFormLayout(format_group)
-        format_form.setSpacing(12)
-        
-        self.setup_format = QComboBox()
-        self.setup_format.addItems(["json_array", "csv", "raw_bytes", "bits"])
-        self.setup_format.setCurrentText(self.connection_settings.get('data_format','json_array'))
-        self.setup_channels = QSpinBox()
-        self.setup_channels.setRange(1, 1024)
-        self.setup_channels.setValue(int(self.connection_settings.get('channel_count',32)))
-        self.setup_width = QSpinBox()
-        self.setup_width.setRange(1, 8)
-        self.setup_width.setValue(int(self.connection_settings.get('sample_width_bytes',2)))
-        self.setup_endian = QComboBox()
-        self.setup_endian.addItems(["little", "big"])
-        self.setup_endian.setCurrentText('little' if self.connection_settings.get('little_endian',True) else 'big')
-        self.setup_csv_sep = QLineEdit(self.connection_settings.get('csv_separator',','))
-        
-        format_form.addRow("Data Format:", self.setup_format)
-        format_form.addRow("Channel Count:", self.setup_channels)
-        format_form.addRow("Sample Width (bytes):", self.setup_width)
-        format_form.addRow("Endianness:", self.setup_endian)
-        format_form.addRow("CSV Separator:", self.setup_csv_sep)
-        
-        scroll_layout.addWidget(conn_group)
-        scroll_layout.addWidget(format_group)
-        scroll_layout.addStretch()
-        
-        main_layout.addWidget(scroll)
-        
-        # Button row
+        # Navigation buttons
         btn_row = QHBoxLayout()
         btn_row.setSpacing(12)
         
         back_btn = QPushButton("Back")
-        manage_btn = QPushButton("Manage Parameters...")
-        next_btn = QPushButton("Start Dashboard")
-        
         back_btn.setObjectName("SecondaryCTA")
-        manage_btn.setObjectName("SecondaryCTA")
-        next_btn.setObjectName("PrimaryCTA")
-        
         back_btn.setMinimumSize(120, 40)
+        
+        manage_btn = QPushButton("Manage Parameters...")
+        manage_btn.setObjectName("SecondaryCTA")
         manage_btn.setMinimumSize(180, 40)
+        
+        next_btn = QPushButton("Start Dashboard")
+        next_btn.setObjectName("PrimaryCTA")
         next_btn.setMinimumSize(160, 40)
         
         btn_row.addWidget(back_btn)
@@ -3207,73 +3199,390 @@ class MainWindow(QMainWindow):
         
         main_layout.addLayout(btn_row)
         self.stack.addWidget(self.setup_page)
-        # Dynamic mode visibility
-        def _apply_setup_mode(mode):
-            is_dummy = (mode == 'dummy')
-            is_serial = (mode == 'serial')
-            is_tcp = (mode == 'tcp')
-            is_udp = (mode == 'udp')
-            
-            # Serial fields
-            # Serial fields
-            self.setup_serial_port.setVisible(is_serial)
-            self.setup_refresh_ports_btn.setVisible(is_serial)  # Add this line
-            self.setup_baud.setVisible(is_serial)
-            
-            # TCP fields
-            self.setup_tcp_host.setVisible(is_tcp)
-            self.setup_tcp_port.setVisible(is_tcp)
-            
-            # UDP fields
-            self.setup_udp_host.setVisible(is_udp)
-            self.setup_udp_port.setVisible(is_udp)
-            
-            # Update labels visibility
-            for i in range(conn_form.rowCount()):
-                item = conn_form.itemAt(i, QFormLayout.ItemRole.LabelRole)
-                if item and item.widget():
-                    label = item.widget()
-                    if "Serial Port" in label.text() or "Baudrate" in label.text():
-                        label.setVisible(is_serial)
-                    elif "TCP Host" in label.text() or "TCP Port" in label.text():
-                        label.setVisible(is_tcp)
-                    elif "UDP Host" in label.text() or "UDP Port" in label.text():
-                        label.setVisible(is_udp)
-            
-            # Show dummy data indicator
-            if is_dummy:
-                if not hasattr(self, 'dummy_indicator'):
-                    self.dummy_indicator = QLabel("Using Dummy Data - No real connection required")
-                    self.dummy_indicator.setStyleSheet("color: #00ff88; font-weight: bold; padding: 8px; background: #1a3a1a; border-radius: 4px;")
-                    self.dummy_indicator.setAlignment(Qt.AlignmentFlag.AlignCenter)
-                    conn_form.addRow(self.dummy_indicator)
-                self.dummy_indicator.setVisible(True)
-            else:
-                if hasattr(self, 'dummy_indicator'):
-                    self.dummy_indicator.setVisible(False)
         
-        self.setup_mode_combo.currentTextChanged.connect(_apply_setup_mode)
-        _apply_setup_mode(self.setup_mode_combo.currentText())
+        # Connect buttons
         back_btn.clicked.connect(lambda: self.show_phase("welcome"))
         manage_btn.clicked.connect(self.open_manage_parameters_dialog)
+        
         def _start():
-            self.connection_settings = {
-                'mode': self.setup_mode_combo.currentText(),
-                'serial_port': (self.setup_serial_port.currentText().strip() if hasattr(self.setup_serial_port, 'currentText') else self.setup_serial_port.text().strip()),
-                'baudrate': int(self.setup_baud.value()),
-                'tcp_host': self.setup_tcp_host.text().strip(),
-                'tcp_port': int(self.setup_tcp_port.value()),
-                'udp_host': self.setup_udp_host.text().strip(),
-                'udp_port': int(self.setup_udp_port.value()),
-                'timeout': 1.0,
-                'data_format': self.setup_format.currentText(),
-                'channel_count': int(self.setup_channels.value()),
-                'sample_width_bytes': int(self.setup_width.value()),
-                'little_endian': (self.setup_endian.currentText() == 'little'),
-                'csv_separator': self.setup_csv_sep.text() or ',',
-            }
-            self.restart_simulator(); self.show_phase("widgets")
+            # Get settings from setup UI
+            self.connection_settings = self._get_setup_settings()
+            self.restart_simulator()
+            self.show_phase("widgets")
+        
         next_btn.clicked.connect(_start)
+        
+        # Apply current settings to UI
+        self._apply_setup_settings()
+
+    def _build_setup_basic_tab(self):
+        """Build Basic Connection tab for setup page"""
+        basic_tab = QWidget()
+        layout = QVBoxLayout(basic_tab)
+        layout.setContentsMargins(20, 20, 20, 20)
+        layout.setSpacing(20)
+        
+        # Title
+        title = QLabel("<h3>Connection Configuration</h3>")
+        desc = QLabel("Select your connection type and configure the basic settings.")
+        desc.setStyleSheet("color: #888888;")
+        layout.addWidget(title)
+        layout.addWidget(desc)
+        
+        # Connection type with visual cards
+        conn_group = QGroupBox("Connection Type")
+        conn_layout = QVBoxLayout(conn_group)
+        
+        self.setup_mode_buttons = {}
+        modes = [
+            ("dummy", "🎲 Dummy Data", "Simulated test data - no hardware needed"),
+            ("serial", "🔌 Serial (USB)", "Arduino, ESP32, STM32 via USB/UART"),
+            ("tcp", "🌐 TCP Client", "Connect to TCP server (Wi-Fi devices)"),
+            ("udp", "📡 UDP Listener", "Receive UDP packets (broadcast data)")
+        ]
+        
+        for mode_id, title_text, desc_text in modes:
+            btn = QPushButton(f"{title_text}\n{desc_text}")
+            btn.setCheckable(True)
+            btn.setMinimumHeight(60)
+            btn.setProperty("mode_id", mode_id)
+            btn.clicked.connect(lambda checked, m=mode_id: self._on_setup_mode_selected(m))
+            btn.setStyleSheet("""
+                QPushButton {
+                    text-align: left;
+                    padding: 12px 16px;
+                    background: #2a2a2a;
+                    border: 2px solid #3a3a3a;
+                    border-radius: 8px;
+                    font-size: 12px;
+                }
+                QPushButton:hover {
+                    background: #333333;
+                    border-color: #0a84ff;
+                }
+                QPushButton:checked {
+                    background: #1e3a5f;
+                    border-color: #0a84ff;
+                    font-weight: bold;
+                }
+            """)
+            conn_layout.addWidget(btn)
+            self.setup_mode_buttons[mode_id] = btn
+        
+        layout.addWidget(conn_group)
+        
+        # Connection parameters
+        params_group = QGroupBox("Connection Parameters")
+        self.setup_params_form = QFormLayout(params_group)
+        self.setup_params_form.setSpacing(12)
+        
+        # Serial
+        self.setup_serial_port = QComboBox()
+        self.setup_serial_port.setEditable(True)
+        self.setup_serial_port.addItems(self.list_serial_ports())
+        
+        self.setup_refresh_ports_btn = QPushButton("🔄")
+        self.setup_refresh_ports_btn.setMaximumWidth(40)
+        self.setup_refresh_ports_btn.setToolTip("Refresh port list")
+        self.setup_refresh_ports_btn.clicked.connect(self.refresh_setup_serial_ports)
+        
+        port_layout = QHBoxLayout()
+        port_layout.addWidget(self.setup_serial_port)
+        port_layout.addWidget(self.setup_refresh_ports_btn)
+        
+        self.setup_baud = QComboBox()
+        self.setup_baud.addItems(["9600", "19200", "38400", "57600", "115200", "230400", "460800", "921600"])
+        self.setup_baud.setEditable(True)
+        self.setup_baud.setCurrentText("9600")
+        
+        self.setup_params_form.addRow("Serial Port:", port_layout)
+        self.setup_params_form.addRow("Baudrate:", self.setup_baud)
+        
+        # TCP
+        self.setup_tcp_host = QLineEdit("127.0.0.1")
+        self.setup_tcp_host.setPlaceholderText("192.168.1.100")
+        self.setup_tcp_port = QSpinBox()
+        self.setup_tcp_port.setRange(1, 65535)
+        self.setup_tcp_port.setValue(9000)
+        
+        self.setup_params_form.addRow("TCP Host:", self.setup_tcp_host)
+        self.setup_params_form.addRow("TCP Port:", self.setup_tcp_port)
+        
+        # UDP
+        self.setup_udp_host = QLineEdit("0.0.0.0")
+        self.setup_udp_host.setPlaceholderText("0.0.0.0 (listen on all)")
+        self.setup_udp_port = QSpinBox()
+        self.setup_udp_port.setRange(1, 65535)
+        self.setup_udp_port.setValue(9000)
+        
+        self.setup_params_form.addRow("UDP Host:", self.setup_udp_host)
+        self.setup_params_form.addRow("UDP Port:", self.setup_udp_port)
+        
+        layout.addWidget(params_group)
+        
+        # Quick presets
+        preset_group = QGroupBox("Quick Presets")
+        preset_layout = QHBoxLayout(preset_group)
+        
+        presets = [
+            ("Arduino JSON", "serial", "9600", "json_array"),
+            ("Arduino CSV", "serial", "9600", "csv"),
+            ("ESP32 Fast", "serial", "115200", "json_array")
+        ]
+        
+        for name, mode, baud, fmt in presets:
+            btn = QPushButton(name)
+            btn.clicked.connect(lambda checked, m=mode, b=baud, f=fmt: self._apply_quick_preset(m, b, f))
+            preset_layout.addWidget(btn)
+        
+        layout.addWidget(preset_group)
+        layout.addStretch()
+        
+        self.setup_tabs.addTab(basic_tab, "Basic Connection")
+    
+    def _build_setup_format_tab(self):
+        """Build Data Format tab for setup page"""
+        format_tab = QWidget()
+        layout = QVBoxLayout(format_tab)
+        layout.setContentsMargins(20, 20, 20, 20)
+        layout.setSpacing(20)
+        
+        title = QLabel("<h3>Data Format Configuration</h3>")
+        desc = QLabel("Configure how incoming data should be parsed.")
+        desc.setStyleSheet("color: #888888;")
+        layout.addWidget(title)
+        layout.addWidget(desc)
+        
+        # Format selection
+        format_group = QGroupBox("Data Format")
+        format_layout = QVBoxLayout(format_group)
+        
+        self.setup_format = QComboBox()
+        formats = [
+            "json_array - [value1, value2, value3, ...]",
+            "csv - value1,value2,value3,...",
+            "raw_bytes - Binary data stream",
+            "bits - Bit-packed data"
+        ]
+        self.setup_format.addItems(formats)
+        self.setup_format.currentIndexChanged.connect(self._on_setup_format_changed)
+        format_layout.addWidget(self.setup_format)
+        
+        # Format example
+        self.setup_format_example = QLabel()
+        self.setup_format_example.setStyleSheet("""
+            background: #0d1117;
+            border: 1px solid #3a3a3a;
+            border-radius: 6px;
+            padding: 12px;
+            font-family: 'Consolas', 'Courier New', monospace;
+            color: #58a6ff;
+        """)
+        self.setup_format_example.setWordWrap(True)
+        format_layout.addWidget(QLabel("<b>Example:</b>"))
+        format_layout.addWidget(self.setup_format_example)
+        
+        layout.addWidget(format_group)
+        
+        # Format settings
+        settings_group = QGroupBox("Format Settings")
+        settings_form = QFormLayout(settings_group)
+        
+        self.setup_channels = QSpinBox()
+        self.setup_channels.setRange(1, 1024)
+        self.setup_channels.setValue(8)
+        settings_form.addRow("Channel Count:", self.setup_channels)
+        
+        self.setup_csv_sep = QComboBox()
+        self.setup_csv_sep.addItems([", (comma)", "; (semicolon)", "| (pipe)", "tab"])
+        settings_form.addRow("CSV Separator:", self.setup_csv_sep)
+        
+        self.setup_width = QSpinBox()
+        self.setup_width.setRange(1, 8)
+        self.setup_width.setValue(2)
+        settings_form.addRow("Sample Width (bytes):", self.setup_width)
+        
+        self.setup_endian = QComboBox()
+        self.setup_endian.addItems(["Little Endian", "Big Endian"])
+        settings_form.addRow("Byte Order:", self.setup_endian)
+        
+        layout.addWidget(settings_group)
+        layout.addStretch()
+        
+        self.setup_tabs.addTab(format_tab, "Data Format")
+        
+        # Trigger initial example
+        self._on_setup_format_changed(0)
+    
+    def _build_setup_advanced_tab(self):
+        """Build Advanced tab for setup page"""
+        advanced_tab = QWidget()
+        layout = QVBoxLayout(advanced_tab)
+        layout.setContentsMargins(20, 20, 20, 20)
+        layout.setSpacing(20)
+        
+        title = QLabel("<h3>Advanced Settings</h3>")
+        desc = QLabel("Optional: Fine-tune connection behavior. Default values work for most cases.")
+        desc.setStyleSheet("color: #888888;")
+        layout.addWidget(title)
+        layout.addWidget(desc)
+        
+        # Timeout
+        timing_group = QGroupBox("Timing & Buffer")
+        timing_form = QFormLayout(timing_group)
+        
+        self.setup_timeout = QDoubleSpinBox()
+        self.setup_timeout.setRange(0.1, 10.0)
+        self.setup_timeout.setValue(1.0)
+        self.setup_timeout.setSingleStep(0.1)
+        self.setup_timeout.setSuffix(" sec")
+        timing_form.addRow("Connection Timeout:", self.setup_timeout)
+        
+        layout.addWidget(timing_group)
+        
+        # Info label
+        info = QLabel(
+            "💡 <b>Tip:</b> Most users can skip this tab and use the default settings. "
+            "Advanced options are for special use cases."
+        )
+        info.setWordWrap(True)
+        info.setStyleSheet("background: #2a2a2a; padding: 12px; border-radius: 6px; color: #b8b8b8;")
+        layout.addWidget(info)
+        
+        layout.addStretch()
+        
+        self.setup_tabs.addTab(advanced_tab, "Advanced")
+
+    def _on_setup_mode_selected(self, mode):
+        """Handle mode selection in setup page"""
+        # Update button states
+        for mode_id, btn in self.setup_mode_buttons.items():
+            btn.setChecked(mode_id == mode)
+        
+        # Update visibility
+        self._update_setup_params_visibility(mode)
+    
+    def _update_setup_params_visibility(self, mode):
+        """Update visibility of connection parameters in setup page"""
+        for i in range(self.setup_params_form.rowCount()):
+            label_item = self.setup_params_form.itemAt(i, QFormLayout.ItemRole.LabelRole)
+            field_item = self.setup_params_form.itemAt(i, QFormLayout.ItemRole.FieldRole)
+            
+            if label_item and label_item.widget():
+                label = label_item.widget().text()
+                
+                visible = False
+                if mode == 'serial' and ('Serial' in label or 'Baud' in label):
+                    visible = True
+                elif mode == 'tcp' and 'TCP' in label:
+                    visible = True
+                elif mode == 'udp' and 'UDP' in label:
+                    visible = True
+                
+                label_item.widget().setVisible(visible)
+                if field_item:
+                    widget = field_item.widget() if hasattr(field_item, 'widget') else field_item.layout()
+                    if hasattr(widget, 'setVisible'):
+                        widget.setVisible(visible)
+                    elif widget:  # Layout
+                        for j in range(widget.count()):
+                            item = widget.itemAt(j)
+                            if item and item.widget():
+                                item.widget().setVisible(visible)
+    
+    def _on_setup_format_changed(self, index):
+        """Update format example in setup page"""
+        formats = {
+            0: "JSON Array:\n[23.5, 45.2, 78.1, 12.3]\n[24.1, 46.0, 79.2, 11.8]",
+            1: "CSV:\n23.5,45.2,78.1,12.3\n24.1,46.0,79.2,11.8",
+            2: "Raw Bytes (hex):\nAB CD EF 12 34 56 78 90",
+            3: "Bits:\n10110101 11001100 01010011"
+        }
+        self.setup_format_example.setText(formats.get(index, "Example data"))
+    
+    def _apply_quick_preset(self, mode, baud, fmt):
+        """Apply a quick preset in setup page"""
+        # Set mode
+        for mode_id, btn in self.setup_mode_buttons.items():
+            btn.setChecked(mode_id == mode)
+        self._update_setup_params_visibility(mode)
+        
+        # Set baudrate
+        self.setup_baud.setCurrentText(baud)
+        
+        # Set format
+        format_map = {'json_array': 0, 'csv': 1, 'raw_bytes': 2, 'bits': 3}
+        self.setup_format.setCurrentIndex(format_map.get(fmt, 0))
+    
+    def _get_setup_settings(self):
+        """Extract settings from setup page UI"""
+        # Get selected mode
+        selected_mode = 'dummy'
+        for mode_id, btn in self.setup_mode_buttons.items():
+            if btn.isChecked():
+                selected_mode = mode_id
+                break
+        
+        # Get CSV separator
+        csv_sep = self.setup_csv_sep.currentText()
+        if csv_sep.startswith(','):
+            csv_sep = ','
+        elif csv_sep.startswith(';'):
+            csv_sep = ';'
+        elif csv_sep.startswith('|'):
+            csv_sep = '|'
+        elif csv_sep == 'tab':
+            csv_sep = '\t'
+        
+        # Get format
+        format_map = ['json_array', 'csv', 'raw_bytes', 'bits']
+        data_format = format_map[self.setup_format.currentIndex()]
+        
+        return {
+            'mode': selected_mode,
+            'serial_port': self.setup_serial_port.currentText().strip(),
+            'baudrate': int(self.setup_baud.currentText()),
+            'tcp_host': self.setup_tcp_host.text().strip(),
+            'tcp_port': int(self.setup_tcp_port.value()),
+            'udp_host': self.setup_udp_host.text().strip(),
+            'udp_port': int(self.setup_udp_port.value()),
+            'timeout': float(self.setup_timeout.value()),
+            'data_format': data_format,
+            'channel_count': int(self.setup_channels.value()),
+            'sample_width_bytes': int(self.setup_width.value()),
+            'little_endian': (self.setup_endian.currentIndex() == 0),
+            'csv_separator': csv_sep
+        }
+    
+    def _apply_setup_settings(self):
+        """Apply current connection settings to setup page UI"""
+        # Set mode
+        mode = self.connection_settings.get('mode', 'dummy')
+        for mode_id, btn in self.setup_mode_buttons.items():
+            btn.setChecked(mode_id == mode)
+        self._update_setup_params_visibility(mode)
+        
+        # Serial
+        self.setup_serial_port.setCurrentText(self.connection_settings.get('serial_port', 'COM4'))
+        self.setup_baud.setCurrentText(str(self.connection_settings.get('baudrate', 9600)))
+        
+        # TCP/UDP
+        self.setup_tcp_host.setText(self.connection_settings.get('tcp_host', '127.0.0.1'))
+        self.setup_tcp_port.setValue(int(self.connection_settings.get('tcp_port', 9000)))
+        self.setup_udp_host.setText(self.connection_settings.get('udp_host', '0.0.0.0'))
+        self.setup_udp_port.setValue(int(self.connection_settings.get('udp_port', 9000)))
+        
+        # Format
+        format_map = {'json_array': 0, 'csv': 1, 'raw_bytes': 2, 'bits': 3}
+        fmt_idx = format_map.get(self.connection_settings.get('data_format', 'json_array'), 0)
+        self.setup_format.setCurrentIndex(fmt_idx)
+        
+        self.setup_channels.setValue(int(self.connection_settings.get('channel_count', 8)))
+        self.setup_width.setValue(int(self.connection_settings.get('sample_width_bytes', 2)))
+        self.setup_endian.setCurrentIndex(0 if self.connection_settings.get('little_endian', True) else 1)
+        
+        # Advanced
+        self.setup_timeout.setValue(float(self.connection_settings.get('timeout', 1.0)))
 
     def _build_widgets_page(self):
         self.widgets_page = QWidget()
@@ -3642,12 +3951,14 @@ class MainWindow(QMainWindow):
                 self.add_new_tab(name="Main View", is_closable=False)
 
     def open_connection_settings(self):
-        dialog = ConnectionSettingsDialog(self.connection_settings, self)
+        dialog = ImprovedConnectionSettingsDialog(self.connection_settings, self)
         if dialog.exec() == QDialog.DialogCode.Accepted:
             self.connection_settings = dialog.get_settings()
             self.mark_as_unsaved()
             self.restart_simulator()
             self.update_status_bar()
+            self.update_connection_status()
+
     def apply_stylesheet(self):
         self.setStyleSheet("""
             QMainWindow, QDialog { background-color: #1e1e1e; color: #d4d4d4; }
@@ -3712,6 +4023,706 @@ class MainWindow(QMainWindow):
             pass
         
         super().closeEvent(event)
+
+class ImprovedConnectionSettingsDialog(QDialog):
+    def __init__(self, settings, parent=None):
+        super().__init__(parent)
+        self.setWindowTitle("Connection Settings")
+        self.setMinimumSize(750, 650)
+        self._settings = dict(settings)
+        self._test_thread = None
+        
+        # Main layout
+        main_layout = QVBoxLayout(self)
+        main_layout.setContentsMargins(0, 0, 0, 0)
+        main_layout.setSpacing(0)
+        
+        # Create tab widget
+        self.tabs = QTabWidget()
+        self.tabs.setStyleSheet("""
+            QTabWidget::pane {
+                border: 1px solid #3a3a3a;
+                background: #1e1e1e;
+            }
+            QTabBar::tab {
+                background: #2a2a2a;
+                color: #d4d4d4;
+                padding: 10px 20px;
+                border: 1px solid #3a3a3a;
+                border-bottom: none;
+                margin-right: 2px;
+            }
+            QTabBar::tab:selected {
+                background: #1e1e1e;
+                border-bottom: 2px solid #0a84ff;
+            }
+            QTabBar::tab:hover {
+                background: #333333;
+            }
+        """)
+        
+        # Create tabs
+        self._build_basic_tab()
+        self._build_format_tab()
+        self._build_advanced_tab()
+        
+        main_layout.addWidget(self.tabs)
+        
+        # Bottom action bar
+        action_bar = QWidget()
+        action_bar.setStyleSheet("background: #2a2a2a; border-top: 1px solid #3a3a3a;")
+        action_layout = QHBoxLayout(action_bar)
+        action_layout.setContentsMargins(16, 12, 16, 12)
+        
+        # Profile management
+        self.profile_combo = QComboBox()
+        self.profile_combo.addItems(["<Current Settings>", "Arduino JSON Array", "Arduino CSV", "ESP32 Binary", "Text Messages"])
+        self.profile_combo.currentTextChanged.connect(self._load_profile)
+        
+        # Test connection button
+        test_btn = QPushButton("🔌 Test Connection")
+        test_btn.setObjectName("SecondaryCTA")
+        test_btn.clicked.connect(self._test_connection)
+        
+        # Dialog buttons
+        buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel)
+        buttons.accepted.connect(self.accept)
+        buttons.rejected.connect(self.reject)
+        
+        action_layout.addWidget(QLabel("Quick Preset:"))
+        action_layout.addWidget(self.profile_combo)
+        action_layout.addStretch()
+        action_layout.addWidget(test_btn)
+        action_layout.addWidget(buttons)
+        
+        main_layout.addWidget(action_bar)
+        
+        # Apply current settings to UI
+        self._apply_settings_to_ui()
+
+
+    def _build_basic_tab(self):
+        """Build the Basic Connection tab"""
+        basic_tab = QWidget()
+        layout = QVBoxLayout(basic_tab)
+        layout.setContentsMargins(20, 20, 20, 20)
+        layout.setSpacing(20)
+        
+        # Title and description
+        title = QLabel("<h3>Connection Configuration</h3>")
+        desc = QLabel("Select your connection type and configure the basic settings.")
+        desc.setStyleSheet("color: #888888;")
+        layout.addWidget(title)
+        layout.addWidget(desc)
+        
+        # Connection type selection with visual cards
+        conn_group = QGroupBox("Connection Type")
+        conn_layout = QVBoxLayout(conn_group)
+        
+        self.mode_buttons = {}
+        modes = [
+            ("dummy", "🎲 Dummy Data", "Simulated test data - no hardware needed"),
+            ("serial", "🔌 Serial (USB)", "Arduino, ESP32, STM32 via USB/UART"),
+            ("tcp", "🌐 TCP Client", "Connect to TCP server (Wi-Fi devices)"),
+            ("udp", "📡 UDP Listener", "Receive UDP packets (broadcast data)")
+        ]
+        
+        for mode_id, title_text, desc_text in modes:
+            btn = QPushButton(f"{title_text}\n{desc_text}")
+            btn.setCheckable(True)
+            btn.setMinimumHeight(60)
+            btn.setProperty("mode_id", mode_id)
+            btn.clicked.connect(lambda checked, m=mode_id: self._on_mode_selected(m))
+            btn.setStyleSheet("""
+                QPushButton {
+                    text-align: left;
+                    padding: 12px 16px;
+                    background: #2a2a2a;
+                    border: 2px solid #3a3a3a;
+                    border-radius: 8px;
+                    font-size: 12px;
+                }
+                QPushButton:hover {
+                    background: #333333;
+                    border-color: #0a84ff;
+                }
+                QPushButton:checked {
+                    background: #1e3a5f;
+                    border-color: #0a84ff;
+                    font-weight: bold;
+                }
+            """)
+            conn_layout.addWidget(btn)
+            self.mode_buttons[mode_id] = btn
+        
+        layout.addWidget(conn_group)
+        
+        # Connection parameters (dynamic based on mode)
+        params_group = QGroupBox("Connection Parameters")
+        self.params_form = QFormLayout(params_group)
+        self.params_form.setSpacing(12)
+        
+        # Serial settings
+        self.serial_port_combo = QComboBox()
+        self.serial_port_combo.setEditable(True)
+        ports = self._get_serial_ports()
+        self.serial_port_combo.addItems(ports)
+        
+        refresh_btn = QPushButton("🔄")
+        refresh_btn.setMaximumWidth(40)
+        refresh_btn.setToolTip("Refresh port list")
+        refresh_btn.clicked.connect(self._refresh_ports)
+        
+        port_layout = QHBoxLayout()
+        port_layout.addWidget(self.serial_port_combo)
+        port_layout.addWidget(refresh_btn)
+        
+        self.baud_combo = QComboBox()
+        self.baud_combo.addItems(["9600", "19200", "38400", "57600", "115200", "230400", "460800", "921600"])
+        self.baud_combo.setEditable(True)
+        
+        self.params_form.addRow("Serial Port:", port_layout)
+        self.params_form.addRow("Baudrate:", self.baud_combo)
+        
+        # TCP settings
+        self.tcp_host_edit = QLineEdit()
+        self.tcp_host_edit.setPlaceholderText("192.168.1.100")
+        self.tcp_port_spin = QSpinBox()
+        self.tcp_port_spin.setRange(1, 65535)
+        self.tcp_port_spin.setValue(9000)
+        
+        self.params_form.addRow("TCP Host:", self.tcp_host_edit)
+        self.params_form.addRow("TCP Port:", self.tcp_port_spin)
+        
+        # UDP settings
+        self.udp_host_edit = QLineEdit()
+        self.udp_host_edit.setPlaceholderText("0.0.0.0 (listen on all)")
+        self.udp_port_spin = QSpinBox()
+        self.udp_port_spin.setRange(1, 65535)
+        self.udp_port_spin.setValue(9000)
+        
+        self.params_form.addRow("UDP Host:", self.udp_host_edit)
+        self.params_form.addRow("UDP Port:", self.udp_port_spin)
+        
+        layout.addWidget(params_group)
+        layout.addStretch()
+        
+        self.tabs.addTab(basic_tab, "Basic Connection")
+
+
+    def _build_format_tab(self):
+        """Build the Data Format tab"""
+        format_tab = QWidget()
+        layout = QVBoxLayout(format_tab)
+        layout.setContentsMargins(20, 20, 20, 20)
+        layout.setSpacing(20)
+        
+        # Title
+        title = QLabel("<h3>Data Format Configuration</h3>")
+        desc = QLabel("Configure how incoming data should be parsed and interpreted.")
+        desc.setStyleSheet("color: #888888;")
+        layout.addWidget(title)
+        layout.addWidget(desc)
+        
+        # Format selection
+        format_group = QGroupBox("Data Format")
+        format_layout = QVBoxLayout(format_group)
+        
+        self.format_combo = QComboBox()
+        formats = [
+            "json_array - [value1, value2, value3, ...]",
+            "csv - value1,value2,value3,...",
+            "raw_bytes - Binary data stream",
+            "bits - Bit-packed data"
+        ]
+        self.format_combo.addItems(formats)
+        self.format_combo.currentIndexChanged.connect(self._on_format_changed)
+        format_layout.addWidget(self.format_combo)
+        
+        # Format example display
+        self.format_example = QLabel()
+        self.format_example.setStyleSheet("""
+            background: #0d1117;
+            border: 1px solid #3a3a3a;
+            border-radius: 6px;
+            padding: 12px;
+            font-family: 'Consolas', 'Courier New', monospace;
+            color: #58a6ff;
+        """)
+        self.format_example.setWordWrap(True)
+        format_layout.addWidget(QLabel("<b>Example:</b>"))
+        format_layout.addWidget(self.format_example)
+        
+        layout.addWidget(format_group)
+        
+        # Format-specific settings
+        settings_group = QGroupBox("Format Settings")
+        settings_form = QFormLayout(settings_group)
+        settings_form.setSpacing(12)
+        
+        # Channel count
+        self.channels_spin = QSpinBox()
+        self.channels_spin.setRange(1, 1024)
+        self.channels_spin.setValue(32)
+        self.channels_spin.setToolTip("Number of data channels/values per packet")
+        settings_form.addRow("Channel Count:", self.channels_spin)
+        
+        # CSV separator (for CSV format)
+        self.csv_sep_combo = QComboBox()
+        self.csv_sep_combo.addItems([", (comma)", "; (semicolon)", "| (pipe)", "tab", "space"])
+        self.csv_sep_combo.setEditable(True)
+        settings_form.addRow("CSV Separator:", self.csv_sep_combo)
+        
+        # Binary format settings
+        self.sample_width_spin = QSpinBox()
+        self.sample_width_spin.setRange(1, 8)
+        self.sample_width_spin.setValue(2)
+        self.sample_width_spin.setToolTip("Bytes per sample (1, 2, 4, or 8)")
+        settings_form.addRow("Sample Width (bytes):", self.sample_width_spin)
+        
+        self.endian_combo = QComboBox()
+        self.endian_combo.addItems(["Little Endian (x86, ARM)", "Big Endian (Network)"])
+        settings_form.addRow("Byte Order:", self.endian_combo)
+        
+        layout.addWidget(settings_group)
+        
+        # Quick tips
+        tips_label = QLabel(
+            "<b>Quick Tips:</b><br>"
+            "• <b>JSON Array</b>: Best for Arduino with Serial.print(\"[1.23,4.56,7.89]\\n\")<br>"
+            "• <b>CSV</b>: Simple format like \"1.23,4.56,7.89\\n\"<br>"
+            "• <b>Raw Bytes</b>: Binary data from microcontrollers<br>"
+            "• <b>Bits</b>: Packed binary flags and values"
+        )
+        tips_label.setWordWrap(True)
+        tips_label.setStyleSheet("background: #2a2a2a; padding: 12px; border-radius: 6px; color: #b8b8b8;")
+        layout.addWidget(tips_label)
+        
+        layout.addStretch()
+        
+        self.tabs.addTab(format_tab, "Data Format")
+
+    def _build_advanced_tab(self):
+        """Build the Advanced Settings tab"""
+        advanced_tab = QWidget()
+        layout = QVBoxLayout(advanced_tab)
+        layout.setContentsMargins(20, 20, 20, 20)
+        layout.setSpacing(20)
+        
+        # Title
+        title = QLabel("<h3>Advanced Settings</h3>")
+        desc = QLabel("Fine-tune connection and parsing behavior. Default values work for most cases.")
+        desc.setStyleSheet("color: #888888;")
+        layout.addWidget(title)
+        layout.addWidget(desc)
+        
+        # Timeout and buffer settings
+        timing_group = QGroupBox("Timing & Buffer")
+        timing_form = QFormLayout(timing_group)
+        timing_form.setSpacing(12)
+        
+        self.timeout_spin = QDoubleSpinBox()
+        self.timeout_spin.setRange(0.1, 10.0)
+        self.timeout_spin.setValue(1.0)
+        self.timeout_spin.setSingleStep(0.1)
+        self.timeout_spin.setSuffix(" sec")
+        self.timeout_spin.setToolTip("Connection timeout duration")
+        timing_form.addRow("Connection Timeout:", self.timeout_spin)
+        
+        self.read_buffer_spin = QSpinBox()
+        self.read_buffer_spin.setRange(64, 65536)
+        self.read_buffer_spin.setValue(4096)
+        self.read_buffer_spin.setSuffix(" bytes")
+        self.read_buffer_spin.setToolTip("Read buffer size")
+        timing_form.addRow("Read Buffer Size:", self.read_buffer_spin)
+        
+        layout.addWidget(timing_group)
+        
+        # Reconnection settings
+        reconnect_group = QGroupBox("Auto-Reconnect")
+        reconnect_layout = QVBoxLayout(reconnect_group)
+        
+        self.auto_reconnect_check = QCheckBox("Enable automatic reconnection on disconnect")
+        self.auto_reconnect_check.setChecked(False)
+        reconnect_layout.addWidget(self.auto_reconnect_check)
+        
+        reconnect_form = QFormLayout()
+        self.reconnect_delay_spin = QSpinBox()
+        self.reconnect_delay_spin.setRange(1, 60)
+        self.reconnect_delay_spin.setValue(5)
+        self.reconnect_delay_spin.setSuffix(" sec")
+        self.reconnect_delay_spin.setEnabled(False)
+        self.auto_reconnect_check.toggled.connect(self.reconnect_delay_spin.setEnabled)
+        reconnect_form.addRow("Retry Delay:", self.reconnect_delay_spin)
+        
+        self.max_reconnect_spin = QSpinBox()
+        self.max_reconnect_spin.setRange(1, 100)
+        self.max_reconnect_spin.setValue(10)
+        self.max_reconnect_spin.setSuffix(" attempts")
+        self.max_reconnect_spin.setEnabled(False)
+        self.auto_reconnect_check.toggled.connect(self.max_reconnect_spin.setEnabled)
+        reconnect_form.addRow("Max Attempts:", self.max_reconnect_spin)
+        
+        reconnect_layout.addLayout(reconnect_form)
+        layout.addWidget(reconnect_group)
+        
+        # Data validation
+        validation_group = QGroupBox("Data Validation")
+        validation_layout = QVBoxLayout(validation_group)
+        
+        self.validate_range_check = QCheckBox("Validate data is within expected range")
+        self.validate_range_check.setChecked(False)
+        validation_layout.addWidget(self.validate_range_check)
+        
+        self.drop_invalid_check = QCheckBox("Drop invalid packets (don't display errors)")
+        self.drop_invalid_check.setChecked(False)
+        validation_layout.addWidget(self.drop_invalid_check)
+        
+        layout.addWidget(validation_group)
+        
+        # Warning label
+        warning = QLabel(
+            "⚠️ <b>Note:</b> Changing these settings may affect connection stability. "
+            "Use defaults unless you have specific requirements."
+        )
+        warning.setWordWrap(True)
+        warning.setStyleSheet("background: #3a2a1a; padding: 10px; border-radius: 6px; color: #ffcc00;")
+        layout.addWidget(warning)
+        
+        layout.addStretch()
+        
+        self.tabs.addTab(advanced_tab, "Advanced")
+        
+    def _get_serial_ports(self):
+        """Get list of available serial ports"""
+        ports = []
+        try:
+            if _serial_list_ports:
+                ports = [p.device for p in _serial_list_ports.comports()]
+        except Exception:
+            pass
+        
+        if not ports:
+            # Add common defaults if none found
+            if sys.platform.startswith('linux'):
+                ports = ['/dev/ttyUSB0', '/dev/ttyACM0', '/dev/ttyUSB1']
+            elif sys.platform.startswith('win'):
+                ports = ['COM3', 'COM4', 'COM5', 'COM6']
+            elif sys.platform.startswith('darwin'):
+                ports = ['/dev/tty.usbserial', '/dev/tty.usbmodem']
+        
+        return ports if ports else ['No ports found']
+    
+    def _refresh_ports(self):
+        """Refresh the serial ports list"""
+        current = self.serial_port_combo.currentText()
+        self.serial_port_combo.clear()
+        ports = self._get_serial_ports()
+        self.serial_port_combo.addItems(ports)
+        
+        # Try to restore previous selection
+        index = self.serial_port_combo.findText(current)
+        if index >= 0:
+            self.serial_port_combo.setCurrentIndex(index)
+    
+    def _on_mode_selected(self, mode):
+        """Handle connection mode selection"""
+        # Update button states
+        for mode_id, btn in self.mode_buttons.items():
+            btn.setChecked(mode_id == mode)
+        
+        # Show/hide relevant fields
+        self._update_params_visibility(mode)
+    
+    def _update_params_visibility(self, mode):
+        """Update visibility of connection parameters based on mode"""
+        # Get all form rows
+        for i in range(self.params_form.rowCount()):
+            label_item = self.params_form.itemAt(i, QFormLayout.ItemRole.LabelRole)
+            field_item = self.params_form.itemAt(i, QFormLayout.ItemRole.FieldRole)
+            
+            if label_item and label_item.widget():
+                label = label_item.widget().text()
+                
+                # Show/hide based on mode
+                visible = False
+                if mode == 'serial' and ('Serial' in label or 'Baud' in label):
+                    visible = True
+                elif mode == 'tcp' and 'TCP' in label:
+                    visible = True
+                elif mode == 'udp' and 'UDP' in label:
+                    visible = True
+                
+                label_item.widget().setVisible(visible)
+                if field_item:
+                    widget = field_item.widget() if hasattr(field_item, 'widget') else field_item.layout()
+                    if hasattr(widget, 'setVisible'):
+                        widget.setVisible(visible)
+                    elif widget:  # It's a layout
+                        for j in range(widget.count()):
+                            item = widget.itemAt(j)
+                            if item and item.widget():
+                                item.widget().setVisible(visible)
+    
+    def _on_format_changed(self, index):
+        """Update format example when format is changed"""
+        formats = {
+            0: "JSON Array:\n[23.5, 45.2, 78.1, 12.3]\n[24.1, 46.0, 79.2, 11.8]",
+            1: "CSV:\n23.5,45.2,78.1,12.3\n24.1,46.0,79.2,11.8",
+            2: "Raw Bytes (hex):\nAB CD EF 12 34 56 78 90",
+            3: "Bits:\n10110101 11001100 01010011"
+        }
+        self.format_example.setText(formats.get(index, "Example data"))
+
+    def _load_profile(self, profile_name):
+        """Load a connection profile/preset"""
+        if profile_name == "<Current Settings>":
+            return
+        
+        presets = {
+            "Arduino JSON Array": {
+                'mode': 'serial',
+                'baudrate': 9600,
+                'data_format': 'json_array',
+                'channel_count': 8,
+                'csv_separator': ','
+            },
+            "Arduino CSV": {
+                'mode': 'serial',
+                'baudrate': 9600,
+                'data_format': 'csv',
+                'channel_count': 8,
+                'csv_separator': ','
+            },
+            "ESP32 Binary": {
+                'mode': 'serial',
+                'baudrate': 115200,
+                'data_format': 'raw_bytes',
+                'channel_count': 16,
+                'sample_width_bytes': 2,
+                'little_endian': True
+            },
+            "Text Messages": {
+                'mode': 'serial',
+                'baudrate': 9600,
+                'data_format': 'csv',
+                'channel_count': 1,
+                'csv_separator': ','
+            }
+        }
+        
+        preset = presets.get(profile_name)
+        if preset:
+            # Apply preset to UI
+            mode = preset.get('mode', 'serial')
+            for mode_id, btn in self.mode_buttons.items():
+                btn.setChecked(mode_id == mode)
+            self._update_params_visibility(mode)
+            
+            # Set baudrate
+            if 'baudrate' in preset:
+                self.baud_combo.setCurrentText(str(preset['baudrate']))
+            
+            # Set format
+            format_map = {
+                'json_array': 0,
+                'csv': 1,
+                'raw_bytes': 2,
+                'bits': 3
+            }
+            format_idx = format_map.get(preset.get('data_format', 'json_array'), 0)
+            self.format_combo.setCurrentIndex(format_idx)
+            
+            # Set channel count
+            if 'channel_count' in preset:
+                self.channels_spin.setValue(preset['channel_count'])
+            
+            # Set CSV separator
+            if 'csv_separator' in preset:
+                sep_map = {',': 0, ';': 1, '|': 2}
+                idx = sep_map.get(preset['csv_separator'], 0)
+                self.csv_sep_combo.setCurrentIndex(idx)
+            
+            # Set binary settings
+            if 'sample_width_bytes' in preset:
+                self.sample_width_spin.setValue(preset['sample_width_bytes'])
+            if 'little_endian' in preset:
+                self.endian_combo.setCurrentIndex(0 if preset['little_endian'] else 1)
+            
+            QMessageBox.information(self, "Profile Loaded", 
+                                f"Profile '{profile_name}' has been loaded.\n\n"
+                                f"Review the settings and click OK to apply.")
+    
+    def _test_connection(self):
+        """Test the connection with current settings"""
+        from PySide6.QtCore import QThread, Signal
+        
+        class TestThread(QThread):
+            result = Signal(bool, str)
+            
+            def __init__(self, settings):
+                super().__init__()
+                self.settings = settings
+            
+            def run(self):
+                try:
+                    mode = self.settings.get('mode', 'dummy')
+                    
+                    if mode == 'dummy':
+                        import time
+                        time.sleep(0.5)
+                        self.result.emit(True, "Dummy mode - always succeeds")
+                        return
+                    
+                    # Try to create a DataReader and test connection
+                    from backend import DataReader
+                    reader = DataReader(
+                        mode=mode,
+                        serial_port=self.settings.get('serial_port', 'COM4'),
+                        baudrate=self.settings.get('baudrate', 115200),
+                        tcp_host=self.settings.get('tcp_host', '127.0.0.1'),
+                        tcp_port=self.settings.get('tcp_port', 9000),
+                        udp_host=self.settings.get('udp_host', '0.0.0.0'),
+                        udp_port=self.settings.get('udp_port', 9000),
+                        timeout=self.settings.get('timeout', 1.0),
+                        data_format=self.settings.get('data_format', 'json_array'),
+                        channel_count=self.settings.get('channel_count', 32),
+                        sample_width_bytes=self.settings.get('sample_width_bytes', 2),
+                        little_endian=self.settings.get('little_endian', True),
+                        csv_separator=self.settings.get('csv_separator', ',')
+                    )
+                    
+                    # Try to read one line
+                    data = reader.read_line()
+                    reader.close()
+                    
+                    if data:
+                        self.result.emit(True, f"Connection successful! Received data: {str(data)[:100]}")
+                    else:
+                        self.result.emit(False, "Connected but no data received. Check if device is sending data.")
+                    
+                except Exception as e:
+                    self.result.emit(False, f"Connection failed: {str(e)}")
+        
+        # Get current settings from UI
+        test_settings = self._get_settings_from_ui()
+        
+        # Show progress dialog
+        progress = QMessageBox(self)
+        progress.setWindowTitle("Testing Connection")
+        progress.setText("Testing connection...\nPlease wait.")
+        progress.setStandardButtons(QMessageBox.StandardButton.NoButton)
+        progress.show()
+        
+        # Start test thread
+        self._test_thread = TestThread(test_settings)
+        
+        def on_result(success, message):
+            progress.close()
+            if success:
+                QMessageBox.information(self, "Connection Test", message)
+            else:
+                QMessageBox.warning(self, "Connection Test Failed", message)
+        
+        self._test_thread.result.connect(on_result)
+        self._test_thread.start()
+
+    def _get_settings_from_ui(self):
+        """Extract current settings from UI controls"""
+        # Determine selected mode
+        selected_mode = 'dummy'
+        for mode_id, btn in self.mode_buttons.items():
+            if btn.isChecked():
+                selected_mode = mode_id
+                break
+        
+        # Get CSV separator
+        csv_sep = self.csv_sep_combo.currentText()
+        if csv_sep.startswith(','):
+            csv_sep = ','
+        elif csv_sep.startswith(';'):
+            csv_sep = ';'
+        elif csv_sep.startswith('|'):
+            csv_sep = '|'
+        elif csv_sep == 'tab':
+            csv_sep = '\t'
+        elif csv_sep == 'space':
+            csv_sep = ' '
+        
+        # Get data format
+        format_map = ['json_array', 'csv', 'raw_bytes', 'bits']
+        data_format = format_map[self.format_combo.currentIndex()]
+        
+        return {
+            'mode': selected_mode,
+            'serial_port': self.serial_port_combo.currentText().strip(),
+            'baudrate': int(self.baud_combo.currentText()),
+            'tcp_host': self.tcp_host_edit.text().strip(),
+            'tcp_port': int(self.tcp_port_spin.value()),
+            'udp_host': self.udp_host_edit.text().strip(),
+            'udp_port': int(self.udp_port_spin.value()),
+            'timeout': float(self.timeout_spin.value()),
+            'data_format': data_format,
+            'channel_count': int(self.channels_spin.value()),
+            'sample_width_bytes': int(self.sample_width_spin.value()),
+            'little_endian': (self.endian_combo.currentIndex() == 0),
+            'csv_separator': csv_sep,
+            'read_buffer': int(self.read_buffer_spin.value()),
+            'auto_reconnect': self.auto_reconnect_check.isChecked(),
+            'reconnect_delay': int(self.reconnect_delay_spin.value()),
+            'max_reconnect_attempts': int(self.max_reconnect_spin.value())
+        }
+    
+    def _apply_settings_to_ui(self):
+        """Apply stored settings to UI controls"""
+        # Set mode
+        mode = self._settings.get('mode', 'dummy')
+        for mode_id, btn in self.mode_buttons.items():
+            btn.setChecked(mode_id == mode)
+        self._update_params_visibility(mode)
+        
+        # Serial settings
+        self.serial_port_combo.setCurrentText(self._settings.get('serial_port', 'COM4'))
+        self.baud_combo.setCurrentText(str(self._settings.get('baudrate', 9600)))
+        
+        # TCP/UDP settings
+        self.tcp_host_edit.setText(self._settings.get('tcp_host', '127.0.0.1'))
+        self.tcp_port_spin.setValue(int(self._settings.get('tcp_port', 9000)))
+        self.udp_host_edit.setText(self._settings.get('udp_host', '0.0.0.0'))
+        self.udp_port_spin.setValue(int(self._settings.get('udp_port', 9000)))
+        
+        # Format settings
+        format_map = {
+            'json_array': 0,
+            'csv': 1,
+            'raw_bytes': 2,
+            'bits': 3
+        }
+        format_idx = format_map.get(self._settings.get('data_format', 'json_array'), 0)
+        self.format_combo.setCurrentIndex(format_idx)
+        self._on_format_changed(format_idx)
+        
+        self.channels_spin.setValue(int(self._settings.get('channel_count', 32)))
+        self.sample_width_spin.setValue(int(self._settings.get('sample_width_bytes', 2)))
+        self.endian_combo.setCurrentIndex(0 if self._settings.get('little_endian', True) else 1)
+        
+        # CSV separator
+        sep = self._settings.get('csv_separator', ',')
+        sep_map = {',': 0, ';': 1, '|': 2, '\t': 3, ' ': 4}
+        self.csv_sep_combo.setCurrentIndex(sep_map.get(sep, 0))
+        
+        # Advanced settings
+        self.timeout_spin.setValue(float(self._settings.get('timeout', 1.0)))
+        self.read_buffer_spin.setValue(int(self._settings.get('read_buffer', 4096)))
+        self.auto_reconnect_check.setChecked(self._settings.get('auto_reconnect', False))
+        self.reconnect_delay_spin.setValue(int(self._settings.get('reconnect_delay', 5)))
+        self.max_reconnect_spin.setValue(int(self._settings.get('max_reconnect_attempts', 10)))
+    
+    def get_settings(self):
+        """Get the final settings (called when OK is clicked)"""
+        return self._get_settings_from_ui()
+        
+
 
 class ConnectionSettingsDialog(QDialog):
     def __init__(self, settings, parent=None):
