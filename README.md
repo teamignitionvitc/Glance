@@ -49,8 +49,7 @@
 
 ## 🚀 About
 
-**Dashboard Builder** is a professional-grade telemetry visualization platform designed for real-time monitoring of sensor data from rockets, drones, embedded systems, and data-acquisition applications. Built with **PySide6 (Qt6)**, it provides a flexible, widget-based dashboard system with comprehensive data logging and multi-source support.
-
+**Glance** is a sophisticated real-time telemetry visualization platform designed for rockets, drones, embedded systems, and advanced data-acquisition applications. Built with PySide6 (Qt6), it offers a modular, widget-based dashboard that adapts to diverse telemetry needs. With multi-source connectivity, powerful data logging, and professional UI/UX, Glance empowers engineers, researchers, and operators to gain actionable insights — all at a single glance.
 ### Key Capabilities
 
 - ⚡ **Real-time visualization** of multi-channel sensor data
