@@ -20,7 +20,7 @@
 ![Team Ignition Logo](public/ign_logo_wht.png)
 
 **Developed by Team Ignition Software Department**  
-*Vellore Institute of Technology, Chennai*
+*Official Model Rocketry Team of Vellore Institute of Technology, Chennai*
 
 </div>
 

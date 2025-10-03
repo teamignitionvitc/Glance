@@ -3,773 +3,624 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard Builder Documentation</title>
+    <title>Glance | Dashboard Builder Documentation</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
+        /* General Reset & Root Variables */
+        :root {
+            --primary: #0a84ff;
+            --primary-dark: #0077ee;
+            --bg-dark: #111111;
+            --bg-darker: #1c1c1e;
+            --bg-light: #2c2c2e;
+            --text-primary: #f5f5f7;
+            --text-secondary: #a1a1a6;
+            --border: #3a3a3c;
+            --accent: #30d158;
+            --warning: #ff9f0a;
+            --danger: #ff453a;
+            --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+        }
+
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
         }
 
-        :root {
-            --primary: #0a84ff;
-            --primary-dark: #0969c3;
-            --bg-dark: #1e1e1e;
-            --bg-darker: #161616;
-            --bg-light: #2a2a2a;
-            --text-primary: #e0e0e0;
-            --text-secondary: #a0a0a0;
-            --border: #3a3a3a;
-            --accent: #21b35a;
-            --warning: #ffbf00;
-            --danger: #ff3131;
+        html {
+            scroll-behavior: smooth;
         }
 
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            font-family: var(--font-sans);
             background: var(--bg-dark);
             color: var(--text-primary);
-            line-height: 1.6;
+            line-height: 1.7;
+            font-size: 16px;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+        
+        /* Custom Scrollbar - Body */
+        ::-webkit-scrollbar {
+            width: 12px;
+            height: 12px;
         }
 
-        .container {
-            display: flex;
-            min-height: 100vh;
+        ::-webkit-scrollbar-track {
+            background: var(--bg-dark);
         }
 
-        /* Sidebar */
+        ::-webkit-scrollbar-thumb {
+            background-color: var(--border);
+            border-radius: 6px;
+            border: 3px solid var(--bg-dark);
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background-color: var(--primary);
+        }
+
+        /* Firefox scrollbar */
+        html {
+            scrollbar-width: thin;
+            scrollbar-color: var(--border) var(--bg-dark);
+        }
+
+        /* Typography */
+        h1, h2, h3, h4, h5, h6 {
+            color: var(--text-primary);
+            line-height: 1.3;
+            font-weight: 700;
+        }
+        h1 { font-size: 2.75rem; margin-bottom: 1rem; }
+        h2 { font-size: 2.25rem; margin: 3.5rem 0 1.5rem 0; padding-bottom: 0.75rem; border-bottom: 1px solid var(--border); }
+        h3 { font-size: 1.75rem; margin: 2.5rem 0 1.25rem 0; }
+        h4 { font-size: 1.25rem; margin: 1.5rem 0 0.75rem 0; color: var(--primary); font-weight: 600; }
+        p { margin-bottom: 1rem; color: var(--text-secondary); max-width: 75ch; }
+        a { color: var(--primary); text-decoration: none; transition: color 0.2s ease; }
+        a:hover { color: var(--primary-dark); text-decoration: underline; }
+        strong { font-weight: 600; color: var(--text-primary); }
+        ul, ol { margin: 1rem 0 1rem 1.25rem; padding-left: 1rem; }
+        li { margin-bottom: 0.75rem; }
+
+        /* Main Layout */
+        .container { display: flex; }
         .sidebar {
             width: 280px;
             background: var(--bg-darker);
             border-right: 1px solid var(--border);
             position: fixed;
-            height: 100vh;
+            height: 100%;
             overflow-y: auto;
-            z-index: 100;
+            transition: transform 0.3s ease;
+            z-index: 1000;
         }
-
-        .sidebar::-webkit-scrollbar {
-            width: 6px;
-        }
-
-        .sidebar::-webkit-scrollbar-track {
-            background: var(--bg-darker);
-        }
-
-        .sidebar::-webkit-scrollbar-thumb {
-            background: var(--border);
-            border-radius: 3px;
-        }
-
-        .logo {
-            padding: 24px 20px;
-            border-bottom: 1px solid var(--border);
-        }
-
-        .logo h1 {
-            font-size: 18px;
-            color: var(--primary);
-            margin-bottom: 4px;
-        }
-
-        .logo p {
-            font-size: 12px;
-            color: var(--text-secondary);
-        }
-
-        .nav {
-            padding: 16px 0;
-        }
-
-        .nav-section {
-            margin-bottom: 24px;
-        }
-
-        .nav-section-title {
-            padding: 8px 20px;
-            font-size: 11px;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            color: var(--text-secondary);
-        }
-
-        .nav-item {
-            display: block;
-            padding: 10px 20px;
-            color: var(--text-secondary);
-            text-decoration: none;
-            font-size: 14px;
-            transition: all 0.2s;
-            border-left: 3px solid transparent;
-        }
-
-        .nav-item:hover {
-            background: var(--bg-light);
-            color: var(--text-primary);
-        }
-
-        .nav-item.active {
-            background: var(--bg-light);
-            color: var(--primary);
-            border-left-color: var(--primary);
-        }
-
-        .nav-sub-item {
-            padding: 8px 20px 8px 40px;
-            font-size: 13px;
-        }
-
-        /* Content */
         .content {
             margin-left: 280px;
-            flex: 1;
-            padding: 40px 60px;
-            max-width: 1200px;
+            width: calc(100% - 280px);
+            padding: 3rem 5rem;
         }
+        main > section { scroll-margin-top: 3rem; }
 
-        .content h1 {
-            font-size: 36px;
-            margin-bottom: 16px;
-            color: var(--text-primary);
-        }
-
-        .content h2 {
-            font-size: 28px;
-            margin: 48px 0 20px 0;
-            padding-bottom: 12px;
-            border-bottom: 1px solid var(--border);
-            color: var(--text-primary);
-        }
-
-        .content h3 {
-            font-size: 22px;
-            margin: 32px 0 16px 0;
-            color: var(--text-primary);
-        }
-
-        .content h4 {
-            font-size: 18px;
-            margin: 24px 0 12px 0;
-            color: var(--text-primary);
-        }
-
-        .content p {
-            margin-bottom: 16px;
-            color: var(--text-secondary);
-        }
-
-        .content ul, .content ol {
-            margin: 16px 0 16px 24px;
-            color: var(--text-secondary);
-        }
-
-        .content li {
-            margin-bottom: 8px;
-        }
-
-        .badge {
-            display: inline-block;
-            padding: 4px 10px;
-            border-radius: 12px;
-            font-size: 12px;
-            font-weight: 600;
-            margin-left: 8px;
-        }
-
-        .badge-version {
-            background: var(--primary);
-            color: white;
-        }
-
-        .badge-new {
-            background: var(--accent);
-            color: white;
-        }
-
-        .info-box {
-            background: var(--bg-light);
-            border-left: 4px solid var(--primary);
-            padding: 16px 20px;
-            margin: 24px 0;
-            border-radius: 4px;
-        }
-
-        .info-box.warning {
-            border-left-color: var(--warning);
-        }
-
-        .info-box.danger {
-            border-left-color: var(--danger);
-        }
-
-        .info-box.success {
-            border-left-color: var(--accent);
-        }
-
-        .info-box p {
-            margin: 0;
-        }
-
-        code {
-            background: var(--bg-light);
-            padding: 2px 6px;
-            border-radius: 3px;
-            font-family: 'Consolas', 'Monaco', monospace;
-            font-size: 13px;
-            color: #ce9178;
-        }
-
-        pre {
-            background: var(--bg-darker);
-            padding: 20px;
-            border-radius: 6px;
-            overflow-x: auto;
-            margin: 20px 0;
-            border: 1px solid var(--border);
-        }
-
-        pre code {
-            background: none;
-            padding: 0;
-            color: var(--text-primary);
-        }
-
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin: 24px 0;
-            background: var(--bg-light);
-            border-radius: 6px;
-            overflow: hidden;
-        }
-
-        th {
-            background: var(--bg-darker);
-            padding: 12px;
-            text-align: left;
-            font-weight: 600;
-            border-bottom: 2px solid var(--border);
-        }
-
-        td {
-            padding: 12px;
+        /* Sidebar Styling */
+        .sidebar-header {
+            padding: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 12px;
             border-bottom: 1px solid var(--border);
         }
+        .sidebar-header img { width: 40px; height: 40px; }
+        .sidebar-header .title h1 { font-size: 1.2rem; margin: 0; color: var(--text-primary); }
+        .sidebar-header .title p { font-size: 0.8rem; margin: 0; color: var(--text-secondary); }
+        .nav-section-title { padding: 1.5rem 1.5rem 0.5rem; font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: var(--text-secondary); }
+        .nav-item { display: flex; align-items: center; gap: 10px; padding: 0.75rem 1.5rem; color: var(--text-secondary); font-size: 0.9rem; border-left: 3px solid transparent; transition: all 0.2s ease; font-weight: 500;}
+        .nav-item:hover { background: var(--bg-light); color: var(--text-primary); }
+        .nav-item.active { background: rgba(10, 132, 255, 0.1); color: var(--primary); border-left-color: var(--primary); font-weight: 600; }
+        .nav-item .icon { width: 16px; height: 16px; stroke-width: 2px; }
+        /* Custom scrollbar for sidebar */
+        .sidebar::-webkit-scrollbar { width: 8px; }
+        .sidebar::-webkit-scrollbar-track { background: transparent; }
+        .sidebar::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+        .sidebar::-webkit-scrollbar-thumb:hover { background: var(--primary); }
 
-        tr:last-child td {
-            border-bottom: none;
-        }
+        /* Content Styling */
+        .main-header { text-align: center; margin-bottom: 3rem; padding-bottom: 2rem; border-bottom: 1px solid var(--border); }
+        .main-header .main-logo { max-width: 300px; margin-bottom: 1.5rem; }
+        .main-header p { margin-left: auto; margin-right: auto; }
+        .animated-gif { max-width: 100%; border-radius: 8px; border: 1px solid var(--border); margin: 2rem 0; box-shadow: 0 10px 30px rgba(0,0,0,0.3);}
 
-        .btn {
-            display: inline-block;
-            padding: 10px 20px;
-            background: var(--primary);
-            color: white;
-            text-decoration: none;
-            border-radius: 6px;
-            font-weight: 500;
-            transition: background 0.2s;
-        }
+        /* Utility & Components */  
+        .info-box { background: var(--bg-light); border-left: 4px solid var(--primary); padding: 1rem 1.5rem; margin: 1.5rem 0; border-radius: 0 4px 4px 0; }
+        .info-box.warning { border-color: var(--warning); }
+        .info-box.danger { border-color: var(--danger); }
+        .info-box p { margin: 0; max-width: none;}
+        
+        /* Code Blocks */
+        code { background: var(--bg-light); padding: 0.2em 0.4em; border-radius: 4px; font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace; font-size: 0.9em; color: #ff9f0a; }
+        pre { background: var(--bg-darker); border: 1px solid var(--border); border-radius: 8px; margin: 1.5rem 0; position: relative; }
+        pre code { background: none; padding: 1.5rem; display: block; overflow-x: auto; font-size: 0.85rem; line-height: 1.6; color: var(--text-primary); }
+        .copy-btn { position: absolute; top: 1rem; right: 1rem; background: var(--bg-light); border: 1px solid var(--border); color: var(--text-secondary); padding: 0.5rem; border-radius: 6px; cursor: pointer; opacity: 0.7; transition: all 0.2s ease; }
+        pre:hover .copy-btn { opacity: 1; }
+        .copy-btn:hover { background: var(--border); color: var(--text-primary); }
+        .copy-btn svg { width: 16px; height: 16px; vertical-align: middle; transition: transform 0.1s ease; }
+        .copy-btn:active svg { transform: scale(0.9); }
 
-        .btn:hover {
-            background: var(--primary-dark);
-        }
+        /* Tables */
+        table { width: 100%; border-collapse: collapse; margin: 1.5rem 0; background: var(--bg-darker); border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+        th, td { padding: 0.75rem 1rem; text-align: left; border-bottom: 1px solid var(--border); }
+        th { background: #333333; font-weight: 600; }
+        tbody tr { transition: background-color 0.2s ease; }
+        tbody tr:hover { background-color: var(--bg-light); }
+        tr:last-child td { border-bottom: none; }
+        td ul { margin: 0 0 0 1rem; }
 
-        .feature-grid {
+        /* Cards & Grids */
+        .feature-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.5rem; margin-top: 2rem; }
+        .feature-card { background: var(--bg-light); border: 1px solid var(--border); padding: 1.5rem; border-radius: 8px; transition: transform 0.2s ease, box-shadow 0.2s ease; }
+        .feature-card:hover { transform: translateY(-5px); box-shadow: 0 10px 20px rgba(0,0,0,0.2); }
+        .feature-card h4 { margin-top: 0; }
+
+        /* Screenshots */
+        .screenshot-gallery { display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; margin-top: 2rem; }
+        .screenshot-gallery figure { text-align: center; background-color: var(--bg-darker); padding: 1rem; border-radius: 8px; border: 1px solid var(--border); }
+        .screenshot-gallery img { width: 100%; border-radius: 6px; margin-bottom: 0.75rem; }
+        .screenshot-gallery figcaption { font-style: italic; color: var(--text-secondary); font-size: 0.9rem; }
+        
+        .telemetry-images {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 20px;
-            margin: 32px 0;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.5rem;
+            margin-top: 2rem;
         }
-
-        .feature-card {
-            background: var(--bg-light);
-            padding: 24px;
+        .telemetry-images img {
+            width: 50%;
             border-radius: 8px;
             border: 1px solid var(--border);
         }
 
-        .feature-card h4 {
-            margin-top: 0;
-            color: var(--primary);
+        /* Footer */
+        footer { 
+            margin-top: 4rem; 
+            padding: 3rem 2rem; 
+            border-top: 1px solid var(--border); 
+            text-align: center; 
+            background-color: var(--bg-darker);
         }
+        .footer-logo { max-width: 80px; margin-bottom: 1rem; }
+        .footer-text { max-width: 60ch; margin: 0 auto 1.5rem auto; color: var(--text-secondary); font-size: 0.9rem; }
+        .social-links { display: flex; justify-content: center; gap: 1rem; margin-bottom: 1.5rem; list-style: none; padding: 0;}
+        .social-links a { color: var(--text-secondary); transition: color 0.2s ease; display: inline-block; }
+        .social-links a:hover { color: var(--text-primary); transform: scale(1.1); }
+        .social-links svg { width: 24px; height: 24px; }
+        .copyright { font-size: 0.85rem; color: #777;}
 
-        @media (max-width: 768px) {
-            .sidebar {
-                width: 100%;
-                position: relative;
-                height: auto;
-            }
-
-            .content {
-                margin-left: 0;
-                padding: 24px 20px;
-            }
+        /* Mobile Responsive Design */
+        .mobile-nav-toggle { display: none; }
+        @media (max-width: 1024px) {
+            .sidebar { transform: translateX(-100%); position: fixed; box-shadow: 0 0 40px rgba(0,0,0,0.5); }
+            .sidebar.open { transform: translateX(0); }
+            .content { margin-left: 0; width: 100%; padding: 2.5rem; }
+            .mobile-nav-toggle { display: block; position: fixed; top: 1rem; left: 1rem; z-index: 1001; background: var(--bg-light); border: 1px solid var(--border); border-radius: 8px; padding: 0.75rem; cursor: pointer; }
+            .mobile-nav-toggle .icon { color: var(--text-primary); width: 24px; height: 24px; }
+            .screenshot-gallery { grid-template-columns: 1fr; }
+            h1 { font-size: 2.25rem; }
+            h2 { font-size: 1.75rem; }
         }
     </style>
 </head>
 <body>
+    <button class="mobile-nav-toggle" id="menu-toggle" aria-label="Toggle navigation">
+         <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16m-7 6h7"></path></svg>
+    </button>
     <div class="container">
         <!-- Sidebar Navigation -->
-        <aside class="sidebar">
-            <div class="logo">
-                <h1>Dashboard Builder</h1>
-                <p>Team Ignition VIT-C</p>
-            </div>
+        <aside class="sidebar" id="sidebar">
+            <header class="sidebar-header">
+                <img src="../public/Glance_nobg _jl.png" alt="Glance Logo">
+                <div class="title">
+                    <h1>Glance</h1>
+                    <p>Dashboard Builder</p>
+                </div>
+
+            </header>
             
             <nav class="nav">
                 <div class="nav-section">
+                    <div class="nav-section-title">Introduction</div>
+                    <a href="#overview" class="nav-item active"><svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>Overview</a>
+                    <a href="#features" class="nav-item"><svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"></path></svg>Features</a>
+                    <a href="#screenshots" class="nav-item"><svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>Screenshots</a>
+                </div>
+                <div class="nav-section">
                     <div class="nav-section-title">Getting Started</div>
-                    <a href="#overview" class="nav-item active">Overview</a>
-                    <a href="#features" class="nav-item">Features</a>
-                    <a href="#requirements" class="nav-item">System Requirements</a>
-                    <a href="#installation" class="nav-item">Installation</a>
-                    <a href="#quickstart" class="nav-item">Quick Start Guide</a>
+                    <a href="#requirements" class="nav-item"><svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M12 6V3m0 18v-3M5.636 5.636L4.222 4.222m15.556 15.556L18.364 18.364M5.636 18.364L4.222 19.778m15.556-15.556l1.414-1.414"></path></svg>System Requirements</a>
+                    <a href="#installation" class="nav-item"><svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>Installation</a>
+                    <a href="#workflow" class="nav-item"><svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>The Glance Workflow</a>
                 </div>
-
                 <div class="nav-section">
-                    <div class="nav-section-title">User Guide</div>
-                    <a href="#interface" class="nav-item">Dashboard Interface</a>
-                    <a href="#parameters" class="nav-item">Managing Parameters</a>
-                    <a href="#widgets" class="nav-item">Working with Widgets</a>
-                    <a href="#tabs" class="nav-item">Tabs & Layout</a>
-                    <a href="#stream-control" class="nav-item">Stream Control</a>
+                    <div class="nav-section-title">Core Concepts</div>
+                    <a href="#data-sources" class="nav-item"><svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8.111 16.404a5.5 5.5 0 017.778 0M12 20h.01m-7.08-7.071a10 10 0 0114.142 0M1.394 8.532a15 15 0 0121.212 0"></path></svg>Data Sources</a>
+                    <a href="#data-formats" class="nav-item"><svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path></svg>Data Formats</a>
+                    <a href="#parameters" class="nav-item"><svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>Parameters</a>
+                    <a href="#widget-library" class="nav-item"><svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z"></path></svg>Widget Library</a>
+                    <a href="#data-logging" class="nav-item"><svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 7v8a2 2 0 002 2h4M8 7a2 2 0 012-2h4a2 2 0 012 2v8a2 2 0 01-2 2h-4a2 2 0 01-2-2l-4.5-4.5L8 7z"></path></svg>Data Logging</a>
                 </div>
-
                 <div class="nav-section">
-                    <div class="nav-section-title">Configuration</div>
-                    <a href="#connection" class="nav-item">Connection Settings</a>
-                    <a href="#data-formats" class="nav-item">Data Formats</a>
-                    <a href="#data-logging" class="nav-item">Data Logging</a>
-                    <a href="#project-files" class="nav-item">Project Files</a>
-                </div>
-
-                <div class="nav-section">
-                    <div class="nav-section-title">Troubleshooting</div>
-                    <a href="#connection-issues" class="nav-item">Connection Issues</a>
-                    <a href="#data-issues" class="nav-item">Data Display Issues</a>
-                    <a href="#performance" class="nav-item">Performance</a>
-                </div>
-
-                <div class="nav-section">
-                    <div class="nav-section-title">Reference</div>
-                    <a href="#widget-types" class="nav-item">Widget Types</a>
-                    <a href="#keyboard" class="nav-item">Keyboard Shortcuts</a>
-                    <a href="#api" class="nav-item">API Reference</a>
+                    <div class="nav-section-title">Advanced</div>
+                     <a href="#advanced-features" class="nav-item"><svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>Advanced Features</a>
+                    <a href="#contributing" class="nav-item"><svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"></path></svg>Contributing</a>
+                    <a href="#license" class="nav-item"><svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M10 21h7a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v11m0 5l4.879-4.879m0 0a3 3 0 104.243-4.242 3 3 0 00-4.243 4.242z"></path></svg>License</a>
                 </div>
             </nav>
         </aside>
 
         <!-- Main Content -->
         <main class="content">
-            <section id="overview">
-                <h1>Dashboard Builder <span class="badge badge-version">v2.0.0</span></h1>
-                <p>Professional Real-Time Telemetry Visualization Platform for monitoring and analyzing sensor data, system metrics, and telemetry streams.</p>
-                
-                <div class="info-box success">
-                    <p><strong>Developed by Team Ignition Software Department</strong> at Vellore Institute of Technology, Chennai</p>
-                </div>
+            <header class="main-header">
+                <img src="../public/Glance_nobg.png" alt="Glance Main Logo" class="main-logo">
+                <h1>Glance Dashboard Documentation</h1>
+                <p>Your complete guide to setting up, configuring, and using the Glance real-time telemetry visualization platform. Built by <a href="https://teamignition.space" target="_blank">Team Ignition</a>.</p>
+            </header>
 
-                <p>Dashboard Builder is a professional-grade telemetry visualization platform designed for real-time monitoring of sensor data from rockets, drones, embedded systems, and other data-acquisition applications.</p>
+            <section id="overview">
+                <h2>Overview</h2>
+                <p><strong>Glance</strong> is a professional-grade, real-time telemetry visualization platform designed for rockets, drones, embedded systems, and advanced data-acquisition applications. Built with PySide6 (Qt6), it offers a modular, widget-based dashboard that adapts to diverse telemetry needs. With multi-source connectivity, powerful data logging, and an intuitive UI/UX, Glance empowers engineers, researchers, and operators to gain actionable insights from complex data streams—all at a single glance.</p>
+                <div class="info-box">
+                    <p><strong>Primary Goal:</strong> To provide a powerful, flexible, and user-friendly tool for monitoring live data, enabling rapid diagnostics, performance analysis, and decision-making during critical operations.</p>
+                </div>
             </section>
 
             <section id="features">
-                <h2>Features</h2>
-                
+                <h2>Key Features</h2>
                 <div class="feature-grid">
                     <div class="feature-card">
-                        <h4>Real-time Visualization</h4>
-                        <p>Stream and visualize sensor data in real-time from multiple sources including Serial, TCP, UDP, and built-in simulators.</p>
+                        <h4>Multi-Source Connectivity</h4>
+                        <p>Connect to hardware via Serial (RS232/USB), or stream data over a network using TCP and UDP protocols. A built-in dummy data generator allows for testing without hardware.</p>
                     </div>
-                    
                     <div class="feature-card">
-                        <h4>Multiple Widget Types</h4>
-                        <p>7+ widget types including graphs, gauges, tables, LED indicators, and GPS maps for comprehensive data monitoring.</p>
+                        <h4>Dynamic Widget System</h4>
+                        <p>Visualize data your way with 7+ widgets, including time-series graphs, gauges, data tables, and GPS maps. Arrange them using a flexible drag-and-drop interface.</p>
                     </div>
-                    
                     <div class="feature-card">
-                        <h4>Data Logging</h4>
-                        <p>Comprehensive data logging to CSV and JSON formats with configurable buffer sizes and parameter selection.</p>
+                        <h4>Advanced Parameterization</h4>
+                        <p>Define custom data channels with unique IDs, units, and color-coded alarm thresholds. Map incoming data from any source to any widget with ease.</p>
                     </div>
-                    
                     <div class="feature-card">
-                        <h4>Professional UI</h4>
-                        <p>Industry-ready dark theme interface with customizable layouts, dockable widgets, and multi-tab support.</p>
+                        <h4>Comprehensive Data Logging</h4>
+                        <p>Record telemetry sessions to CSV or JSON formats. Configure logging parameters, buffer sizes, and file outputs to capture the data that matters most.</p>
                     </div>
                 </div>
+            </section>
 
-                <h3>Widget Types</h3>
+            <section id="screenshots">
+                <h2>Application Screenshots</h2>
+                <p>A glimpse into the Glance user interface, from initial setup to a fully configured, live dashboard.</p>
+                <div class="screenshot-gallery">
+                    <figure>
+                        <img src="../public/Doc Images/HomeScreen.png" alt="Glance welcome screen">
+                        <figcaption>The Welcome Screen: Start a new project or load an existing one.</figcaption>
+                    </figure>
+                    <figure>
+                        <img src="../public/Doc Images/Connection.png" alt="Connection settings dialog">
+                        <figcaption>Connection Settings: Configure data sources like Serial, TCP, and UDP.</figcaption>
+                    </figure>
+                    <figure>
+                        <img src="../public/Doc Images/parameters.png" alt="Parameter management window">
+                        <figcaption>Parameter Management: Define your data channels and alarm thresholds.</figcaption>
+                    </figure>
+                    <figure>
+                        <img src="../public/Doc Images/dashboard.png" alt="A fully configured dashboard with multiple widgets">
+                        <figcaption>The Live Dashboard: Monitor multiple data streams in real-time.</figcaption>
+                    </figure>
+                </div>
+            </section>
+            
+            <section id="requirements">
+                <h2>System Requirements</h2>
                 <table>
                     <thead>
                         <tr>
-                            <th>Widget</th>
-                            <th>Description</th>
-                            <th>Use Case</th>
+                            <th>Component</th>
+                            <th>Minimum Requirement</th>
+                            <th>Recommended Specification</th>
                         </tr>
                     </thead>
                     <tbody>
-                        <tr>
-                            <td><strong>Value Card</strong></td>
-                            <td>Large numeric display with alarm states</td>
-                            <td>Critical parameters (temperature, pressure)</td>
-                        </tr>
-                        <tr>
-                            <td><strong>Time Graph</strong></td>
-                            <td>Multi-parameter line chart with time axis</td>
-                            <td>Trend analysis over time</td>
-                        </tr>
-                        <tr>
-                            <td><strong>Gauge</strong></td>
-                            <td>Circular gauge with threshold indicators</td>
-                            <td>Visual ranges (speed, altitude)</td>
-                        </tr>
-                        <tr>
-                            <td><strong>Histogram</strong></td>
-                            <td>Distribution visualization</td>
-                            <td>Statistical analysis</td>
-                        </tr>
-                        <tr>
-                            <td><strong>LED Indicator</strong></td>
-                            <td>Status light with color-coded states</td>
-                            <td>Binary or threshold-based status</td>
-                        </tr>
-                        <tr>
-                            <td><strong>Log Table</strong></td>
-                            <td>Scrolling tabular data</td>
-                            <td>Detailed data inspection</td>
-                        </tr>
-                        <tr>
-                            <td><strong>Map Widget</strong></td>
-                            <td>GPS coordinate visualization</td>
-                            <td>Location tracking</td>
-                        </tr>
+                        <tr><td><strong>Operating System</strong></td><td>Windows 10, Ubuntu 20.04+, macOS 10.15+</td><td>Windows 11, Ubuntu 22.04+, macOS 12+</td></tr>
+                        <tr><td><strong>Python Version</strong></td><td>3.8 or higher</td><td>3.10 or higher</td></tr>
+                        <tr><td><strong>RAM</strong></td><td>4 GB</td><td>8 GB or more</td></tr>
+                        <tr><td><strong>Display</strong></td><td>1280x720 resolution</td><td>1920x1080 or higher</td></tr>
                     </tbody>
                 </table>
             </section>
 
-            <section id="requirements">
-                <h2>System Requirements</h2>
-                
-                <h3>Minimum Requirements</h3>
-                <ul>
-                    <li><strong>OS:</strong> Windows 10/11, Linux (Ubuntu 20.04+), macOS 10.15+</li>
-                    <li><strong>Python:</strong> 3.8 or higher</li>
-                    <li><strong>RAM:</strong> 4 GB</li>
-                    <li><strong>Display:</strong> 1280x720 resolution</li>
-                </ul>
-
-                <h3>Recommended Requirements</h3>
-                <ul>
-                    <li><strong>OS:</strong> Windows 11, Linux (Ubuntu 22.04+), macOS 12+</li>
-                    <li><strong>Python:</strong> 3.10 or higher</li>
-                    <li><strong>RAM:</strong> 8 GB or more</li>
-                    <li><strong>Display:</strong> 1920x1080 or higher resolution</li>
-                    <li><strong>Network:</strong> Ethernet for TCP/UDP sources</li>
-                </ul>
-            </section>
-
             <section id="installation">
-                <h2>Installation</h2>
+                <h2>Installation Guide</h2>
+                <h3>1. Clone the Repository</h3>
+                <p>First, clone the project from GitHub to your local machine.</p>
+                <pre><code class="language-bash">git clone https://github.com/teamignitionvitc/Glance.git
+cd Dashboard-Builder</code><button class="copy-btn" title="Copy code"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg></button></pre>
                 
-                <h3>Step 1: Install Python</h3>
-                <p>Ensure Python 3.8+ is installed on your system:</p>
-                <pre><code>python --version</code></pre>
+                <h3>2. Set Up a Virtual Environment (Recommended)</h3>
+                <p>Using a virtual environment prevents conflicts with other Python projects.</p>
+                <pre><code class="language-bash">python -m venv venv
+# On Windows: venv\Scripts\activate
+# On macOS/Linux: source venv/bin/activate</code><button class="copy-btn" title="Copy code"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg></button></pre>
 
-                <h3>Step 2: Clone Repository</h3>
-                <pre><code>git clone https://github.com/teamignitionvitc/Dashboard-Builder.git
-cd Dashboard-Builder</code></pre>
-
-                <h3>Step 3: Install Dependencies</h3>
-                <pre><code>pip install -r requirements.txt</code></pre>
+                <h3>3. Install Dependencies</h3>
+                <p>Install all required libraries using the <code>requirements.txt</code> file.</p>
+                <pre><code class="language-bash">pip install -r requirements.txt</code><button class="copy-btn" title="Copy code"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg></button></pre>
 
                 <div class="info-box">
-                    <p><strong>Required packages:</strong> PySide6, pyqtgraph, numpy, pyserial</p>
+                    <p>For the <strong>Map Widget</strong>, an optional dependency is required. Install it with: <code>pip install PySide6-WebEngine</code></p>
                 </div>
-
-                <h3>Step 4: Verify Installation</h3>
-                <pre><code>python main.py</code></pre>
+                <div class="info-box" style="border-color: var(--accent);">
+                    <p><strong>Coming Soon:</strong> We are actively working on one-click executables for Windows (.exe) and Linux app files. These will be available in an upcoming release to make installation even easier!</p>
+                </div>
             </section>
 
-            <section id="quickstart">
-                <h2>Quick Start Guide</h2>
+            <section id="workflow">
+                <h2>The Glance Workflow</h2>
+                <p>Glance is built around a simple four-phase workflow that guides you from a blank slate to a fully functional dashboard.</p>
                 
-                <h3>1. Launch Application</h3>
-                <pre><code>python main.py</code></pre>
-
-                <h3>2. Create New Dashboard</h3>
-                <ol>
-                    <li>Click <strong>"Create New Dashboard"</strong> on the welcome screen</li>
-                    <li>Enter the 4-phase dashboard creation wizard</li>
-                </ol>
-
-                <h3>3. Configure Connection</h3>
+                <h3>Phase 1: Welcome Screen</h3>
+                <p>The initial screen provides two main paths: creating a new dashboard from scratch or loading a previously saved project configuration file (.json).</p>
                 
-                <h4>For Testing (No Hardware):</h4>
-                <ul>
-                    <li>Select <strong>Connection Mode:</strong> <code>dummy</code></li>
-                    <li>Click <strong>"Start Dashboard"</strong></li>
-                </ul>
-
-                <h4>For Serial Hardware:</h4>
-                <ul>
-                    <li>Select <strong>Connection Mode:</strong> <code>serial</code></li>
-                    <li>Choose <strong>Serial Port</strong> from dropdown</li>
-                    <li>Set <strong>Baudrate</strong> (e.g., 115200)</li>
-                    <li>Configure <strong>Data Format</strong> (e.g., json_array)</li>
-                    <li>Set <strong>Channel Count</strong></li>
-                </ul>
-
-                <h3>4. Configure Parameters</h3>
-                <ol>
-                    <li>Go to <strong>Edit → Manage Parameters</strong></li>
-                    <li>Click <strong>"Add..."</strong> to create new parameter</li>
-                    <li>Fill in parameter details (ID, Name, Array Index, Unit, Thresholds)</li>
-                    <li>Click <strong>OK</strong> to save</li>
-                </ol>
-
-                <h3>5. Add Widgets</h3>
-                <ol>
-                    <li>Click <strong>"Add Widget..."</strong> button</li>
-                    <li>Select widget type</li>
-                    <li>Choose parameters to display</li>
-                    <li>Configure widget options</li>
-                    <li>Click <strong>OK</strong></li>
-                </ol>
+                <h3>Phase 2: Connection & Data Format Setup</h3>
+                <p>Here, you tell Glance where your data is coming from. You'll select a <a href="#data-sources">Data Source</a> (like Serial or TCP) and specify the format of the incoming data packets (e.g., JSON array, CSV). This step is crucial for ensuring the application can correctly read and parse your telemetry stream.</p>
+                
+                <h3>Phase 3: Initial Widget Configuration</h3>
+                <p>After setting up the data source, you can optionally pre-configure the widgets you want to see on your dashboard. You can select a widget type, link it to one or more defined <a href="#parameters">Parameters</a>, and add it to the initial layout. You can also skip this step and add widgets manually later on.</p>
+                
+                <h3>Phase 4: The Live Dashboard</h3>
+                <p>This is the main interface where you can monitor your data in real-time. The dashboard is a fully interactive environment where you can drag, drop, resize, and float widgets to create a layout that suits your needs. You can add more widgets, manage parameters, and control data logging directly from here.</p>
+                <img src="../public/user_interface.gif" alt="Dashboard Interface GIF" class="animated-gif">
             </section>
 
-            <section id="interface">
-                <h2>Dashboard Interface</h2>
-                
-                <h3>Top Bar (Header)</h3>
+             <section id="data-sources">
+                <h2>Connecting to Data Sources</h2>
+                <p>Glance can connect to a variety of hardware and software data sources. This is the first step in the setup wizard.</p>
+                 <table>
+                     <thead><tr><th>Mode</th><th>Use Case</th><th>Configuration</th></tr></thead>
+                     <tbody>
+                         <tr><td><strong>Serial</strong></td><td>Direct hardware connection (Arduino, flight computer) via USB or RS232.</td><td>Set Port, Baudrate, and Data Format. A refresh button helps find available ports.</td></tr>
+                         <tr><td><strong>TCP</strong></td><td>Receiving data from a network server over a reliable connection.</td><td>Set Host IP Address and Port number.</td></tr>
+                         <tr><td><strong>UDP</strong></td><td>High-frequency data streaming where minor packet loss is acceptable.</td><td>Set listening Host (e.g., 0.0.0.0) and Port.</td></tr>
+                         <tr><td><strong>Dummy</strong></td><td>Testing and development without any hardware connected.</td><td>Generates configurable sine wave data automatically.</td></tr>
+                     </tbody>
+                 </table>
+            </section>
+
+            <section id="data-formats">
+                <h2>Configuring Data Formats</h2>
+                <p>Telling Glance how to interpret the incoming stream of bytes is one of the most critical configuration steps. An incorrect data format setting will result in garbled or no data appearing on your widgets.</p>
+
+                <h4>JSON Array (<code>json_array</code>)</h4>
+                <p>This is the simplest and most human-readable format. Glance expects a standard JSON array of numbers for each packet.</p>
                 <ul>
-                    <li><strong>Dashboard Title:</strong> Customizable title (right-click to edit)</li>
-                    <li><strong>Connection Status:</strong> Real-time connection indicator</li>
-                    <li><strong>Stream Status:</strong> STREAMING, PAUSED, or AWAITING PARAMETERS</li>
-                    <li><strong>Logging Status:</strong> Shows if data logging is active</li>
-                    <li><strong>Pause Button:</strong> Pause/resume data stream</li>
+                    <li><strong>Structure:</strong> A text string starting with <code>[</code> and ending with <code>]</code>, with numbers separated by commas.</li>
+                    <li><strong>Example Packet:</strong> <code>[25.5, 55.2, 1013.25, 9.81, -0.5, 0.2]</code></li>
+                    <li><strong>Required Settings:</strong>
+                        <ul>
+                            <li><code>Channel Count</code>: Must match the number of elements in your array.</li>
+                        </ul>
+                    </li>
                 </ul>
 
-                <h3>Status Bar (Bottom)</h3>
+                <h4>CSV (<code>csv</code>)</h4>
+                <p>This format uses a delimiter (like a comma) to separate values. It's less overhead than JSON but still text-based.</p>
                 <ul>
-                    <li><strong>System Clock:</strong> Current date and time</li>
-                    <li><strong>Connection Details:</strong> Active connection information</li>
-                    <li><strong>Uptime:</strong> Dashboard runtime</li>
-                    <li><strong>RX:</strong> Total bytes received</li>
-                    <li><strong>Packets:</strong> Total packet count</li>
-                    <li><strong>Rate:</strong> Packets per second</li>
+                    <li><strong>Structure:</strong> A text string of numbers separated by a specific character.</li>
+                    <li><strong>Example Packet:</strong> <code>25.5,55.2,1013.25,9.81,-0.5,0.2</code></li>
+                    <li><strong>Required Settings:</strong>
+                        <ul>
+                            <li><code>Channel Count</code>: Must match the number of values.</li>
+                            <li><code>CSV Separator</code>: The character used to separate values (e.g., <code>,</code>, <code>;</code>, <code>|</code>).</li>
+                        </ul>
+                    </li>
                 </ul>
 
-                <div class="info-box">
-                    <p><strong>Tip:</strong> Right-click on any widget for quick actions like rename, float/dock, or close.</p>
+                <h4>Raw Bytes (<code>raw_bytes</code>)</h4>
+                <p>This is the most efficient format, sending raw binary data without any text formatting. It requires precise configuration to be read correctly.</p>
+                <div class="info-box warning">
+                    <p><strong>Warning:</strong> For <code>raw_bytes</code>, all settings—Channel Count, Sample Width, and Endianness—must <strong>exactly</strong> match the configuration of the device sending the data.</p>
                 </div>
+                <ul>
+                    <li><strong><code>Channel Count</code>:</strong> The total number of distinct values in one complete data packet.</li>
+                    <li><strong><code>Sample Width (Bytes)</code>:</strong> The number of bytes used for each single value. For example, a 16-bit integer uses 2 bytes; a 32-bit float uses 4 bytes.</li>
+                    <li><strong><code>Endianness</code>:</strong> This defines the order of bytes for numbers larger than one byte.
+                        <ul>
+                            <li><strong>Little-Endian:</strong> The least significant byte is sent first. This is common for Intel/AMD processors and many microcontrollers (e.g., Arduino, ESP32).</li>
+                            <li><strong>Big-Endian:</strong> The most significant byte is sent first. This is common in networking protocols and older architectures.</li>
+                        </ul>
+                    </li>
+                </ul>
+                <p><strong>Example:</strong> Your device sends 3 channels of data as 16-bit (2-byte) little-endian integers. Your total packet size is 3 channels * 2 bytes/channel = 6 bytes.</p>
+                <p>If the values are `[258, 515, 772]`, their hexadecimal representations are `[0x0102, 0x0203, 0x0304]`. The byte stream Glance expects to receive would be:</p>
+                <pre><code>02 01 03 02 04 03</code></pre>
             </section>
 
             <section id="parameters">
                 <h2>Managing Parameters</h2>
-                
-                <h3>Parameter Properties</h3>
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Property</th>
-                            <th>Description</th>
-                            <th>Example</th>
-                        </tr>
-                    </thead>
+                <p>Parameters are the heart of Glance. They act as translators, mapping raw incoming data (like a value at a specific position in an array) to a meaningful, human-readable channel that widgets can display. You can configure them via <strong>Edit → Manage Parameters</strong>.</p>
+                <div class="info-box danger">
+                     <p><strong>The Array Index is Critical:</strong> This zero-based number tells Glance where to find the data for this parameter in the incoming data packet. An incorrect index is the most common reason for data not appearing on a widget.</p>
+                </div>
+                <h4>Key Parameter Properties:</h4>
+                 <table>
+                    <thead><tr><th>Property</th><th>Description</th></tr></thead>
                     <tbody>
-                        <tr>
-                            <td><strong>ID</strong></td>
-                            <td>Unique identifier (no spaces)</td>
-                            <td>accel_x</td>
-                        </tr>
-                        <tr>
-                            <td><strong>Name</strong></td>
-                            <td>Display name</td>
-                            <td>Acceleration X</td>
-                        </tr>
-                        <tr>
-                            <td><strong>Array Index</strong></td>
-                            <td>Position in data packet</td>
-                            <td>3</td>
-                        </tr>
-                        <tr>
-                            <td><strong>Unit</strong></td>
-                            <td>Measurement unit</td>
-                            <td>m/s²</td>
-                        </tr>
-                        <tr>
-                            <td><strong>Thresholds</strong></td>
-                            <td>Alarm levels</td>
-                            <td>Low: -20, High: 20</td>
-                        </tr>
+                        <tr><td><strong>ID & Name</strong></td><td>A unique programmatic ID (no spaces) and a human-readable display name.</td></tr>
+                        <tr><td><strong>Array Index</strong></td><td>The position (0, 1, 2, etc.) of this parameter's value within the incoming data packet.</td></tr>
+                        <tr><td><strong>Unit</strong></td><td>The measurement unit to display (e.g., °C, m/s², V).</td></tr>
+                        <tr><td><strong>Thresholds</strong></td><td>Four values (Low Critical, Low Warning, High Warning, High Critical) that define alarm states and color-coding in widgets. Must be in ascending order.</td></tr>
+                        <tr><td><strong>Sensor Group</strong></td><td>An optional text field for organizing parameters (e.g., "IMU", "Power System").</td></tr>
                     </tbody>
                 </table>
-
-                <h3>Adding Parameters</h3>
-                <ol>
-                    <li>Navigate to <strong>Edit → Manage Parameters → Add...</strong></li>
-                    <li>Fill in all required fields</li>
-                    <li>Set threshold values in ascending order</li>
-                    <li>Click <strong>OK</strong></li>
-                </ol>
-
-                <div class="info-box warning">
-                    <p><strong>Important:</strong> Ensure Array Index matches the position of your data in the incoming packet.</p>
+            </section>
+            
+            <section id="widget-library">
+                <h2>The Widget Library</h2>
+                <p>Widgets are the visual components of your dashboard. Add them by clicking <strong>"Add Widget..."</strong> and linking them to one or more configured parameters.</p>
+                <div class="feature-grid">
+                    <div class="feature-card">
+                        <h4>Value Card</h4>
+                        <p>Displays a single parameter's value in a large, easy-to-read format. The background color changes based on alarm thresholds, and a border indicates priority.</p>
+                    </div>
+                    <div class="feature-card">
+                        <h4>Time Graph</h4>
+                        <p>A powerful multi-parameter line chart for trend analysis. Features interactive zoom/pan, a crosshair for inspecting values, and a right-click menu to see details of a specific data point.</p>
+                    </div>
+                    <div class="feature-card">
+                        <h4>Gauge</h4>
+                        <p>A classic circular gauge that shows a value within a defined range. Colored arcs on the gauge correspond to the parameter's warning and critical thresholds.</p>
+                    </div>
+                    <div class="feature-card">
+                        <h4>LED Indicator</h4>
+                        <p>A simple status light that provides a quick, at-a-glance indication of a parameter's state. The color changes from blue (low) to green (normal), yellow (warning), and red (critical).</p>
+                    </div>
+                    <div class="feature-card">
+                        <h4>Log Table</h4>
+                        <p>Displays a timestamped, scrolling table of raw data values for multiple parameters. Includes a search function to highlight rows that match specific conditions.</p>
+                    </div>
+                     <div class="feature-card">
+                        <h4>Histogram</h4>
+                        <p>Visualizes the statistical distribution of a single parameter over time, showing how frequently different value ranges occur. Useful for analyzing sensor noise and data patterns.</p>
+                    </div>
+                     <div class="feature-card">
+                        <h4>Map (GPS)</h4>
+                        <p>Plots latitude and longitude coordinates on a satellite map. It shows the current position with a marker, draws a path of previous locations, and includes a button to zoom directly to the latest point.</p>
+                    </div>
                 </div>
             </section>
 
             <section id="data-logging">
                 <h2>Data Logging</h2>
-                
-                <h3>Configuring Data Logging</h3>
-                <ol>
-                    <li>Go to <strong>Data Logging → Configure Logging...</strong></li>
-                    <li>Select format (CSV or JSON)</li>
-                    <li>Choose output file path</li>
-                    <li>Select parameters to log</li>
-                    <li>Set buffer size (10-1000)</li>
+                <p>To record a session, go to <strong>Data Logging → Configure Logging...</strong>. You can select CSV or JSON as the output format, choose which parameters to log, and set a buffer size.</p>
+                <h4>Understanding the Buffer</h4>
+                <p>Data is temporarily stored in memory (the buffer) before being written to the disk. This improves performance by reducing constant disk access.</p>
+                <ul>
+                    <li>A <strong>larger buffer</strong> means fewer disk writes, which is better for performance with high-frequency data, but risks more data loss if the application crashes.</li>
+                    <li>A <strong>smaller buffer</strong> writes to the disk more often, which is safer but can impact performance at very high data rates.</li>
+                </ul>
+            </section>
+            
+            <section id="advanced-features">
+                 <h2>Advanced Features</h2>
+                 <h3>Raw Telemetry Monitor</h3>
+                 <p>Accessible from the <strong>View</strong> menu or the status bar, the Raw Telemetry Monitor is a powerful debugging tool. It displays the raw, unparsed data packets exactly as they are received by the application, along with timestamps and statistics like packet rate and total bytes received. Use this monitor to:</p>
+                 <ul>
+                     <li>Verify that data is being received from your source.</li>
+                     <li>Inspect the structure of your data packets to ensure it matches your configured format.</li>
+                     <li>Diagnose connection or formatting issues at the lowest level.</li>
+                 </ul>
+                 <div class="telemetry-images">
+                    <img src="../public/Doc Images/Standalone_RTV.png" alt="Raw Telemetry Monitor showing data stream">
+                </div>
+                <div class="telemetry-images">
+                    <img src="../public/Doc Images/RTV.png" alt="Controls for the Raw Telemetry Monitor">
+                </div>
+            </section>
+
+            <section id="contributing">
+                <h2>Contributing to Development</h2>
+                <p>Glance is an open-source project driven by community collaboration. We warmly welcome contributions of all kinds, from code and documentation to bug reports and feature suggestions. Your expertise can help us grow and improve this platform for everyone.</p>
+                <h4>How to Contribute</h4>
+                <p>If you'd like to improve Glance, the general workflow is:</p>
+                 <ol>
+                    <li><strong>Fork</strong> the repository on GitHub.</li>
+                    <li><strong>Create</strong> a new feature branch for your changes (e.g., <code>git checkout -b feature/NewGraphWidget</code>).</li>
+                    <li><strong>Commit</strong> your changes with clear, descriptive messages.</li>
+                    <li><strong>Push</strong> your branch to your forked repository.</li>
+                    <li><strong>Open a Pull Request</strong> on the main Glance repository to propose your changes.</li>
                 </ol>
-
-                <h3>Buffer Size Recommendations</h3>
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Data Rate</th>
-                            <th>Buffer Size</th>
-                            <th>Write Frequency</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr>
-                            <td>1-10 Hz</td>
-                            <td>100</td>
-                            <td>Every 10-100 seconds</td>
-                        </tr>
-                        <tr>
-                            <td>10-50 Hz</td>
-                            <td>200-500</td>
-                            <td>Every 4-50 seconds</td>
-                        </tr>
-                        <tr>
-                            <td>50+ Hz</td>
-                            <td>500-1000</td>
-                            <td>Every 10-20 seconds</td>
-                        </tr>
-                    </tbody>
-                </table>
-
-                <div class="info-box">
-                    <p><strong>Note:</strong> Larger buffers reduce disk I/O but increase memory usage and potential data loss on crash.</p>
-                </div>
             </section>
 
-            <section id="connection-issues">
-                <h2>Troubleshooting: Connection Issues</h2>
-                
-                <h3>Serial Port Not Found</h3>
-                <p><strong>Solutions:</strong></p>
-                <ul>
-                    <li>Check device is connected</li>
-                    <li>Install device drivers</li>
-                    <li>Check port permissions (Linux: <code>sudo usermod -a -G dialout $USER</code>)</li>
-                    <li>Click "Refresh" button to update port list</li>
+            <section id="license">
+                <h2>License</h2>
+                <p>This project is licensed under the <strong>GNU General Public License v3.0</strong>, with the restriction that it may not be used for commercial purposes without explicit written permission from Team Ignition.</p>
+            </section>
+
+            <footer>
+                <img src="../public/ign_logo_wht.png" alt="Team Ignition Logo" class="footer-logo">
+                <h3>Team Ignition</h3>
+                <p class="footer-text">The official student rocketry team of Vellore Institute of Technology, Chennai. We are dedicated to advancing aerospace innovation through hands-on learning and experimentation.</p>
+                <ul class="social-links">
+                    <li><a href="https://teamignition.space" target="_blank" title="Website"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"></path></svg></a></li>
+                    <li><a href="https://github.com/teamignitionvitc" target="_blank" title="GitHub"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12c0 4.42 2.87 8.17 6.84 9.5.5.09.68-.22.68-.48 0-.24-.01-1.02-.01-1.84-2.78.6-3.37-1.34-3.37-1.34-.46-1.16-1.11-1.47-1.11-1.47-.91-.62.07-.6.07-.6 1 .07 1.53 1.03 1.53 1.03.89 1.52 2.34 1.08 2.91.83.09-.65.35-1.08.63-1.33-2.22-.25-4.55-1.11-4.55-4.94 0-1.1.39-1.99 1.03-2.69-.1-.25-.45-1.28.1-2.65 0 0 .84-.27 2.75 1.02.79-.22 1.65-.33 2.5-.33.85 0 1.71.11 2.5.33 1.91-1.29 2.75-1.02 2.75-1.02.55 1.37.2 2.4.1 2.65.64.7 1.03 1.59 1.03 2.69 0 3.84-2.33 4.68-4.57 4.93.36.31.68.92.68 1.85 0 1.34-.01 2.42-.01 2.75 0 .27.18.58.69.48C19.13 20.17 22 16.42 22 12c0-5.52-4.48-10-10-10z"></path></svg></a></li>
+                    <li><a href="https://www.linkedin.com/in/teamignition/" target="_blank" title="LinkedIn"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 3a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h14zm-8.29 13.29h2.58V9.41h-2.58v6.88zM8 7.11c0 .55.45 1 1 1s1-.45 1-1-.45-1-1-1-1 .45-1 1zm0 9.18h2.58V9.41H8v6.88zm5.29-3.47c0-1.4.99-2.2 2.21-2.2s2.2.8 2.2 2.2v4.29h2.58v-4.7c0-2.5-1.4-3.8-3.5-3.8s-3.29 1.3-3.29 3.8v4.7h2.58v-4.29z"></path></svg></a></li>
+                    <li><a href="https://x.com/ignitiontech23" target="_blank" title="Twitter/X"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"></path></svg></a></li>
+                    <li><a href="https://www.instagram.com/ignition_vitc" target="_blank" title="Instagram"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M7.8 2h8.4C19.4 2 22 4.6 22 7.8v8.4a5.8 5.8 0 0 1-5.8 5.8H7.8C4.6 22 2 19.4 2 16.2V7.8A5.8 5.8 0 0 1 7.8 2m-.2 2A3.6 3.6 0 0 0 4 7.6v8.8A3.6 3.6 0 0 0 7.6 20h8.8A3.6 3.6 0 0 0 20 16.4V7.6A3.6 3.6 0 0 0 16.4 4H7.6m9.65 1.5a1.25 1.25 0 0 1 1.25 1.25A1.25 1.25 0 0 1 17.25 8 1.25 1.25 0 0 1 16 6.75a1.25 1.25 0 0 1 1.25-1.25M12 7a5 5 0 0 1 5 5 5 5 0 0 1-5 5 5 5 0 0 1-5-5 5 5 0 0 1 5-5m0 2a3 3 0 0 0-3 3 3 3 0 0 0 3 3 3 3 0 0 0 3-3 3 3 0 0 0-3-3z"></path></svg></a></li>
                 </ul>
-
-                <h3>Network Connection Issues</h3>
-                <p><strong>Solutions:</strong></p>
-                <ul>
-                    <li>Verify IP address and port</li>
-                    <li>Check firewall settings</li>
-                    <li>Ping host to verify connectivity</li>
-                    <li>For UDP: Ensure device is sending to correct port</li>
-                    <li>For TCP: Verify server is listening</li>
-                </ul>
-
-                <div class="info-box danger">
-                    <p><strong>Critical:</strong> Always stop the data stream before changing connection settings to avoid errors.</p>
-                </div>
-            </section>
-
-            <section id="keyboard">
-                <h2>Keyboard Shortcuts</h2>
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Shortcut</th>
-                            <th>Action</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr>
-                            <td><code>Space</code></td>
-                            <td>Pause/Resume stream</td>
-                        </tr>
-                        <tr>
-                            <td><code>Ctrl + S</code></td>
-                            <td>Save project</td>
-                        </tr>
-                        <tr>
-                            <td><code>Ctrl + O</code></td>
-                            <td>Open project</td>
-                        </tr>
-                        <tr>
-                            <td><code>Ctrl + W</code></td>
-                            <td>Close current widget</td>
-                        </tr>
-                        <tr>
-                            <td><code>Ctrl + Hold + Drag</code></td>
-                            <td>Pan graph while hovering</td>
-                        </tr>
-                    </tbody>
-                </table>
-            </section>
-
-            <footer style="margin-top: 80px; padding-top: 40px; border-top: 1px solid var(--border); text-align: center; color: var(--text-secondary);">
-                <p>&copy; 2025 Team Ignition Software Department, VIT Chennai</p>
-                <p style="margin-top: 8px;">
-                    <a href="https://github.com/teamignitionvitc/Dashboard-Builder" class="btn" target="_blank">View on GitHub</a>
-                </p>
+                <p class="copyright">Copyright &copy; 2025 Team Ignition Software Department, VIT Chennai</p>
             </footer>
         </main>
     </div>
 
     <script>
-        // Smooth scrolling for navigation
-        document.querySelectorAll('.nav-item').forEach(link => {
-            link.addEventListener('click', (e) => {
-                e.preventDefault();
-                const target = document.querySelector(link.getAttribute('href'));
-                if (target) {
-                    target.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                    
-                    // Update active state
-                    document.querySelectorAll('.nav-item').forEach(item => item.classList.remove('active'));
-                    link.classList.add('active');
-                }
+        document.addEventListener('DOMContentLoaded', () => {
+            // Mobile navigation toggle
+            const menuToggle = document.getElementById('menu-toggle');
+            const sidebar = document.getElementById('sidebar');
+            const content = document.querySelector('.content');
+
+            menuToggle.addEventListener('click', () => {
+                sidebar.classList.toggle('open');
             });
-        });
 
-        // Update active nav on scroll
-        const sections = document.querySelectorAll('section[id]');
-        const navItems = document.querySelectorAll('.nav-item');
-
-        window.addEventListener('scroll', () => {
-            let current = '';
-            sections.forEach(section => {
-                const sectionTop = section.offsetTop;
-                if (window.pageYOffset >= sectionTop - 100) {
-                    current = section.getAttribute('id');
+            // Close sidebar when clicking outside on mobile
+            content.addEventListener('click', () => {
+                if(sidebar.classList.contains('open')) {
+                    sidebar.classList.remove('open');
                 }
             });
 
-            navItems.forEach(item => {
-                item.classList.remove('active');
-                if (item.getAttribute('href') === `#${current}`) {
-                    item.classList.add('active');
+            // Close sidebar when a nav item is clicked on mobile
+            document.querySelectorAll('.nav-item').forEach(item => {
+                item.addEventListener('click', () => {
+                    if (window.innerWidth <= 1024) {
+                        sidebar.classList.remove('open');
+                    }
+                });
+            });
+
+            // Copy-to-clipboard for code blocks
+            document.querySelectorAll('pre').forEach(pre => {
+                const button = pre.querySelector('.copy-btn');
+                if (button) {
+                    button.addEventListener('click', () => {
+                        const code = pre.querySelector('code').innerText;
+                        navigator.clipboard.writeText(code).then(() => {
+                            button.title = 'Copied!';
+                            setTimeout(() => { button.title = 'Copy code'; }, 2000);
+                        });
+                    });
                 }
             });
+
+            // Active nav item on scroll
+            const sections = document.querySelectorAll('main section[id]');
+            const navItems = document.querySelectorAll('.nav-item');
+            const observer = new IntersectionObserver(entries => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                         const id = entry.target.getAttribute('id');
+                        navItems.forEach(item => {
+                            item.classList.toggle('active', item.getAttribute('href') === `#${id}`);
+                        });
+                    }
+                });
+            }, { rootMargin: '-30% 0px -70% 0px' });
+
+            sections.forEach(section => observer.observe(section));
         });
     </script>
 </body>
 </html>
+
+
