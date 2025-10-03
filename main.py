@@ -2746,7 +2746,7 @@ class MainWindow(QMainWindow):
     
     def update_window_title(self):
         """Update window title to show unsaved changes"""
-        base_title = "Dashboard Builder"
+        base_title = "Glance"
         if self.current_project_path:
             filename = os.path.basename(self.current_project_path)
             title = f"{base_title} - {filename}"
@@ -3022,7 +3022,7 @@ class MainWindow(QMainWindow):
         
         # Create documentation viewer dialog
         doc_dialog = QDialog(self)
-        doc_dialog.setWindowTitle("Dashboard Builder Documentation")
+        doc_dialog.setWindowTitle("Glance Documentation")
         doc_dialog.setMinimumSize(1000, 700)
         
         layout = QVBoxLayout(doc_dialog)
@@ -3138,7 +3138,7 @@ class MainWindow(QMainWindow):
         """Display the About dialog with comprehensive team and project information"""
         
         dialog = QDialog(self)
-        dialog.setWindowTitle("About Dashboard Builder")
+        dialog.setWindowTitle("About Glance")
         dialog.setFixedSize(650, 700)
         
         # Modern professional styling with excellent contrast
@@ -3238,7 +3238,7 @@ class MainWindow(QMainWindow):
         logo_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         content_layout.addWidget(logo_label)
         
-        app_name = QLabel("Dashboard Builder")
+        app_name = QLabel("Glance")
         app_name.setAlignment(Qt.AlignmentFlag.AlignCenter)
         app_name.setFont(QFont("Arial", 20, QFont.Weight.Bold))
         app_name.setStyleSheet("color: #ffffff; padding: 8px 0;")
@@ -3310,10 +3310,10 @@ class MainWindow(QMainWindow):
             row.addStretch()
             return row
         
-        links_layout.addLayout(create_link("📦", "GitHub Repository", "https://github.com/teamignitionvitc/Dashboard-Builder"))
-        links_layout.addLayout(create_link("📖", "Documentation", "https://github.com/teamignitionvitc/Dashboard-Builder#readme"))
+        links_layout.addLayout(create_link("📦", "GitHub Repository", "https://github.com/teamignitionvitc/Glance"))
+        links_layout.addLayout(create_link("📖", "Documentation", "https://glance.teamignition.space/"))
         links_layout.addLayout(create_link("🌐", "Team Website", "https://teamignition.space"))
-        links_layout.addLayout(create_link("🐛", "Report Issues", "https://github.com/teamignitionvitc/Dashboard-Builder/issues"))
+        links_layout.addLayout(create_link("🐛", "Report Issues", "https://github.com/teamignitionvitc/Glance/issues"))
         
         content_layout.addWidget(links_card)
         content_layout.addSpacing(8)
