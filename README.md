@@ -323,7 +323,10 @@ Click **"Add Widget..."** and configure:
 
 ### Dashboard Interface
 
-![Dashboard Interface Demo](public/user_interface.gif)
+<p align="center">
+  <img src="public/user_interface.gif" width="400"/>
+</p>
+
 
 ### Working with Parameters
 
