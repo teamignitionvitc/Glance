@@ -324,7 +324,7 @@ Click **"Add Widget..."** and configure:
 ### Dashboard Interface
 
 <p align="center">
-  <img src="public/user_interface.gif" width="400"/>
+  <img src="public/user_interface.gif" width="700"/>
 </p>
 
 
