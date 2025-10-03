@@ -323,26 +323,7 @@ Click **"Add Widget..."** and configure:
 
 ### Dashboard Interface
 
-```
-┌─────────────────────────────────────────────────────────┐
-│ Dashboard Title │ Connection │ Status │ Logging │ Pause │ ← Header Bar
-├─────────────────────────────────────────────────────────┤
-│                                                         │
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐   │
-│  │  Widget 1    │  │  Widget 2    │  │  Widget 3    │   │
-│  │              │  │              │  │              │   │
-│  │   (Graph)    │  │   (Gauge)    │  │   (Table)    │   │
-│  └──────────────┘  └──────────────┘  └──────────────┘   │ ← Main Area
-│                                                         │
-│  ┌──────────────────────────────────────────────────┐   │
-│  │            Widget 4 (Map)                        │   │
-│  │                                                  │   │
-│  └──────────────────────────────────────────────────┘   │
-│                                                         │
-├─────────────────────────────────────────────────────────┤
-│ Clock │ Connection │ Uptime │ Packets │ Rate │ RX Bytes │ ← Status Bar
-└─────────────────────────────────────────────────────────┘
-```
+![Dashboard Interface Demo](public/user_interface.gif)
 
 ### Working with Parameters
 
