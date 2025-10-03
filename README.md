@@ -1,6 +1,6 @@
 <div align="center">
 
-![Dashboard Builder Logo](public/Glance.png)
+![Dashboard Builder Logo](doc/public/Glance.png)
 
 # Dashboard Builder
 
@@ -17,7 +17,7 @@
 
 ---
 
-![Team Ignition Logo](public/ign_logo_wht.png)
+![Team Ignition Logo](doc/public/ign_logo_wht.png)
 
 **Developed by Team Ignition Software Department**  
 *Official Model Rocketry Team of Vellore Institute of Technology, Chennai*
@@ -128,23 +128,23 @@
 <div align="center">
 
 ### Home Screen
-![Welcome Screen](public/Doc%20Images/HomeScreen.png)
+![Welcome Screen](doc/public/Doc%20Images/HomeScreen.png)
 *Home Screen*
 
 ### Dashboard View
-![Dashboard View](public/Doc%20Images/dashboard.png)
+![Dashboard View](doc/public/Doc%20Images/dashboard.png)
 *Real-time telemetry visualization with multiple widgets*
 
 ### Parameter Management
-![Parameter Management](public/Doc%20Images/parameters.png)
+![Parameter Management](doc/public/Doc%20Images/parameters.png)
 *Intuitive parameter configuration interface*
 
 ### Connection Settings
-![Connection Settings](public/Doc%20Images/Connection.png)
+![Connection Settings](doc/public/Doc%20Images/Connection.png)
 *Flexible data source configuration*
 
 ### Data Logging
-![Data Logging](public/Doc%20Images/logging.png)
+![Data Logging](doc/public/Doc%20Images/logging.png)
 *Comprehensive logging with format selection*
 
 </div>
@@ -324,7 +324,7 @@ Click **"Add Widget..."** and configure:
 ### Dashboard Interface
 
 <p align="center">
-  <img src="public/user_interface.gif" width="700"/>
+  <img src="doc/public/user_interface.gif" width="700"/>
 </p>
 
 
@@ -793,7 +793,7 @@ Dashboard-Builder/
 │   └── ui/
 │       ├── __init__.py
 │       └── main_window.py       # Main window
-├── public/
+├── doc/public/
 │   ├── Glance_nobg.png          # App logo
 │   └── ign_logo_wht.png         # Team logo
 ├── examples/
@@ -830,7 +830,7 @@ pip install pyinstaller
 
 # Build Windows executable
 pyinstaller --onefile --windowed --name "Dashboard Builder" \
-    --icon=public/Glance_nobg.png \
+    --icon=doc/public/Glance_nobg.png \
     --add-data "public:public" \
     --add-data "Documentation:Documentation" \
     main.py
@@ -859,7 +859,7 @@ python main.py
 
 <div align="center">
 
-![Team Ignition Logo](public/ign_logo_wht.png)
+![Team Ignition Logo](doc/public/ign_logo_wht.png)
 
 **Official Student Rocketry Team**  
 Vellore Institute of Technology, Chennai
