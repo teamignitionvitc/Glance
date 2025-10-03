@@ -205,6 +205,7 @@
         .info-box { background: var(--bg-light); border-left: 4px solid var(--primary); padding: 1rem 1.5rem; margin: 1.5rem 0; border-radius: 0 4px 4px 0; }
         .info-box.warning { border-color: var(--warning); }
         .info-box.danger { border-color: var(--danger); }
+        .info-box.accent { border-color: var(--accent); }
         .info-box p { margin: 0; max-width: none;}
         
         /* Code Blocks */
@@ -249,6 +250,47 @@
             border-radius: 8px;
             border: 1px solid var(--border);
         }
+
+        /* Troubleshooting Section */
+        details {
+            background: var(--bg-darker);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            margin-bottom: 1rem;
+            transition: background-color 0.2s ease;
+        }
+        details[open] {
+             background: var(--bg-light);
+        }
+        summary {
+            padding: 1rem 1.5rem;
+            font-weight: 600;
+            cursor: pointer;
+            list-style: none;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        summary::-webkit-details-marker {
+            display: none;
+        }
+        summary::after {
+            content: '+';
+            font-size: 1.5rem;
+            font-weight: 400;
+            transition: transform 0.2s ease;
+        }
+        details[open] summary::after {
+            transform: rotate(45deg);
+        }
+        .details-content {
+            padding: 0 1.5rem 1.5rem 1.5rem;
+            border-top: 1px solid var(--border);
+        }
+        .details-content p, .details-content ul, .details-content ol {
+            max-width: none;
+        }
+
 
         /* Footer */
         footer { 
@@ -356,9 +398,11 @@
                     <a href="#data-logging" class="nav-item"><svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 7v8a2 2 0 002 2h4M8 7a2 2 0 012-2h4a2 2 0 012 2v8a2 2 0 01-2 2h-4a2 2 0 01-2-2l-4.5-4.5L8 7z"></path></svg>Data Logging</a>
                 </div>
                 <div class="nav-section">
-                    <div class="nav-section-title">Advanced</div>
-                     <a href="#advanced-features" class="nav-item"><svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>Advanced Features</a>
-                    <a href="#contributing" class="nav-item"><svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"></path></svg>Contributing</a>
+                    <div class="nav-section-title">Technical Details</div>
+                     <a href="#project-file" class="nav-item"><svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path></svg>Project File Structure</a>
+                     <a href="#advanced-features" class="nav-item"><svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>Advanced Tools</a>
+                    <a href="#development" class="nav-item"><svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"></path></svg>Development Guide</a>
+                    <a href="#troubleshooting" class="nav-item"><svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>Troubleshooting</a>
                     <a href="#license" class="nav-item"><svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M10 21h7a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v11m0 5l4.879-4.879m0 0a3 3 0 104.243-4.242 3 3 0 00-4.243 4.242z"></path></svg>License</a>
                 </div>
             </nav>
@@ -393,22 +437,22 @@
 
             <section id="features">
                 <h2>Key Features</h2>
-                <div class="feature-grid">
+                 <div class="feature-grid">
                     <div class="feature-card">
-                        <h4>Multi-Source Connectivity</h4>
-                        <p>Connect to hardware via Serial (RS232/USB), or stream data over a network using TCP and UDP protocols. A built-in dummy data generator allows for testing without hardware.</p>
+                        <h4>Visualization</h4>
+                        <p>7+ widget types including time-series graphs, gauges, data tables, histograms, LED indicators, and GPS maps. Arrange them using a flexible drag-and-drop, multi-tab interface.</p>
                     </div>
                     <div class="feature-card">
-                        <h4>Dynamic Widget System</h4>
-                        <p>Visualize data your way with 7+ widgets, including time-series graphs, gauges, data tables, and GPS maps. Arrange them using a flexible drag-and-drop interface.</p>
+                        <h4>Technical Connectivity</h4>
+                        <p>Connect to hardware via Serial (RS232/USB), or stream data over a network using TCP and UDP. Parse incoming JSON, CSV, and raw binary data with configurable formats.</p>
                     </div>
                     <div class="feature-card">
-                        <h4>Advanced Parameterization</h4>
-                        <p>Define custom data channels with unique IDs, units, and color-coded alarm thresholds. Map incoming data from any source to any widget with ease.</p>
+                        <h4>Data Management</h4>
+                        <p>Record sessions to CSV or JSON, select which parameters to log, and configure buffer sizes for optimal performance. Save and load entire dashboard configurations as portable project files.</p>
                     </div>
                     <div class="feature-card">
-                        <h4>Comprehensive Data Logging</h4>
-                        <p>Record telemetry sessions to CSV or JSON formats. Configure logging parameters, buffer sizes, and file outputs to capture the data that matters most.</p>
+                        <h4>User Experience</h4>
+                        <p>A guided 4-phase setup wizard, modern dark theme, and professional UI/UX make configuration intuitive. Includes a Raw Telemetry Monitor for deep-level debugging.</p>
                     </div>
                 </div>
             </section>
@@ -471,44 +515,77 @@ cd Dashboard-Builder</code><button class="copy-btn" title="Copy code"><svg fill=
                 <h3>3. Install Dependencies</h3>
                 <p>Install all required libraries using the <code>requirements.txt</code> file.</p>
                 <pre><code class="language-bash">pip install -r requirements.txt</code><button class="copy-btn" title="Copy code"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg></button></pre>
-
+                
                 <div class="info-box">
                     <p>For the <strong>Map Widget</strong>, an optional dependency is required. Install it with: <code>pip install PySide6-WebEngine</code></p>
                 </div>
-                <div class="info-box" style="border-color: var(--accent);">
-                    <p><strong>Coming Soon:</strong> We are actively working on one-click executables for Windows (.exe) and Linux app files. These will be available in an upcoming release to make installation even easier!</p>
+                 <div class="info-box accent">
+                    <p><strong>Coming Soon:</strong> We are actively working on one-click executables for Windows (.exe) and Linux (.AppImage) to make installation even easier. These will be available in upcoming releases!</p>
                 </div>
+
+                 <h3>4. Launch the Application</h3>
+                 <p>Once dependencies are installed, you can start Glance.</p>
+                 <pre><code class="language-bash">python main.py</code><button class="copy-btn" title="Copy code"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg></button></pre>
             </section>
 
             <section id="workflow">
                 <h2>The Glance Workflow</h2>
                 <p>Glance is built around a simple four-phase workflow that guides you from a blank slate to a fully functional dashboard.</p>
                 
-                <h3>Phase 1: Welcome Screen</h3>
-                <p>The initial screen provides two main paths: creating a new dashboard from scratch or loading a previously saved project configuration file (.json).</p>
-                
-                <h3>Phase 2: Connection & Data Format Setup</h3>
-                <p>Here, you tell Glance where your data is coming from. You'll select a <a href="#data-sources">Data Source</a> (like Serial or TCP) and specify the format of the incoming data packets (e.g., JSON array, CSV). This step is crucial for ensuring the application can correctly read and parse your telemetry stream.</p>
-                
-                <h3>Phase 3: Initial Widget Configuration</h3>
-                <p>After setting up the data source, you can optionally pre-configure the widgets you want to see on your dashboard. You can select a widget type, link it to one or more defined <a href="#parameters">Parameters</a>, and add it to the initial layout. You can also skip this step and add widgets manually later on.</p>
-                
-                <h3>Phase 4: The Live Dashboard</h3>
-                <p>This is the main interface where you can monitor your data in real-time. The dashboard is a fully interactive environment where you can drag, drop, resize, and float widgets to create a layout that suits your needs. You can add more widgets, manage parameters, and control data logging directly from here.</p>
+                <ol>
+                    <li>
+                        <h4>Phase 1: Welcome</h4>
+                        <p>The initial screen provides two main paths: creating a new dashboard from scratch or loading a previously saved project configuration file (.json). This is your starting point for any session.</p>
+                    </li>
+                    <li>
+                        <h4>Phase 2: Connection & Data Setup</h4>
+                        <p>Here, you tell Glance where your data is coming from and how it's formatted. You'll select a <a href="#data-sources">Data Source</a> (like Serial or TCP) and specify the structure of the incoming data packets (e.g., JSON array, CSV). This step is crucial for ensuring the application can correctly read and parse your telemetry stream.</p>
+                    </li>
+                    <li>
+                        <h4>Phase 3: Initial Widget Layout</h4>
+                        <p>After setting up the data source, you can pre-configure the widgets you want to see on your dashboard. You can select a widget type, link it to one or more defined <a href="#parameters">Parameters</a>, and add it to the initial layout. You can also skip this step and add widgets manually later on.</p>
+                    </li>
+                    <li>
+                        <h4>Phase 4: The Live Dashboard</h4>
+                        <p>This is the main interface where you monitor your data in real-time. The dashboard is a fully interactive environment where you can drag, drop, resize, and float widgets to create a layout that suits your needs. You can add more widgets, manage parameters, and control data logging directly from here.</p>
+                    </li>
+                </ol>
             </section>
 
              <section id="data-sources">
                 <h2>Connecting to Data Sources</h2>
-                <p>Glance can connect to a variety of hardware and software data sources. This is the first step in the setup wizard.</p>
-                 <table>
-                     <thead><tr><th>Mode</th><th>Use Case</th><th>Configuration</th></tr></thead>
-                     <tbody>
-                         <tr><td><strong>Serial</strong></td><td>Direct hardware connection (Arduino, flight computer) via USB or RS232.</td><td>Set Port, Baudrate, and Data Format. A refresh button helps find available ports.</td></tr>
-                         <tr><td><strong>TCP</strong></td><td>Receiving data from a network server over a reliable connection.</td><td>Set Host IP Address and Port number.</td></tr>
-                         <tr><td><strong>UDP</strong></td><td>High-frequency data streaming where minor packet loss is acceptable.</td><td>Set listening Host (e.g., 0.0.0.0) and Port.</td></tr>
-                         <tr><td><strong>Dummy</strong></td><td>Testing and development without any hardware connected.</td><td>Generates configurable sine wave data automatically.</td></tr>
-                     </tbody>
-                 </table>
+                <p>Glance can connect to a variety of hardware and software data sources. This is configured in the setup wizard or via <strong>File → Connection Settings...</strong>. If you encounter issues, see the <a href="#troubleshooting">Troubleshooting</a> section.</p>
+                 
+                <h3>Serial</h3>
+                <p>Used for direct hardware connections via USB-to-Serial adapters, RS232, or on-board USB ports (like an Arduino or ESP32). You must specify the correct port name and baud rate.</p>
+                <ul>
+                    <li><strong>Finding the Port:</strong> The port name depends on your operating system.
+                        <ul>
+                            <li><strong>Windows:</strong> The port is named <code>COM</code> followed by a number (e.g., <code>COM3</code>, <code>COM11</code>). You can find it in the "Ports (COM & LPT)" section of the <strong>Device Manager</strong>.</li>
+                            <li><strong>Linux:</strong> The port is typically named <code>/dev/ttyUSB0</code> for USB-to-Serial adapters or <code>/dev/ttyACM0</code> for devices like Arduino. You can list available ports by running <code>ls /dev/tty*</code> in a terminal.</li>
+                            <li><strong>macOS:</strong> The port name usually starts with <code>/dev/cu.</code> (e.g., <code>/dev/cu.usbserial-A50285BI</code> or <code>/dev/cu.usbmodem14101</code>).</li>
+                        </ul>
+                    </li>
+                    <li><strong>Baud Rate:</strong> This must exactly match the baud rate configured on your device (e.g., <code>Serial.begin(115200)</code> in Arduino code). Common values are 9600, 57600, and 115200.</li>
+                </ul>
+                
+                <h3>TCP</h3>
+                <p>Used for receiving data over a network from a device or application acting as a server. Glance acts as the client and connects to the server's IP address and port.</p>
+                <ul>
+                    <li><strong>Host:</strong> The IP address of the device sending the data (e.g., <code>192.168.1.101</code>).</li>
+                    <li><strong>Port:</strong> The port number the server application is listening on (e.g., <code>9000</code>).</li>
+                    <li><strong>Common Pitfall:</strong> Firewalls on either the sending or receiving machine can block TCP connections. Ensure the port is open.</li>
+                </ul>
+
+                <h3>UDP</h3>
+                <p>Used for high-frequency data streaming where the occasional loss of a packet is acceptable. Glance acts as a listener on a specific port.</p>
+                <ul>
+                    <li><strong>Host:</strong> Typically set to <code>0.0.0.0</code> to listen for packets from any device on the network.</li>
+                    <li><strong>Port:</strong> The port number Glance will listen on for incoming data. The sending device must be configured to send UDP packets to the IP address of the computer running Glance, on this specific port.</li>
+                </ul>
+
+                <h3>Dummy</h3>
+                <p>A built-in data generator for testing and development. It produces a configurable number of channels with sine wave data and random noise, requiring no external hardware.</p>
             </section>
 
             <section id="data-formats">
@@ -575,42 +652,64 @@ cd Dashboard-Builder</code><button class="copy-btn" title="Copy code"><svg fill=
                         <tr><td><strong>Unit</strong></td><td>The measurement unit to display (e.g., °C, m/s², V).</td></tr>
                         <tr><td><strong>Thresholds</strong></td><td>Four values (Low Critical, Low Warning, High Warning, High Critical) that define alarm states and color-coding in widgets. Must be in ascending order.</td></tr>
                         <tr><td><strong>Sensor Group</strong></td><td>An optional text field for organizing parameters (e.g., "IMU", "Power System").</td></tr>
+                        <tr><td><strong>Description</strong></td><td>An optional field for more details about the parameter.</td></tr>
                     </tbody>
                 </table>
             </section>
             
             <section id="widget-library">
-                <h2>The Widget Library</h2>
-                <p>Widgets are the visual components of your dashboard. Add them by clicking <strong>"Add Widget..."</strong> and linking them to one or more configured parameters.</p>
-                <div class="feature-grid">
-                    <div class="feature-card">
-                        <h4>Value Card</h4>
-                        <p>Displays a single parameter's value in a large, easy-to-read format. The background color changes based on alarm thresholds, and a border indicates priority.</p>
-                    </div>
-                    <div class="feature-card">
-                        <h4>Time Graph</h4>
-                        <p>A powerful multi-parameter line chart for trend analysis. Features interactive zoom/pan, a crosshair for inspecting values, and a right-click menu to see details of a specific data point.</p>
-                    </div>
-                    <div class="feature-card">
-                        <h4>Gauge</h4>
-                        <p>A classic circular gauge that shows a value within a defined range. Colored arcs on the gauge correspond to the parameter's warning and critical thresholds.</p>
-                    </div>
-                    <div class="feature-card">
-                        <h4>LED Indicator</h4>
-                        <p>A simple status light that provides a quick, at-a-glance indication of a parameter's state. The color changes from blue (low) to green (normal), yellow (warning), and red (critical).</p>
-                    </div>
-                    <div class="feature-card">
-                        <h4>Log Table</h4>
-                        <p>Displays a timestamped, scrolling table of raw data values for multiple parameters. Includes a search function to highlight rows that match specific conditions.</p>
-                    </div>
-                     <div class="feature-card">
-                        <h4>Histogram</h4>
-                        <p>Visualizes the statistical distribution of a single parameter over time, showing how frequently different value ranges occur. Useful for analyzing sensor noise and data patterns.</p>
-                    </div>
-                     <div class="feature-card">
-                        <h4>Map (GPS)</h4>
-                        <p>Plots latitude and longitude coordinates on a satellite map. It shows the current position with a marker, draws a path of previous locations, and includes a button to zoom directly to the latest point.</p>
-                    </div>
+                <h2>The Widget Library & Customization</h2>
+                <p>Widgets are the visual components of your dashboard. Add them by clicking <strong>"Add Widget..."</strong> and linking them to one or more configured parameters. Each widget has unique behaviors and customization options derived from the parameter settings.</p>
+                
+                <h3>Value Card</h3>
+                <p>Displays a single parameter's value in a large, easy-to-read format. Its appearance is highly dynamic based on parameter settings.</p>
+                <ul>
+                    <li><strong>Alarm State:</strong> The background color changes based on where the current value falls within the defined thresholds:
+                        <ul>
+                            <li><code>Nominal:</code> Dark gray background.</li>
+                            <li><code>Warning:</code> Yellow background.</li>
+                            <li><code>Critical:</code> Red background.</li>
+                        </ul>
+                    </li>
+                    <li><strong>Priority:</strong> A colored border indicates importance, configured when adding the widget:
+                         <ul>
+                            <li><code>High:</code> Red border.</li>
+                            <li><code>Medium:</code> Blue border.</li>
+                            <li><code>Low:</code> No border.</li>
+                        </ul>
+                    </li>
+                </ul>
+
+                <h3>Time Graph</h3>
+                <p>A powerful multi-parameter line chart for trend analysis. It is highly interactive.</p>
+                <ul>
+                    <li><strong>Interactivity:</strong> Features interactive zoom (mouse wheel), pan (click-and-drag), and a crosshair for inspecting values on hover.</li>
+                     <li><strong>Data Point Inspection:</strong> Right-clicking on the graph near a data point will show a dialog with the precise value and timestamp for that point.</li>
+                    <li><strong>Colors:</strong> Line colors are automatically assigned from a predefined palette to ensure contrast.</li>
+                </ul>
+
+                <h3>Gauge</h3>
+                <p>A classic circular gauge that shows a value within a defined range. The parameter's thresholds are used to draw colored arcs on the gauge, providing an immediate visual sense of the value's state relative to its operational limits.</p>
+
+                <h3>LED Indicator</h3>
+                <p>A simple status light that provides a quick, at-a-glance indication of a parameter's state based on its thresholds.</p>
+                <ul>
+                     <li><strong>Blue:</strong> Value is below the 'Low Warning' threshold.</li>
+                     <li><strong>Green:</strong> Value is in the normal range (between 'Low Warning' and 'High Warning').</li>
+                     <li><strong>Yellow:</strong> Value is in the high warning range (between 'High Warning' and 'High Critical').</li>
+                     <li><strong>Red:</strong> Value is in the critical range (below 'Low Critical' or above 'High Critical').</li>
+                </ul>
+
+                <h3>Log Table</h3>
+                <p>Displays a timestamped, scrolling table of raw data values for multiple parameters. Includes a powerful search function to find the last occurrence of a value that matches a condition (e.g., `> 100`) and highlights the corresponding row.</p>
+
+                <h3>Histogram</h3>
+                <p>Visualizes the statistical distribution of a single parameter over time, showing how frequently different value ranges occur. Useful for analyzing sensor noise and data patterns.</p>
+
+                <h3>Map (GPS)</h3>
+                <p>Plots latitude and longitude coordinates on a satellite map. It requires exactly two parameters (latitude and longitude) to function. It shows the current position with a marker, draws a path of previous locations, and includes a button to zoom directly to the latest point.</p>
+                 <div class="info-box">
+                    <p><strong>Note:</strong> The Map widget requires the <code>PySide6-WebEngine</code> optional dependency to be installed.</p>
                 </div>
             </section>
 
@@ -623,16 +722,68 @@ cd Dashboard-Builder</code><button class="copy-btn" title="Copy code"><svg fill=
                     <li>A <strong>larger buffer</strong> means fewer disk writes, which is better for performance with high-frequency data, but risks more data loss if the application crashes.</li>
                     <li>A <strong>smaller buffer</strong> writes to the disk more often, which is safer but can impact performance at very high data rates.</li>
                 </ul>
+                 <h4>Output Formats</h4>
+                 <p>The logger produces clean, well-structured files perfect for post-analysis.</p>
+                 <p><strong>CSV Output Structure:</strong></p>
+                 <pre><code class="language-csv">timestamp,elapsed_time,temp_sensor_Temperature,humidity_Humidity
+2025-01-15 10:30:00.123,0.000,23.500,65.200
+2025-01-15 10:30:01.223,1.100,23.600,65.100</code></pre>
+                <p><strong>JSON Output Structure (JSON Lines):</strong></p>
+                 <pre><code class="language-json">{ "timestamp": "2025-01-15T10:30:00.123", "elapsed_time": 0.0, "parameters": { "temp_sensor": 23.5, "humidity": 65.2 } }
+{ "timestamp": "2025-01-15T10:30:01.223", "elapsed_time": 1.1, "parameters": { "temp_sensor": 23.6, "humidity": 65.1 } }</code></pre>
+            </section>
+            
+             <section id="project-file">
+                <h2>Project File Structure</h2>
+                <p>Glance projects are saved as <code>.json</code> files, which store the entire state of your dashboard. This makes your configurations portable and easy to share.</p>
+                 <pre><code class="language-json">{
+  "version": "1.0",
+  "parameters": [
+    {
+      "id": "temp_sensor",
+      "name": "Temperature",
+      "array_index": 0,
+      "unit": "°C",
+      "threshold": {
+        "low_crit": -10, "low_warn": 0, "high_warn": 80, "high_crit": 100
+      }
+    }
+  ],
+  "connection_settings": {
+    "mode": "serial",
+    "serial_port": "COM4",
+    "baudrate": 115200,
+    "data_format": "json_array",
+    "channel_count": 32
+  },
+  "layout": {
+    "Main View": {
+      "configs": {
+        "widget_uuid": {
+          "displayType": "Time Graph",
+          "param_ids": ["temp_sensor"],
+          "priority": "Medium"
+        }
+      },
+      "state": "..."
+    }
+  },
+  "logging_settings": {
+    "format": "csv",
+    "selected_params": ["temp_sensor"],
+    "buffer_size": 100
+  }
+}</code><button class="copy-btn" title="Copy code"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg></button></pre>
             </section>
             
             <section id="advanced-features">
-                 <h2>Advanced Features</h2>
+                 <h2>Advanced Tools</h2>
                  <h3>Raw Telemetry Monitor</h3>
                  <p>Accessible from the <strong>View</strong> menu or the status bar, the Raw Telemetry Monitor is a powerful debugging tool. It displays the raw, unparsed data packets exactly as they are received by the application, along with timestamps and statistics. Use this monitor to:</p>
                  <ul>
                      <li>Verify that data is being received from your source.</li>
                      <li>Inspect the structure of your data packets to ensure it matches your configured format.</li>
-                     <li>Switch between Decimal, Hex, and ASCII views to debug binary data.</li>
+                     <li>Switch between Decimal and Hex views to debug binary data.</li>
                      <li>Pause, clear, and save the raw log for later analysis.</li>
                  </ul>
                  <div class="telemetry-images">
@@ -641,18 +792,186 @@ cd Dashboard-Builder</code><button class="copy-btn" title="Copy code"><svg fill=
                 </div>
             </section>
 
-            <section id="contributing">
-                <h2>Contributing to Development</h2>
-                <p>Glance is an open-source project driven by community collaboration. We warmly welcome contributions of all kinds, from code and documentation to bug reports and feature suggestions. Your expertise can help us grow and improve this platform for everyone.</p>
-                <h4>How to Contribute</h4>
-                <p>If you'd like to improve Glance, the general workflow is:</p>
+            <section id="development">
+                <h2>Development Guide</h2>
+                <p>Glance is an open-source project driven by community collaboration. This guide provides the technical details needed to understand the codebase, add new features, and contribute to the project.</p>
+
+                <h3>Architectural Overview</h3>
+                <p>The application is built on the Qt framework via PySide6 and leverages its powerful <strong>signals and slots mechanism</strong> for communication between components. The architecture follows a Model-View-Controller-like pattern:</p>
+                <ul>
+                    <li><strong>Model:</strong> The data acquisition layer (<code>app/backend.py</code>) and the application's state (parameters, widget configs, data history) managed by the `MainWindow`.</li>
+                    <li><strong>View:</strong> The various widget classes (<code>app/widgets.py</code>) and dialogs (<code>app/dialogs.py</code>) that present data and options to the user.</li>
+                    <li><strong>Controller:</strong> The <code>app/ui/main_window.py</code> module, which connects the data backend to the UI, handles user input, and orchestrates the overall application logic.</li>
+                </ul>
+                
+                <h3>Project Code Structure</h3>
+                <p>The project is organized into modules with specific responsibilities.</p>
+                <pre><code class="language-bash">.
+├── main.py              # Application entry point, launches the main window.
+├── app/
+│   ├── backend.py       # DataReader class for Serial, TCP, UDP sources.
+│   ├── simulator.py     # DataSimulator class for generating dummy data.
+│   ├── widgets.py       # Contains all custom widget classes (ValueCard, TimeGraph, etc.).
+│   ├── dialogs.py       # UI for all dialog windows (Connection, Parameters, etc.).
+│   └── ui/
+│       └── main_window.py # Core MainWindow class, UI layout, and main application logic.
+├── docs/                  # Documentation files and images for the web guide.
+├── logs/                  # Default directory for saved data logs.
+├── LICENSE
+└── requirements.txt     # Python dependencies.
+</code><button class="copy-btn" title="Copy code"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg></button></pre>
+                
+                <h3>Core Data Flow</h3>
+                <p>Understanding the data flow is key to modifying or extending Glance.</p>
+                <ol>
+                    <li>The <code>DataReader</code> or <code>DataSimulator</code> runs in a separate QThread.</li>
+                    <li>Upon receiving/generating a complete data packet, it emits a <code>newData</code> signal with the data (as a list of values).</li>
+                    <li>The <code>MainWindow</code> has a slot, <code>update_data(packet)</code>, connected to this signal.</li>
+                    <li>Inside <code>update_data</code>, the `MainWindow` iterates through its list of defined parameters. For each parameter, it uses the <code>array_index</code> to get the corresponding value from the packet.</li>
+                    <li>The value and timestamp are appended to the global <code>data_history</code> dictionary.</li>
+                    <li>The `MainWindow` then identifies which active widgets are subscribed to the updated parameter and calls their respective update methods (e.g., <code>widget.update_value(value)</code>).</li>
+                </ol>
+
+                <h3>Adding a Custom Widget</h3>
+                <p>Follow these steps to create and integrate a new widget type:</p>
+                <ol>
+                    <li><strong>Create the Widget Class in <code>app/widgets.py</code>:</strong>
+                        <p>Your class must inherit from a Qt widget (like <code>QWidget</code> or <code>QFrame</code>) and have an update method.</p>
+                        <pre><code class="language-python"># In app/widgets.py
+from PySide6.QtWidgets import QWidget, QLabel, QVBoxLayout
+
+class MyCustomWidget(QWidget):
+    def __init__(self, param_config):
+        super().__init__()
+        self.param = param_config[0] # Assuming one parameter for simplicity
+        
+        layout = QVBoxLayout(self)
+        self.title_label = QLabel(f"<b>{self.param['name']}</b>")
+        self.value_label = QLabel("---")
+        layout.addWidget(self.title_label)
+        layout.addWidget(self.value_label)
+
+    def update_data(self, history):
+        # This method will be called by MainWindow
+        param_id = self.param['id']
+        if param_id in history and history[param_id]:
+            latest_value = history[param_id][-1]['value']
+            self.value_label.setText(f"{latest_value:.2f} {self.param['unit']}")
+</code><button class="copy-btn" title="Copy code"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg></button></pre>
+                    </li>
+                    <li><strong>Register in <code>app/dialogs.py</code>:</strong>
+                        <p>In the `AddWidgetDialog` class, add the name of your new widget to the `display_types` list to make it selectable by the user.</p>
+                    </li>
+                    <li><strong>Add Handler in <code>app/ui/main_window.py</code>:</strong>
+                        <p>In the `MainWindow.add_widget_to_dashboard` method, add a new `elif` block to instantiate your widget class when its display type is chosen.</p>
+                        <pre><code class="language-python"># In MainWindow.add_widget_to_dashboard(...)
+# ...
+elif config['displayType'] == 'My Custom Widget' and len(param_configs) == 1:
+    widget = MyCustomWidget(param_configs)
+# ...
+</code><button class="copy-btn" title="Copy code"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg></button></pre>
+                    </li>
+                </ol>
+
+                 <h3>Building an Executable</h3>
+                <p>To create a standalone executable, you can use PyInstaller. This packages your application and its dependencies into a single file.</p>
+                <pre><code class="language-bash"># Install PyInstaller
+pip install pyinstaller
+
+# Build the executable from the project root directory
+pyinstaller --onefile --windowed --name "Glance" \
+--icon="docs/public/Glance_nobg.ico" \
+--add-data "docs/public:docs/public" \
+main.py
+</code><button class="copy-btn" title="Copy code"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg></button></pre>
+                <div class="info-box">
+                    <p><strong>Note:</strong> The <code>--add-data</code> flag is crucial for bundling assets like images. The syntax is <code>"source:destination_in_bundle"</code>. You may need to adjust paths depending on your OS.</p>
+                </div>
+                
+                <h3>Contributing</h3>
+                 <p>If you'd like to improve Glance, the general workflow is:</p>
                  <ol>
                     <li><strong>Fork</strong> the repository on GitHub.</li>
                     <li><strong>Create</strong> a new feature branch for your changes (e.g., <code>git checkout -b feature/NewGraphWidget</code>).</li>
-                    <li><strong>Commit</strong> your changes with clear, descriptive messages.</li>
+                    <li><strong>Commit</strong> your changes with clear, descriptive messages following conventional commit standards.</li>
                     <li><strong>Push</strong> your branch to your forked repository.</li>
-                    <li><strong>Open a Pull Request</strong> on the main Glance repository to propose your changes.</li>
+                    <li><strong>Open a Pull Request</strong> on the main Glance repository to propose your changes. Please provide a detailed description of your changes in the PR.</li>
                 </ol>
+            </section>
+            
+            <section id="troubleshooting">
+                <h2>Troubleshooting FAQ</h2>
+                <p>Here are solutions to some of the most common issues encountered during setup and operation.</p>
+
+                <details>
+                    <summary><h4>My Serial Port is not in the list.</h4></summary>
+                    <div class="details-content">
+                        <p>If the port for your connected device doesn't appear in the dropdown, try these steps:</p>
+                        <ol>
+                            <li><strong>Refresh the List:</strong> Click the "Refresh" icon next to the dropdown menu to force Glance to scan for new ports.</li>
+                            <li><strong>Check Drivers:</strong> Ensure you have the correct drivers installed for your USB-to-Serial adapter (e.g., FTDI, CH340).</li>
+                            <li><strong>Verify Connection:</strong> Make sure the USB cable is fully plugged in and is a data cable, not just a charging cable.</li>
+                            <li><strong>Check OS:</strong>
+                                <ul>
+                                    <li><strong>Windows:</strong> Open <strong>Device Manager</strong> and look under "Ports (COM & LPT)". If there's a yellow warning icon, the driver may be missing or incorrect.</li>
+                                    <li><strong>Linux:</strong> You may need to add your user to the <code>dialout</code> group. Run <code>sudo usermod -a -G dialout $USER</code>, then log out and log back in.</li>
+                                </ul>
+                            </li>
+                        </ol>
+                    </div>
+                </details>
+
+                <details>
+                    <summary><h4>I'm connected, but no data is appearing on my widgets.</h4></summary>
+                    <div class="details-content">
+                        <p>This is a common issue with several potential causes. Follow this diagnostic checklist:</p>
+                        <ol>
+                            <li><strong>Use the Raw Telemetry Monitor:</strong> Go to <strong>View → Raw Telemetry Monitor</strong>. This is the most important step. If you see data here, the problem is with your parsing configuration (step 2). If you don't see any data, the problem is with your physical connection or data source (step 3).</li>
+                            <li><strong>Check Parsing and Parameter Settings:</strong>
+                                <ul>
+                                    <li>Is the <strong>Data Format</strong> (JSON, CSV, Raw Bytes) set correctly to match what your device is sending?</li>
+                                    <li>Is the <strong>Channel Count</strong> correct?</li>
+                                    <li>Most importantly, is the <strong>Array Index</strong> for your parameter correct? Remember it's zero-based.</li>
+                                    <li>If using Raw Bytes, are the <strong>Sample Width</strong> and <strong>Endianness</strong> an exact match with your device?</li>
+                                </ul>
+                            </li>
+                             <li><strong>Check Connection Settings:</strong>
+                                <ul>
+                                    <li>For Serial, is the <strong>Baud Rate</strong> identical to the one set on your hardware?</li>
+                                    <li>Are the TX and RX lines swapped? Try switching them.</li>
+                                    <li>For TCP/UDP, are the <strong>IP address</strong> and <strong>Port</strong> correct? Check for typos.</li>
+                                    <li>Is a <strong>firewall</strong> on either the sending or receiving computer blocking the connection?</li>
+                                </ul>
+                            </li>
+                             <li><strong>Check Stream Status:</strong> Ensure the stream is not paused. The status label in the top bar should say "STREAMING".</li>
+                        </ol>
+                    </div>
+                </details>
+
+                <details>
+                    <summary><h4>The data on my widgets is garbled or incorrect.</h4></summary>
+                    <div class="details-content">
+                        <p>This almost always indicates a mismatch between the data being sent and how Glance is configured to parse it.</p>
+                        <ul>
+                            <li><strong>Baud Rate Mismatch:</strong> If using a serial connection, receiving at a different baud rate than the sender will result in meaningless characters. Verify the rates match.</li>
+                            <li><strong>Incorrect Data Format:</strong> If your device sends CSV but Glance expects JSON, it won't be able to parse it. Use the Raw Telemetry Monitor to see the exact format of the incoming text.</li>
+                            <li><strong>Raw Bytes Mismatch:</strong> If using `raw_bytes`, this is the most likely cause. A single incorrect setting (Sample Width, Channel Count, or Endianness) will corrupt the interpretation of all subsequent data. Double-check these against your device's firmware.</li>
+                        </ul>
+                    </div>
+                </details>
+                
+                 <details>
+                    <summary><h4>The application is running slow or lagging.</h4></summary>
+                    <div class="details-content">
+                        <p>High data rates combined with many complex widgets can consume significant CPU resources. Try these optimizations:</p>
+                        <ul>
+                            <li><strong>Reduce Widget Complexity:</strong> Time Graphs are more resource-intensive than Value Cards or Gauges. Temporarily close complex widgets to see if performance improves.</li>
+                             <li><strong>Increase Logging Buffer:</strong> If you are logging data at a high frequency, go to <strong>Data Logging → Configure Logging...</strong> and increase the buffer size (e.g., to 500 or 1000). This reduces the frequency of disk writes.</li>
+                             <li><strong>Reduce Data Rate:</strong> If possible, lower the rate at which your hardware sends data. A rate of 10-50 Hz is often sufficient for visual monitoring.</li>
+                        </ul>
+                    </div>
+                </details>
+
             </section>
 
             <section id="license">
@@ -669,7 +988,7 @@ cd Dashboard-Builder</code><button class="copy-btn" title="Copy code"><svg fill=
                         <ul class="social-links">
                             <li><a href="https://teamignition.space" target="_blank" title="Website"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"></path></svg></a></li>
                             <li><a href="https://github.com/teamignitionvitc" target="_blank" title="GitHub"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12c0 4.42 2.87 8.17 6.84 9.5.5.09.68-.22.68-.48 0-.24-.01-1.02-.01-1.84-2.78.6-3.37-1.34-3.37-1.34-.46-1.16-1.11-1.47-1.11-1.47-.91-.62.07-.6.07-.6 1 .07 1.53 1.03 1.53 1.03.89 1.52 2.34 1.08 2.91.83.09-.65.35-1.08.63-1.33-2.22-.25-4.55-1.11-4.55-4.94 0-1.1.39-1.99 1.03-2.69-.1-.25-.45-1.28.1-2.65 0 0 .84-.27 2.75 1.02.79-.22 1.65-.33 2.5-.33.85 0 1.71.11 2.5.33 1.91-1.29 2.75-1.02 2.75-1.02.55 1.37.2 2.4.1 2.65.64.7 1.03 1.59 1.03 2.69 0 3.84-2.33 4.68-4.57 4.93.36.31.68.92.68 1.85 0 1.34-.01 2.42-.01 2.75 0 .27.18.58.69.48C19.13 20.17 22 16.42 22 12c0-5.52-4.48-10-10-10z"></path></svg></a></li>
-                            <li><a href="https://www.linkedin.com/in/teamignition/" target="_blank" title="LinkedIn"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 0h-14c-2.761 0-5 2.239-5 5v14c0 2.761 2.239 5 5 5h14c2.762 0 5-2.239 5-5v-14c0-2.761-2.238-5-5-5zm-11 19h-3v-11h3v11zm-1.5-12.268c-.966 0-1.75-.79-1.75-1.764s.784-1.764 1.75-1.764 1.75.79 1.75 1.764-.783 1.764-1.75 1.764zm13.5 12.268h-3v-5.604c0-3.368-4-3.113-4 0v5.604h-3v-11h3v1.765c1.396-2.586 7-2.777 7 2.476v6.759z"></path></svg></a></li>
+                            <li><a href="https://www.linkedin.com/company/teamignitionvitc/" target="_blank" title="LinkedIn"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 0h-14c-2.761 0-5 2.239-5 5v14c0 2.761 2.239 5 5 5h14c2.762 0 5-2.239 5-5v-14c0-2.761-2.238-5-5-5zm-11 19h-3v-11h3v11zm-1.5-12.268c-.966 0-1.75-.79-1.75-1.764s.784-1.764 1.75-1.764 1.75.79 1.75 1.764-.783 1.764-1.75 1.764zm13.5 12.268h-3v-5.604c0-3.368-4-3.113-4 0v5.604h-3v-11h3v1.765c1.396-2.586 7-2.777 7 2.476v6.759z"></path></svg></a></li>
                             <li><a href="https://x.com/ignitiontech23" target="_blank" title="Twitter/X"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"></path></svg></a></li>
                             <li><a href="https://www.instagram.com/ignition_vitc" target="_blank" title="Instagram"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M7.8 2h8.4C19.4 2 22 4.6 22 7.8v8.4a5.8 5.8 0 0 1-5.8 5.8H7.8C4.6 22 2 19.4 2 16.2V7.8A5.8 5.8 0 0 1 7.8 2m-.2 2A3.6 3.6 0 0 0 4 7.6v8.8A3.6 3.6 0 0 0 7.6 20h8.8A3.6 3.6 0 0 0 20 16.4V7.6A3.6 3.6 0 0 0 16.4 4H7.6m9.65 1.5a1.25 1.25 0 0 1 1.25 1.25A1.25 1.25 0 0 1 17.25 8 1.25 1.25 0 0 1 16 6.75a1.25 1.25 0 0 1 1.25-1.25M12 7a5 5 0 0 1 5 5 5 5 0 0 1-5 5 5 5 0 0 1-5-5 5 5 0 0 1 5-5m0 2a3 3 0 0 0-3 3 3 3 0 0 0 3 3 3 3 0 0 0 3-3 3 3 0 0 0-3-3z"></path></svg></a></li>
                         </ul>
@@ -769,4 +1088,3 @@ cd Dashboard-Builder</code><button class="copy-btn" title="Copy code"><svg fill=
     </script>
 </body>
 </html>
-
