@@ -3225,7 +3225,7 @@ class MainWindow(QMainWindow):
         
         # Logo and title section
         logo_label = QLabel()
-        logo_path = os.path.join("public", "ign_logo_wht.png")
+        logo_path = os.path.join("docs/public", "ign_logo_wht.png")
         if os.path.exists(logo_path):
             pixmap = QPixmap(logo_path)
             scaled_pixmap = pixmap.scaled(100, 100, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation)
@@ -3765,7 +3765,7 @@ class MainWindow(QMainWindow):
         try:
             from PySide6.QtGui import QPixmap
             logo = QLabel("")
-            pix = QPixmap("doc/public/Glance_nobg.png")
+            pix = QPixmap("docs/public/Glance_nobg.png")
             if not pix.isNull():
                 logo.setPixmap(pix.scaledToWidth(300, Qt.SmoothTransformation))
                 logo.setAlignment(Qt.AlignmentFlag.AlignCenter)
