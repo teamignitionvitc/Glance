@@ -84,6 +84,8 @@ try:
 except Exception:
     _serial_list_ports = None
 import webbrowser
+from abc import ABC, abstractmethod
+from collections import deque
 ####################################################################################################
 
 
@@ -214,6 +216,267 @@ class DataLogger:
         
         self.log_file.flush()
         self.log_buffer = []
+
+
+
+# --- SIGNAL FILTERING SYSTEM ---
+
+class SignalFilter(ABC):
+    """Abstract base class for all signal filters"""
+    
+    def __init__(self, filter_id, filter_name):
+        self.filter_id = filter_id
+        self.filter_name = filter_name
+        self.enabled = True
+    
+    @abstractmethod
+    def apply(self, value, timestamp=None):
+        """Apply the filter to a value and return filtered result"""
+        pass
+    
+    @abstractmethod
+    def reset(self):
+        """Reset the filter state"""
+        pass
+    
+    @abstractmethod
+    def to_dict(self):
+        """Serialize filter configuration to dictionary"""
+        pass
+    
+    @classmethod
+    @abstractmethod
+    def from_dict(cls, data):
+        """Deserialize filter from dictionary"""
+        pass
+
+
+class MovingAverageFilter(SignalFilter):
+    """Simple moving average filter"""
+    
+    def __init__(self, filter_id, window_size=5):
+        super().__init__(filter_id, "Moving Average")
+        self.window_size = window_size
+        self.buffer = deque(maxlen=window_size)
+    
+    def apply(self, value, timestamp=None):
+        if value is None:
+            return None
+        self.buffer.append(value)
+        return sum(self.buffer) / len(self.buffer)
+    
+    def reset(self):
+        self.buffer.clear()
+    
+    def to_dict(self):
+        return {
+            'type': 'moving_average',
+            'filter_id': self.filter_id,
+            'filter_name': self.filter_name,
+            'window_size': self.window_size,
+            'enabled': self.enabled
+        }
+    
+    @classmethod
+    def from_dict(cls, data):
+        f = cls(data['filter_id'], data['window_size'])
+        f.enabled = data.get('enabled', True)
+        return f
+
+
+class LowPassFilter(SignalFilter):
+    """Simple low-pass filter (exponential moving average)"""
+    
+    def __init__(self, filter_id, alpha=0.3):
+        super().__init__(filter_id, "Low Pass")
+        self.alpha = alpha  # Smoothing factor (0-1), lower = more smoothing
+        self.last_value = None
+    
+    def apply(self, value, timestamp=None):
+        if value is None:
+            return None
+        if self.last_value is None:
+            self.last_value = value
+            return value
+        filtered = self.alpha * value + (1 - self.alpha) * self.last_value
+        self.last_value = filtered
+        return filtered
+    
+    def reset(self):
+        self.last_value = None
+    
+    def to_dict(self):
+        return {
+            'type': 'low_pass',
+            'filter_id': self.filter_id,
+            'filter_name': self.filter_name,
+            'alpha': self.alpha,
+            'enabled': self.enabled
+        }
+    
+    @classmethod
+    def from_dict(cls, data):
+        f = cls(data['filter_id'], data['alpha'])
+        f.enabled = data.get('enabled', True)
+        return f
+
+
+class KalmanFilter(SignalFilter):
+    """Simple 1D Kalman filter for scalar values"""
+    
+    def __init__(self, filter_id, process_variance=0.01, measurement_variance=0.1):
+        super().__init__(filter_id, "Kalman")
+        self.process_variance = process_variance  # Q
+        self.measurement_variance = measurement_variance  # R
+        self.estimated_value = None
+        self.estimation_error = 1.0  # P
+    
+    def apply(self, value, timestamp=None):
+        if value is None:
+            return None
+        
+        if self.estimated_value is None:
+            self.estimated_value = value
+            return value
+        
+        # Prediction step
+        predicted_error = self.estimation_error + self.process_variance
+        
+        # Update step
+        kalman_gain = predicted_error / (predicted_error + self.measurement_variance)
+        self.estimated_value = self.estimated_value + kalman_gain * (value - self.estimated_value)
+        self.estimation_error = (1 - kalman_gain) * predicted_error
+        
+        return self.estimated_value
+    
+    def reset(self):
+        self.estimated_value = None
+        self.estimation_error = 1.0
+    
+    def to_dict(self):
+        return {
+            'type': 'kalman',
+            'filter_id': self.filter_id,
+            'filter_name': self.filter_name,
+            'process_variance': self.process_variance,
+            'measurement_variance': self.measurement_variance,
+            'enabled': self.enabled
+        }
+    
+    @classmethod
+    def from_dict(cls, data):
+        f = cls(data['filter_id'], data['process_variance'], data['measurement_variance'])
+        f.enabled = data.get('enabled', True)
+        return f
+
+
+class MedianFilter(SignalFilter):
+    """Median filter for removing outliers"""
+    
+    def __init__(self, filter_id, window_size=5):
+        super().__init__(filter_id, "Median")
+        self.window_size = window_size
+        self.buffer = deque(maxlen=window_size)
+    
+    def apply(self, value, timestamp=None):
+        if value is None:
+            return None
+        self.buffer.append(value)
+        sorted_buffer = sorted(self.buffer)
+        n = len(sorted_buffer)
+        if n % 2 == 0:
+            return (sorted_buffer[n//2 - 1] + sorted_buffer[n//2]) / 2
+        else:
+            return sorted_buffer[n//2]
+    
+    def reset(self):
+        self.buffer.clear()
+    
+    def to_dict(self):
+        return {
+            'type': 'median',
+            'filter_id': self.filter_id,
+            'filter_name': self.filter_name,
+            'window_size': self.window_size,
+            'enabled': self.enabled
+        }
+    
+    @classmethod
+    def from_dict(cls, data):
+        f = cls(data['filter_id'], data['window_size'])
+        f.enabled = data.get('enabled', True)
+        return f
+
+
+class FilterManager:
+    """Manages filters for all parameters"""
+    
+    def __init__(self):
+        self.parameter_filters = {}  # param_id -> list of filters
+    
+    def add_filter(self, param_id, filter_obj):
+        """Add a filter to a parameter"""
+        if param_id not in self.parameter_filters:
+            self.parameter_filters[param_id] = []
+        self.parameter_filters[param_id].append(filter_obj)
+    
+    def remove_filter(self, param_id, filter_id):
+        """Remove a filter from a parameter"""
+        if param_id in self.parameter_filters:
+            self.parameter_filters[param_id] = [
+                f for f in self.parameter_filters[param_id] if f.filter_id != filter_id
+            ]
+    
+    def get_filters(self, param_id):
+        """Get all filters for a parameter"""
+        return self.parameter_filters.get(param_id, [])
+    
+    def apply_filters(self, param_id, value, timestamp=None):
+        """Apply all enabled filters to a value"""
+        if param_id not in self.parameter_filters:
+            return value
+        
+        filtered_value = value
+        for filter_obj in self.parameter_filters[param_id]:
+            if filter_obj.enabled:
+                filtered_value = filter_obj.apply(filtered_value, timestamp)
+        
+        return filtered_value
+    
+    def reset_filters(self, param_id=None):
+        """Reset filters for a parameter or all parameters"""
+        if param_id:
+            for filter_obj in self.parameter_filters.get(param_id, []):
+                filter_obj.reset()
+        else:
+            for filters in self.parameter_filters.values():
+                for filter_obj in filters:
+                    filter_obj.reset()
+    
+    def to_dict(self):
+        """Serialize all filters"""
+        result = {}
+        for param_id, filters in self.parameter_filters.items():
+            result[param_id] = [f.to_dict() for f in filters]
+        return result
+    
+    def from_dict(self, data):
+        """Deserialize filters"""
+        self.parameter_filters.clear()
+        for param_id, filter_list in data.items():
+            for filter_data in filter_list:
+                filter_type = filter_data['type']
+                if filter_type == 'moving_average':
+                    filter_obj = MovingAverageFilter.from_dict(filter_data)
+                elif filter_type == 'low_pass':
+                    filter_obj = LowPassFilter.from_dict(filter_data)
+                elif filter_type == 'kalman':
+                    filter_obj = KalmanFilter.from_dict(filter_data)
+                elif filter_type == 'median':
+                    filter_obj = MedianFilter.from_dict(filter_data)
+                else:
+                    continue
+                self.add_filter(param_id, filter_obj)
 
 
 # --- 2. DATA SIMULATOR & WIDGETS ---
@@ -1972,6 +2235,7 @@ class MainWindow(QMainWindow):
         
         # Initialize data logger
         self.data_logger = DataLogger()
+        self.filter_manager = FilterManager()
         self.logging_settings = None
 
         # Raw telemetry monitor
@@ -2541,7 +2805,7 @@ class MainWindow(QMainWindow):
     def update_data(self, packet: list):
         timestamp = time.time()
 
-         # Track packets for status bar
+        # Track packets for status bar
         self.packet_count += 1
         self.packet_timestamps.append(timestamp)
 
@@ -2552,41 +2816,59 @@ class MainWindow(QMainWindow):
 
             # Check if the parameter has a valid index and if the index is within the packet bounds
             if array_idx is not None and 0 <= array_idx < len(packet):
-                value = packet[array_idx]
-                if value is None: continue # Skip if data for this channel is null
+                raw_value = packet[array_idx]
+                if raw_value is None: 
+                    continue  # Skip if data for this channel is null
 
-                # --- The rest of the logic is the same, but now runs per-parameter ---
-                if param_id not in self.data_history: self.data_history[param_id] = []
-                self.data_history[param_id].append({'value': value, 'timestamp': timestamp})
-                self.data_history[param_id] = self.data_history[param_id][-500:] # Limit history
+                # Apply filters to get filtered value
+                filtered_value = self.filter_manager.apply_filters(param_id, raw_value, timestamp)
 
-                # Update relevant widgets for this specific parameter
+                # Store RAW value in history (for logging)
+                if param_id not in self.data_history: 
+                    self.data_history[param_id] = []
+                self.data_history[param_id].append({
+                    'value': raw_value,  # Store raw value
+                    'filtered_value': filtered_value,  # Also store filtered value
+                    'timestamp': timestamp
+                })
+                self.data_history[param_id] = self.data_history[param_id][-500:]  # Limit history
+
+                # Update widgets with FILTERED value
                 for tab_info in self.tab_data.values():
                     for widget_id, widget in tab_info['widgets'].items():
                         config = tab_info['configs'][widget_id]
                         if param_id in config['param_ids']:
                             if isinstance(widget, ValueCard):
-                                alarm_state = self.get_alarm_state(value, param_meta['threshold'])
-                                widget.update_value(value, alarm_state)
+                                alarm_state = self.get_alarm_state(filtered_value, param_meta['threshold'])
+                                widget.update_value(filtered_value, alarm_state)
                             elif isinstance(widget, TimeGraph):
-                                widget.update_data(self.data_history)
+                                # Create filtered history for graphs
+                                filtered_history = {}
+                                for pid in config['param_ids']:
+                                    if pid in self.data_history:
+                                        filtered_history[pid] = [
+                                            {'value': dp['filtered_value'], 'timestamp': dp['timestamp']}
+                                            for dp in self.data_history[pid]
+                                        ]
+                                widget.update_data(filtered_history)
                             elif isinstance(widget, LogTable):
                                 widget.update_data(param_id, self.data_history)
                             elif isinstance(widget, GaugeWidget):
-                                widget.update_value(value)
+                                widget.update_value(filtered_value)
                             elif isinstance(widget, HistogramWidget):
-                                hist_vals = [dp['value'] for dp in self.data_history.get(param_id, [])]
+                                # Use filtered values for histogram
+                                hist_vals = [dp['filtered_value'] for dp in self.data_history.get(param_id, [])]
                                 widget.update_histogram(hist_vals)
                             elif isinstance(widget, LEDWidget):
-                                widget.update_value(value)
+                                widget.update_value(filtered_value)
                             elif isinstance(widget, MapWidget):
                                 widget.update_position(self.data_history)
         
-        # Log data if logging is enabled
+        # Log RAW data (not filtered) if logging is enabled
         if self.data_logger.is_logging:
             self.data_logger.log_data(packet, self.data_history)
 
-        # Send to raw telemetry monitor if open
+        # Send RAW data to raw telemetry monitor if open
         if self.raw_tlm_monitor and self.raw_tlm_monitor.isVisible():
             self.raw_tlm_monitor.append_packet(packet)
 
@@ -2680,8 +2962,276 @@ class MainWindow(QMainWindow):
         dialog = ManageParametersDialog(self.parameters, self)
         if dialog.exec() == QDialog.DialogCode.Accepted:
              self.update_control_states() # No need to restart simulator anymore
+             self.update_filter_menus() 
              self.mark_as_unsaved()
              QMessageBox.information(self, "Update", "Parameter definitions have been updated.")
+
+    def update_filter_menus(self):
+        """Update filter submenus with current parameters"""
+        # Clear existing actions
+        for menu in self.filter_submenus.values():
+            menu.clear()
+        
+        # If no parameters, show disabled message
+        if not self.parameters:
+            for menu in self.filter_submenus.values():
+                no_params_action = QAction("(No parameters available)", self)
+                no_params_action.setEnabled(False)
+                menu.addAction(no_params_action)
+            return
+        
+        # Add parameter actions to each filter type menu
+        for param in self.parameters:
+            param_id = param['id']
+            param_name = param['name']
+            
+            # Check if this parameter has any filters
+            existing_filters = self.filter_manager.get_filters(param_id)
+            filter_count = len(existing_filters)
+            
+            # Add visual indicator if filters exist
+            if filter_count > 0:
+                display_name = f"{param_name}  [🔧 {filter_count}]"
+            else:
+                display_name = param_name
+            
+            # Moving Average submenu
+            ma_action = QAction(display_name, self)
+            ma_action.triggered.connect(lambda checked, pid=param_id, pname=param_name: 
+                                    self.add_filter_to_parameter(pid, pname, 'moving_average'))
+            self.filter_submenus['moving_average'].addAction(ma_action)
+            
+            # Low Pass submenu
+            lp_action = QAction(display_name, self)
+            lp_action.triggered.connect(lambda checked, pid=param_id, pname=param_name: 
+                                    self.add_filter_to_parameter(pid, pname, 'low_pass'))
+            self.filter_submenus['low_pass'].addAction(lp_action)
+            
+            # Kalman submenu
+            k_action = QAction(display_name, self)
+            k_action.triggered.connect(lambda checked, pid=param_id, pname=param_name: 
+                                    self.add_filter_to_parameter(pid, pname, 'kalman'))
+            self.filter_submenus['kalman'].addAction(k_action)
+            
+            # Median submenu
+            m_action = QAction(display_name, self)
+            m_action.triggered.connect(lambda checked, pid=param_id, pname=param_name: 
+                                    self.add_filter_to_parameter(pid, pname, 'median'))
+            self.filter_submenus['median'].addAction(m_action)
+
+    def add_filter_to_parameter(self, param_id, param_name, filter_type):
+        """Add a specific filter type to a parameter"""
+        from PySide6.QtWidgets import QDialog, QVBoxLayout, QFormLayout, QDoubleSpinBox, QSpinBox
+        
+        # Create configuration dialog
+        dialog = QDialog(self)
+        dialog.setWindowTitle(f"Add {filter_type.replace('_', ' ').title()} Filter to {param_name}")
+        dialog.setMinimumWidth(350)
+        
+        layout = QVBoxLayout(dialog)
+        form = QFormLayout()
+        
+        # Different parameters for different filter types
+        if filter_type == 'moving_average':
+            window_spin = QSpinBox()
+            window_spin.setRange(2, 100)
+            window_spin.setValue(5)
+            form.addRow("Window Size:", window_spin)
+            
+        elif filter_type == 'low_pass':
+            alpha_spin = QDoubleSpinBox()
+            alpha_spin.setRange(0.01, 1.0)
+            alpha_spin.setSingleStep(0.05)
+            alpha_spin.setValue(0.3)
+            alpha_spin.setDecimals(2)
+            form.addRow("Alpha (0-1, lower=smoother):", alpha_spin)
+            
+        elif filter_type == 'kalman':
+            process_var_spin = QDoubleSpinBox()
+            process_var_spin.setRange(0.001, 10.0)
+            process_var_spin.setSingleStep(0.01)
+            process_var_spin.setValue(0.01)
+            process_var_spin.setDecimals(3)
+            form.addRow("Process Variance:", process_var_spin)
+            
+            measurement_var_spin = QDoubleSpinBox()
+            measurement_var_spin.setRange(0.001, 10.0)
+            measurement_var_spin.setSingleStep(0.1)
+            measurement_var_spin.setValue(0.1)
+            measurement_var_spin.setDecimals(3)
+            form.addRow("Measurement Variance:", measurement_var_spin)
+            
+        elif filter_type == 'median':
+            window_spin = QSpinBox()
+            window_spin.setRange(3, 101)
+            window_spin.setSingleStep(2)
+            window_spin.setValue(5)
+            form.addRow("Window Size (odd):", window_spin)
+        
+        layout.addLayout(form)
+        
+        # Add buttons
+        from PySide6.QtWidgets import QDialogButtonBox
+        buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel)
+        buttons.accepted.connect(dialog.accept)
+        buttons.rejected.connect(dialog.reject)
+        layout.addWidget(buttons)
+        
+        # Show dialog
+        if dialog.exec() == QDialog.DialogCode.Accepted:
+            # Create the filter based on type
+            filter_id = str(uuid.uuid4())
+            
+            if filter_type == 'moving_average':
+                filter_obj = MovingAverageFilter(filter_id, window_spin.value())
+            elif filter_type == 'low_pass':
+                filter_obj = LowPassFilter(filter_id, alpha_spin.value())
+            elif filter_type == 'kalman':
+                filter_obj = KalmanFilter(filter_id, process_var_spin.value(), measurement_var_spin.value())
+            elif filter_type == 'median':
+                filter_obj = MedianFilter(filter_id, window_spin.value())
+            else:
+                return
+            
+            # Add to filter manager
+            self.filter_manager.add_filter(param_id, filter_obj)
+            self.mark_as_unsaved()
+            
+            QMessageBox.information(self, "Filter Added", 
+                                f"{filter_obj.filter_name} filter added to parameter '{param_name}'")
+            self.update_filter_menus() 
+
+    def open_manage_filters_dialog(self):
+        """Open dialog to manage all filters"""
+        from PySide6.QtWidgets import QDialog, QVBoxLayout, QHBoxLayout, QTreeWidget, QTreeWidgetItem
+        
+        dialog = QDialog(self)
+        dialog.setWindowTitle("Manage Filters")
+        dialog.setMinimumSize(600, 400)
+        
+        layout = QVBoxLayout(dialog)
+        
+        # Tree widget to show parameters and their filters
+        tree = QTreeWidget()
+        tree.setHeaderLabels(["Parameter / Filter", "Type", "Status", "Details"])
+        tree.setColumnWidth(0, 200)
+        
+        # Populate tree
+        for param in self.parameters:
+            param_id = param['id']
+            param_name = param['name']
+            filters = self.filter_manager.get_filters(param_id)
+            
+            # Create parameter item
+            param_item = QTreeWidgetItem([param_name, "", "", f"{len(filters)} filter(s)"])
+            param_item.setData(0, Qt.ItemDataRole.UserRole, {'type': 'parameter', 'param_id': param_id})
+            
+            # Add filter children
+            for filter_obj in filters:
+                status = "Enabled" if filter_obj.enabled else "Disabled"
+                details = ""
+                
+                if isinstance(filter_obj, MovingAverageFilter):
+                    details = f"Window: {filter_obj.window_size}"
+                elif isinstance(filter_obj, LowPassFilter):
+                    details = f"Alpha: {filter_obj.alpha:.2f}"
+                elif isinstance(filter_obj, KalmanFilter):
+                    details = f"Q: {filter_obj.process_variance:.3f}, R: {filter_obj.measurement_variance:.3f}"
+                elif isinstance(filter_obj, MedianFilter):
+                    details = f"Window: {filter_obj.window_size}"
+                
+                filter_item = QTreeWidgetItem([f"  → {filter_obj.filter_name}", 
+                                            filter_obj.__class__.__name__, 
+                                            status, 
+                                            details])
+                filter_item.setData(0, Qt.ItemDataRole.UserRole, {
+                    'type': 'filter',
+                    'param_id': param_id,
+                    'filter_id': filter_obj.filter_id,
+                    'filter_obj': filter_obj
+                })
+                param_item.addChild(filter_item)
+            
+            tree.addTopLevelItem(param_item)
+        
+        tree.expandAll()
+        layout.addWidget(tree)
+        
+        # Buttons
+        btn_layout = QHBoxLayout()
+        
+        enable_btn = QPushButton("Enable/Disable")
+        enable_btn.clicked.connect(lambda: self.toggle_filter_from_tree(tree))
+        
+        remove_btn = QPushButton("Remove Filter")
+        remove_btn.clicked.connect(lambda: self.remove_filter_from_tree(tree))
+        
+        reset_btn = QPushButton("Reset Filter State")
+        reset_btn.clicked.connect(lambda: self.reset_filter_from_tree(tree))
+        
+        close_btn = QPushButton("Close")
+        close_btn.clicked.connect(dialog.accept)
+        
+        btn_layout.addWidget(enable_btn)
+        btn_layout.addWidget(remove_btn)
+        btn_layout.addWidget(reset_btn)
+        btn_layout.addStretch()
+        btn_layout.addWidget(close_btn)
+        
+        layout.addLayout(btn_layout)
+        
+        dialog.exec()
+
+    def toggle_filter_from_tree(self, tree):
+        """Toggle filter enabled/disabled state"""
+        item = tree.currentItem()
+        if not item:
+            return
+        
+        data = item.data(0, Qt.ItemDataRole.UserRole)
+        if data and data.get('type') == 'filter':
+            filter_obj = data['filter_obj']
+            filter_obj.enabled = not filter_obj.enabled
+            status = "Enabled" if filter_obj.enabled else "Disabled"
+            item.setText(2, status)
+            self.mark_as_unsaved()
+
+    def remove_filter_from_tree(self, tree):
+        """Remove selected filter"""
+        item = tree.currentItem()
+        if not item:
+            return
+        
+        data = item.data(0, Qt.ItemDataRole.UserRole)
+        if data and data.get('type') == 'filter':
+            reply = QMessageBox.question(self, "Remove Filter",
+                                        "Are you sure you want to remove this filter?",
+                                        QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
+            if reply == QMessageBox.StandardButton.Yes:
+                self.filter_manager.remove_filter(data['param_id'], data['filter_id'])
+                parent = item.parent()
+                parent.removeChild(item)
+                parent.setText(3, f"{parent.childCount()} filter(s)")
+                self.mark_as_unsaved()
+                self.update_filter_menus()
+
+    def reset_filter_from_tree(self, tree):
+        """Reset filter state (clear buffer/history)"""
+        item = tree.currentItem()
+        if not item:
+            return
+        
+        data = item.data(0, Qt.ItemDataRole.UserRole)
+        if data and data.get('type') == 'filter':
+            filter_obj = data['filter_obj']
+            filter_obj.reset()
+            QMessageBox.information(self, "Filter Reset", "Filter state has been reset.")
+
+    def import_custom_filter(self):
+        """Import custom filter from JSON file"""
+        QMessageBox.information(self, "Coming Soon", 
+                            "Custom filter import functionality will be available in a future update.")
+
     def update_control_states(self):
         has_params = bool(self.parameters)
         if hasattr(self, 'add_widget_btn') and self.add_widget_btn:
@@ -2809,7 +3359,6 @@ class MainWindow(QMainWindow):
                     'explicit_layout': explicit_layout
                 }
             
-            # Include data logging settings
             # Include data logging settings and dashboard title customization
             project_data = {
                 'parameters': self.parameters,
@@ -2819,6 +3368,7 @@ class MainWindow(QMainWindow):
                 'configured_widgets': getattr(self, 'configured_widgets', []),
                 'dashboard_title_text': self.dashboard_title_text,
                 'dashboard_title_alignment': str(self.dashboard_title_alignment.value),
+                'filters': self.filter_manager.to_dict(),  # NEW: Save filters
                 'version': '1.0',
                 'created': datetime.now().isoformat()
             }
@@ -2928,6 +3478,9 @@ class MainWindow(QMainWindow):
                 self.dashboard_title_alignment = Qt.AlignmentFlag(alignment_val)
             self._update_dashboard_title()
             
+
+            if 'filters' in project_data:
+                self.filter_manager.from_dict(project_data['filters'])
             # Clear existing tabs and data
             
             # Clear existing tabs and data
@@ -2956,6 +3509,7 @@ class MainWindow(QMainWindow):
             
             self.restart_simulator()
             self.update_control_states()
+            self.update_filter_menus()
             self.update_status_bar()
             
             QMessageBox.information(self, "Success", f"Project loaded successfully from:\n{path}")
@@ -2971,77 +3525,317 @@ class MainWindow(QMainWindow):
     
     def _build_menu_bar(self):
         menubar = self.menuBar()
+        menubar.clear() 
+
         file_menu = menubar.addMenu("File")
         edit_menu = menubar.addMenu("Edit")
         view_menu = menubar.addMenu("View")
+        filters_menu = menubar.addMenu("Filters")
 
-        new_action = QAction("New Dashboard", self); new_action.triggered.connect(lambda: self.show_phase("setup"))
-        load_action = QAction("Load Project...", self); load_action.triggered.connect(self.load_project)
-        save_action = QAction("Save Project", self); save_action.triggered.connect(self.save_project)
-        save_as_action = QAction("Save Project As...", self); save_as_action.triggered.connect(self.save_project_as)
-        conn_action = QAction("Connection Settings...", self); conn_action.triggered.connect(self.open_connection_settings)
-        exit_action = QAction("Exit", self); exit_action.triggered.connect(self.close)
-        file_menu.addAction(new_action); file_menu.addAction(load_action); file_menu.addAction(save_action); file_menu.addAction(save_as_action); file_menu.addSeparator(); file_menu.addAction(conn_action); file_menu.addSeparator(); file_menu.addAction(exit_action)
-
-        manage_params_action = QAction("Manage Parameters...", self); manage_params_action.triggered.connect(self.open_manage_parameters_dialog)
-        add_widget_action = QAction("Add Widget...", self); add_widget_action.triggered.connect(self.open_add_widget_dialog)
-        remove_widget_action = QAction("Remove Widget...", self); remove_widget_action.triggered.connect(self.remove_selected_display)
-        edit_menu.addAction(manage_params_action); edit_menu.addAction(add_widget_action); edit_menu.addAction(remove_widget_action)
+        # File menu with shortcuts
+        new_action = QAction("New Dashboard", self)
+        new_action.setShortcut("Ctrl+N")
+        new_action.triggered.connect(lambda: self.show_phase("setup"))
         
-        # Data logging menu
+        load_action = QAction("Load Project...", self)
+        load_action.setShortcut("Ctrl+O")
+        load_action.triggered.connect(self.load_project)
+        
+        save_action = QAction("Save Project", self)
+        save_action.setShortcut("Ctrl+S")
+        save_action.triggered.connect(self.save_project)
+        
+        save_as_action = QAction("Save Project As...", self)
+        save_as_action.setShortcut("Ctrl+Shift+S")
+        save_as_action.triggered.connect(self.save_project_as)
+        
+        conn_action = QAction("Connection Settings...", self)
+        conn_action.setShortcut("Ctrl+Shift+C")
+        conn_action.triggered.connect(self.open_connection_settings)
+        
+        exit_action = QAction("Exit", self)
+        exit_action.setShortcut("Ctrl+Q")
+        exit_action.triggered.connect(self.close)
+        
+        file_menu.addAction(new_action)
+        file_menu.addAction(load_action)
+        file_menu.addAction(save_action)
+        file_menu.addAction(save_as_action)
+        file_menu.addSeparator()
+        file_menu.addAction(conn_action)
+        file_menu.addSeparator()
+        file_menu.addAction(exit_action)
+
+        # Edit menu with shortcuts
+        manage_params_action = QAction("Manage Parameters...", self)
+        manage_params_action.setShortcut("Ctrl+P")
+        manage_params_action.triggered.connect(self.open_manage_parameters_dialog)
+        
+        add_widget_action = QAction("Add Widget...", self)
+        add_widget_action.setShortcut("Ctrl+W")
+        add_widget_action.triggered.connect(self.open_add_widget_dialog)
+        
+        remove_widget_action = QAction("Remove Widget...", self)
+        remove_widget_action.setShortcut("Ctrl+Shift+W")
+        remove_widget_action.triggered.connect(self.remove_selected_display)
+        
+        edit_menu.addAction(manage_params_action)
+        edit_menu.addAction(add_widget_action)
+        edit_menu.addAction(remove_widget_action)
+        
+        # Filters menu with submenus
+        add_filter_menu = filters_menu.addMenu("Add Filter to Parameter")
+        
+        moving_avg_menu = add_filter_menu.addMenu("Moving Average")
+        low_pass_menu = add_filter_menu.addMenu("Low Pass")
+        kalman_menu = add_filter_menu.addMenu("Kalman")
+        median_menu = add_filter_menu.addMenu("Median")
+        
+        self.filter_submenus = {
+            'moving_average': moving_avg_menu,
+            'low_pass': low_pass_menu,
+            'kalman': kalman_menu,
+            'median': median_menu
+        }
+        
+        self.update_filter_menus()
+        
+        filters_menu.addSeparator()
+        manage_filters_action = QAction("Manage Filters...", self)
+        manage_filters_action.setShortcut("Ctrl+F")
+        manage_filters_action.triggered.connect(self.open_manage_filters_dialog)
+        filters_menu.addAction(manage_filters_action)
+        
+        filters_menu.addSeparator()
+        import_filter_action = QAction("Import Custom Filter...", self)
+        import_filter_action.triggered.connect(self.import_custom_filter)
+        filters_menu.addAction(import_filter_action)
+        
+        # Data logging menu with shortcuts
         logging_menu = menubar.addMenu("Data Logging")
-        config_logging_action = QAction("Configure Logging...", self); config_logging_action.triggered.connect(self.open_logging_config)
-        start_logging_action = QAction("Start Logging", self); start_logging_action.triggered.connect(self.start_logging)
-        stop_logging_action = QAction("Stop Logging", self); stop_logging_action.triggered.connect(self.stop_logging)
-        logging_menu.addAction(config_logging_action); logging_menu.addAction(start_logging_action); logging_menu.addAction(stop_logging_action)
+        
+        config_logging_action = QAction("Configure Logging...", self)
+        config_logging_action.setShortcut("Ctrl+L")
+        config_logging_action.triggered.connect(self.open_logging_config)
+        
+        start_logging_action = QAction("Start Logging", self)
+        start_logging_action.setShortcut("Ctrl+Shift+L")
+        start_logging_action.triggered.connect(self.start_logging)
+        
+        stop_logging_action = QAction("Stop Logging", self)
+        stop_logging_action.setShortcut("Ctrl+Alt+L")
+        stop_logging_action.triggered.connect(self.stop_logging)
+        
+        logging_menu.addAction(config_logging_action)
+        logging_menu.addAction(start_logging_action)
+        logging_menu.addAction(stop_logging_action)
 
-        add_tab_action = QAction("Add Tab", self); add_tab_action.triggered.connect(lambda: self.add_new_tab())
-        rename_tab_action = QAction("Rename Current Tab", self); rename_tab_action.triggered.connect(self.rename_current_tab)
-        raw_tlm_action = QAction("Raw Telemetry Monitor...", self); raw_tlm_action.triggered.connect(self.open_raw_telemetry_monitor)
-        view_menu.addAction(add_tab_action); view_menu.addAction(rename_tab_action); view_menu.addSeparator(); view_menu.addAction(raw_tlm_action)
+        # View menu with shortcuts
+        add_tab_action = QAction("Add Tab", self)
+        add_tab_action.setShortcut("Ctrl+T")
+        add_tab_action.triggered.connect(lambda: self.add_new_tab())
+        
+        rename_tab_action = QAction("Rename Current Tab", self)
+        rename_tab_action.setShortcut("Ctrl+R")
+        rename_tab_action.triggered.connect(self.rename_current_tab)
+        
+        raw_tlm_action = QAction("Raw Telemetry Monitor...", self)
+        raw_tlm_action.setShortcut("Ctrl+M")
+        raw_tlm_action.triggered.connect(self.open_raw_telemetry_monitor)
+        
+        # NEW: Pause/Resume shortcut
+        pause_action = QAction("Pause/Resume Stream", self)
+        pause_action.setShortcut("Space")
+        pause_action.triggered.connect(self.toggle_pause_stream)
+        
+        view_menu.addAction(add_tab_action)
+        view_menu.addAction(rename_tab_action)
+        view_menu.addSeparator()
+        view_menu.addAction(raw_tlm_action)
+        view_menu.addSeparator()
+        view_menu.addAction(pause_action)
 
+        # Help menu
         help_menu = menubar.addMenu("Help")
-        documentation_action = QAction("Documentation", self); documentation_action.triggered.connect(self.show_documentation)
-        about_action = QAction("About", self); about_action.triggered.connect(self.show_about_dialog)
+        
+        documentation_action = QAction("Documentation", self)
+        documentation_action.setShortcut("F1")
+        documentation_action.triggered.connect(self.show_documentation)
+        
+        about_action = QAction("About", self)
+        about_action.triggered.connect(self.show_about_dialog)
+        
         help_menu.addAction(documentation_action)
         help_menu.addAction(about_action)
 
+    def _build_welcome_menu_bar(self):
+        """Build minimal menu bar for welcome screen"""
+        menubar = self.menuBar()
+        menubar.clear()  # Clear existing menus
+        
+        # File menu - minimal options
+        file_menu = menubar.addMenu("File")
+        
+        new_action = QAction("New Dashboard", self)
+        new_action.setShortcut("Ctrl+N")
+        new_action.triggered.connect(lambda: self.show_phase("setup"))
+        
+        load_action = QAction("Load Project...", self)
+        load_action.setShortcut("Ctrl+O")
+        load_action.triggered.connect(self._load_project_from_welcome)
+        
+        exit_action = QAction("Exit", self)
+        exit_action.setShortcut("Ctrl+Q")
+        exit_action.triggered.connect(self.close)
+        
+        file_menu.addAction(new_action)
+        file_menu.addAction(load_action)
+        file_menu.addSeparator()
+        file_menu.addAction(exit_action)
+        
+        # Help menu
+        help_menu = menubar.addMenu("Help")
+        
+        documentation_action = QAction("Documentation", self)
+        documentation_action.setShortcut("F1")
+        documentation_action.triggered.connect(self.show_documentation)
+        
+        about_action = QAction("About", self)
+        about_action.triggered.connect(self.show_about_dialog)
+        
+        help_menu.addAction(documentation_action)
+        help_menu.addAction(about_action)
+
+    def _load_project_from_welcome(self):
+        """Load project from welcome screen and navigate to dashboard"""
+        self.load_project()
+        # Only switch to dashboard if a project was actually loaded
+        if self.parameters or self.tab_widget.count() > 0:
+            self.show_phase("dashboard")
+
     def show_documentation(self):
-        """Show the documentation in a viewer window"""
-        # Check if documentation exists
-        doc_path = os.path.join("docs", "index.html")
-        
-        if not os.path.exists(doc_path):
-            QMessageBox.warning(
-                self, 
-                "Documentation Not Found", 
-                f"Documentation file not found at:\n{doc_path}\n\n"
-                "Please ensure the Documentation folder exists and contains index.html"
-            )
-            return
-        
-        # Create documentation viewer dialog
-        doc_dialog = QDialog(self)
-        doc_dialog.setWindowTitle("Glance Documentation")
-        doc_dialog.setMinimumSize(1000, 700)
-        
-        layout = QVBoxLayout(doc_dialog)
-        layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(0)  # Remove spacing between widgets
+        """Show the documentation from web with loading animation"""
+        doc_url = "https://glance.teamignition.space/"
         
         # Try to use QWebEngineView if available
         try:
             from PySide6.QtWebEngineWidgets import QWebEngineView
-            from PySide6.QtCore import QUrl
+            from PySide6.QtCore import QUrl, QTimer
+            from PySide6.QtWidgets import QStackedWidget
             
+            # Create documentation viewer dialog
+            doc_dialog = QDialog(self)
+            doc_dialog.setWindowTitle("Glance Documentation")
+            doc_dialog.setMinimumSize(1000, 700)
+            
+            layout = QVBoxLayout(doc_dialog)
+            layout.setContentsMargins(0, 0, 0, 0)
+            layout.setSpacing(0)
+            
+            # Create a stacked widget to switch between loading and content
+            stack = QStackedWidget()
+            
+            # Loading screen
+            loading_widget = QWidget()
+            loading_widget.setStyleSheet("background-color: #1a1a1a;")
+            loading_layout = QVBoxLayout(loading_widget)
+            loading_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            
+            # Loading animation container
+            loading_container = QWidget()
+            loading_container.setFixedSize(200, 250)
+            loading_inner_layout = QVBoxLayout(loading_container)
+            loading_inner_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            loading_inner_layout.setSpacing(20)
+            
+            # Animated spinner
+            spinner_label = QLabel("⬢")
+            spinner_label.setStyleSheet("color: #4a9eff; font-size: 64px; font-weight: bold;")
+            spinner_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            
+            # Loading text
+            loading_text = QLabel("Loading Documentation...")
+            loading_text.setStyleSheet("color: #e8e8e8; font-size: 16px; font-weight: 500;")
+            loading_text.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            
+            # Progress dots
+            progress_dots = QLabel("●")
+            progress_dots.setStyleSheet("color: #4a9eff; font-size: 14px;")
+            progress_dots.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            
+            loading_inner_layout.addWidget(spinner_label)
+            loading_inner_layout.addWidget(loading_text)
+            loading_inner_layout.addWidget(progress_dots)
+            
+            loading_layout.addWidget(loading_container)
+            
+            # Web view
             web_view = QWebEngineView()
-            web_view.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)  # Make it expand
+            web_view.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
             
-            # Load the documentation
-            abs_path = os.path.abspath(doc_path)
-            web_view.setUrl(QUrl.fromLocalFile(abs_path))
+            # Add both to stack
+            stack.addWidget(loading_widget)
+            stack.addWidget(web_view)
+            stack.setCurrentIndex(0)
             
-            layout.addWidget(web_view, 1)  # Add stretch factor of 1 to make it fill space
+            layout.addWidget(stack, 1)
+            
+            # Store timers
+            spinner_timer = QTimer(doc_dialog)
+            timeout_timer = QTimer(doc_dialog)
+            timeout_timer.setSingleShot(True)
+            
+            # Track if loaded
+            is_loaded = [False]
+            
+            # Animate loading spinner
+            rotation_angle = [0]
+            dot_state = [0]
+            
+            def animate_spinner():
+                rotation_angle[0] = (rotation_angle[0] + 30) % 360
+                spinners = ["⬡", "⬢", "⬣", "⬢"]
+                spinner_label.setText(spinners[(rotation_angle[0] // 30) % len(spinners)])
+                dot_state[0] = (dot_state[0] + 1) % 4
+                dots = "●" * (dot_state[0] + 1) + "○" * (3 - dot_state[0])
+                progress_dots.setText(dots)
+            
+            spinner_timer.timeout.connect(animate_spinner)
+            spinner_timer.start(100)
+            
+            def switch_to_content():
+                if not is_loaded[0]:
+                    is_loaded[0] = True
+                    spinner_timer.stop()
+                    timeout_timer.stop()
+                    stack.setCurrentIndex(1)
+            
+            def on_load_finished(success):
+                print(f"Load finished: {success}")  # Debug
+                switch_to_content()
+            
+            def on_load_progress(progress):
+                print(f"Load progress: {progress}%")  # Debug
+                if progress == 100:
+                    switch_to_content()
+            
+            def on_timeout():
+                print("Timeout - forcing switch")  # Debug
+                if not is_loaded[0]:
+                    # Try to switch anyway after timeout
+                    switch_to_content()
+            
+            # Connect signals
+            web_view.loadFinished.connect(on_load_finished)
+            web_view.loadProgress.connect(on_load_progress)
+            timeout_timer.timeout.connect(on_timeout)
+            
+            # Start timeout (10 seconds)
+            timeout_timer.start(5000)
+            
+            # Load URL
+            print(f"Loading: {doc_url}")  # Debug
+            web_view.load(QUrl(doc_url))
             
             # Add close button at bottom
             button_container = QWidget()
@@ -3049,74 +3843,50 @@ class MainWindow(QMainWindow):
             button_layout = QHBoxLayout(button_container)
             button_layout.setContentsMargins(12, 8, 12, 8)
             
+            # Add "Open in Browser" button
+            browser_btn = QPushButton("Open in Browser")
+            browser_btn.clicked.connect(lambda: webbrowser.open(doc_url))
+            
             close_btn = QPushButton("Close")
             close_btn.setMinimumWidth(100)
             close_btn.clicked.connect(doc_dialog.accept)
             
+            button_layout.addWidget(browser_btn)
             button_layout.addStretch()
             button_layout.addWidget(close_btn)
-            button_layout.addStretch()
             
-            layout.addWidget(button_container, 0)  # No stretch, fixed height
+            layout.addWidget(button_container, 0)
+            
+            doc_dialog.setStyleSheet("""
+                QDialog { background-color: #1e1e1e; }
+                QPushButton {
+                    background-color: #2a2a2a;
+                    border: 1px solid #404040;
+                    border-radius: 5px;
+                    padding: 8px 16px;
+                    color: #e8e8e8;
+                    font-weight: 500;
+                }
+                QPushButton:hover {
+                    background-color: #383838;
+                    border-color: #4a9eff;
+                }
+            """)
+            
+            doc_dialog.exec()
             
         except ImportError:
-            # Fallback: Show message with option to open in browser
-            msg_container = QWidget()
-            msg_container.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
-            msg_layout = QVBoxLayout(msg_container)
-            msg_layout.setContentsMargins(40, 40, 40, 40)
-            msg_layout.setSpacing(20)
-            
-            info_label = QLabel(
-                "<h3>Documentation Viewer</h3>"
-                "<p>The built-in documentation viewer requires PySide6-WebEngine.</p>"
-                "<p>You can:</p>"
-                "<ul>"
-                "<li>Install it with: <code>pip install PySide6-WebEngine</code></li>"
-                "<li>Or open the documentation in your web browser</li>"
-                "</ul>"
+            reply = QMessageBox.question(
+                self, 
+                "Open Documentation", 
+                f"The built-in documentation viewer requires PySide6-WebEngine.\n\n"
+                f"Would you like to open the documentation in your web browser instead?\n\n"
+                f"URL: {doc_url}",
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
             )
-            info_label.setWordWrap(True)
-            msg_layout.addWidget(info_label)
-            msg_layout.addStretch()
             
-            button_layout = QHBoxLayout()
-            browser_btn = QPushButton("Open in Browser")
-            browser_btn.clicked.connect(lambda: self.open_documentation_in_browser(doc_path))
-            close_btn = QPushButton("Close")
-            close_btn.clicked.connect(doc_dialog.accept)
-            
-            button_layout.addStretch()
-            button_layout.addWidget(browser_btn)
-            button_layout.addWidget(close_btn)
-            button_layout.addStretch()
-            
-            msg_layout.addLayout(button_layout)
-            
-            layout.addWidget(msg_container, 1)
-        
-        doc_dialog.setStyleSheet("""
-            QDialog {
-                background-color: #1e1e1e;
-            }
-            QPushButton {
-                background-color: #2a2a2a;
-                border: 1px solid #404040;
-                border-radius: 5px;
-                padding: 8px 16px;
-                color: #e8e8e8;
-                font-weight: 500;
-            }
-            QPushButton:hover {
-                background-color: #383838;
-                border-color: #4a9eff;
-            }
-            QLabel {
-                color: #e8e8e8;
-            }
-        """)
-        
-        doc_dialog.exec()
+            if reply == QMessageBox.StandardButton.Yes:
+                webbrowser.open(doc_url)
 
     def open_documentation_in_browser(self, doc_path):
         """Open documentation in default web browser"""
@@ -3135,13 +3905,12 @@ class MainWindow(QMainWindow):
             self.raw_tlm_monitor.activateWindow()
     
     def show_about_dialog(self):
-        """Display the About dialog with comprehensive team and project information"""
+        """Display the About dialog with modern bento grid layout"""
         
         dialog = QDialog(self)
         dialog.setWindowTitle("About Glance")
-        dialog.setFixedSize(650, 700)
+        dialog.setFixedSize(850, 680)
         
-        # Modern professional styling with excellent contrast
         dialog.setStyleSheet("""
             QDialog {
                 background-color: #1a1a1a;
@@ -3149,11 +3918,41 @@ class MainWindow(QMainWindow):
             QLabel {
                 color: #e8e8e8;
             }
-            QLabel#sectionHeader {
+            QFrame#bentoCard {
+                background-color: #252526;
+                border: 1px solid #333333;
+                border-radius: 8px;
+                padding: 16px;
+            }
+            QFrame#bentoCard:hover {
+                background-color: #2a2a2a;
+                border-color: #4a9eff;
+            }
+            QFrame#primaryCard {
+                background: qlineargradient(x1:0, y1:0, x2:1, y2:1,
+                    stop:0 #1565c0, stop:1 #1976d2);
+                border: 1px solid #2196f3;
+                border-radius: 8px;
+                padding: 20px;
+            }
+            QLabel#cardTitle {
                 color: #ffffff;
                 font-weight: 600;
                 font-size: 13px;
-                padding: 8px 0 4px 0;
+                margin-bottom: 6px;
+            }
+            QLabel#cardContent {
+                color: #d0d0d0;
+                font-size: 11px;
+                line-height: 1.5;
+            }
+            QLabel#linkLabel {
+                color: #4a9eff;
+                font-size: 11px;
+                padding: 4px 0;
+            }
+            QLabel#linkLabel:hover {
+                color: #6bb3ff;
             }
             QLabel a {
                 color: #4a9eff;
@@ -3161,21 +3960,9 @@ class MainWindow(QMainWindow):
             }
             QLabel a:hover {
                 color: #6bb3ff;
-                text-decoration: underline;
-            }
-            QFrame#separator {
-                background-color: #3a3a3a;
-                max-height: 1px;
-                min-height: 1px;
-            }
-            QFrame#card {
-                background-color: #242424;
-                border: 1px solid #333333;
-                border-radius: 6px;
-                padding: 12px;
             }
             QPushButton {
-                background-color: #2d2d2d;
+                background-color: #2a2a2a;
                 border: 1px solid #404040;
                 border-radius: 5px;
                 padding: 9px 20px;
@@ -3184,11 +3971,8 @@ class MainWindow(QMainWindow):
                 font-weight: 500;
             }
             QPushButton:hover {
-                background-color: #383838;
+                background-color: #333333;
                 border-color: #4a9eff;
-            }
-            QPushButton:pressed {
-                background-color: #252525;
             }
             QScrollArea {
                 border: none;
@@ -3196,21 +3980,18 @@ class MainWindow(QMainWindow):
             }
             QScrollBar:vertical {
                 background: #2a2a2a;
-                width: 10px;
-                border-radius: 5px;
+                width: 8px;
+                border-radius: 4px;
             }
             QScrollBar::handle:vertical {
                 background: #4a4a4a;
-                border-radius: 5px;
-            }
-            QScrollBar::handle:vertical:hover {
-                background: #5a5a5a;
+                border-radius: 4px;
             }
         """)
         
-        layout = QVBoxLayout()
-        layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(0)
+        main_layout = QVBoxLayout(dialog)
+        main_layout.setContentsMargins(0, 0, 0, 0)
+        main_layout.setSpacing(0)
         
         # Scrollable content
         from PySide6.QtWidgets import QScrollArea
@@ -3220,169 +4001,214 @@ class MainWindow(QMainWindow):
         
         content = QWidget()
         content_layout = QVBoxLayout(content)
-        content_layout.setContentsMargins(32, 28, 32, 28)
-        content_layout.setSpacing(20)
+        content_layout.setContentsMargins(24, 24, 24, 24)
+        content_layout.setSpacing(16)
         
-        # Logo and title section
-        logo_label = QLabel()
+        # Top row: Both logos + Title
+        header_card = QFrame()
+        header_card.setObjectName("primaryCard")
+        header_card.setMinimumHeight(120)
+        header_layout = QHBoxLayout(header_card)
+        header_layout.setSpacing(20)
+        
+        # Logos container
+        logos_layout = QVBoxLayout()
+        logos_layout.setSpacing(12)
+        
+        # Glance logo placeholder (if you have one)
+        glance_logo = QLabel()
+        Glogo_path = os.path.join("docs/public", "Glance_nobg _jl.png")
+        if os.path.exists(Glogo_path):
+            pixmap = QPixmap(Glogo_path)
+            scaled_pixmap = pixmap.scaled(50, 50, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation)
+            glance_logo.setPixmap(scaled_pixmap)
+        else:
+            glance_logo.setText("Glance")
+            glance_logo.setStyleSheet("color: #ffffff; font-size: 14px; font-weight: bold;")
+        glance_logo.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        
+        # Team Ignition logo
+        team_logo = QLabel()
         logo_path = os.path.join("docs/public", "ign_logo_wht.png")
         if os.path.exists(logo_path):
             pixmap = QPixmap(logo_path)
-            scaled_pixmap = pixmap.scaled(100, 100, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation)
-            logo_label.setPixmap(scaled_pixmap)
+            scaled_pixmap = pixmap.scaled(50, 50, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation)
+            team_logo.setPixmap(scaled_pixmap)
         else:
-            logo_label.setText("IGNITION")
-            font = QFont("Arial", 24, QFont.Weight.Bold)
-            logo_label.setFont(font)
-            logo_label.setStyleSheet("color: #4a9eff;")
-        logo_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        content_layout.addWidget(logo_label)
+            team_logo.setText("IGN")
+            team_logo.setStyleSheet("color: #ffffff; font-size: 14px; font-weight: bold;")
+        team_logo.setAlignment(Qt.AlignmentFlag.AlignCenter)
         
-        app_name = QLabel("Glance")
-        app_name.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        app_name.setFont(QFont("Arial", 20, QFont.Weight.Bold))
-        app_name.setStyleSheet("color: #ffffff; padding: 8px 0;")
-        content_layout.addWidget(app_name)
+        logos_layout.addWidget(glance_logo)
+        logos_layout.addWidget(team_logo)
+        
+        # Title and description
+        text_layout = QVBoxLayout()
+        text_layout.setSpacing(8)
+        
+        title_label = QLabel("Glance")
+        title_label.setFont(QFont("Arial", 22, QFont.Weight.Bold))
+        title_label.setStyleSheet("color: #ffffff;")
+        
+        subtitle_label = QLabel("A professional telemetry dashboard software by Team Ignition")
+        subtitle_label.setFont(QFont("Arial", 12))
+        subtitle_label.setStyleSheet("color: rgba(255,255,255,0.85);")
+        subtitle_label.setWordWrap(True)
         
         version_label = QLabel("Version 2.0.0")
-        version_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         version_label.setFont(QFont("Arial", 10))
-        version_label.setStyleSheet("color: #9a9a9a; padding-bottom: 4px;")
-        content_layout.addWidget(version_label)
+        version_label.setStyleSheet("color: rgba(255,255,255,0.6);")
         
-        # Description
-        desc = QLabel("Professional real-time telemetry visualization and monitoring platform for aerospace applications, embedded systems, and data acquisition.")
-        desc.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        desc.setWordWrap(True)
-        desc.setFont(QFont("Arial", 10))
-        desc.setStyleSheet("color: #b8b8b8; line-height: 1.5; padding: 0 16px;")
-        content_layout.addWidget(desc)
+        desc_label = QLabel("Real-time telemetry visualization platform for aerospace applications, embedded systems, and data acquisition.")
+        desc_label.setFont(QFont("Arial", 10))
+        desc_label.setStyleSheet("color: rgba(255,255,255,0.75);")
+        desc_label.setWordWrap(True)
         
-        content_layout.addSpacing(12)
+        text_layout.addWidget(title_label)
+        text_layout.addWidget(subtitle_label)
+        text_layout.addWidget(version_label)
+        text_layout.addSpacing(6)
+        text_layout.addWidget(desc_label)
+        text_layout.addStretch()
         
-        # Team Ignition section
-        team_header = QLabel("About Team Ignition")
-        team_header.setObjectName("sectionHeader")
-        content_layout.addWidget(team_header)
+        header_layout.addLayout(logos_layout)
+        header_layout.addLayout(text_layout, 1)
         
-        team_card = QFrame()
-        team_card.setObjectName("card")
-        team_layout = QVBoxLayout(team_card)
-        team_layout.setContentsMargins(12, 12, 12, 12)
-        team_layout.setSpacing(8)
+        content_layout.addWidget(header_card)
         
-        team_info = QLabel(
-            "Official student rocketry team of <b>Vellore Institute of Technology, Chennai</b>. "
-            "We design, build, and launch experimental rockets while developing all subsystems in-house — "
-            "from propulsion and avionics to recovery systems and ground support equipment."
+        # Second row: Links with icons
+        links_row = QHBoxLayout()
+        links_row.setSpacing(16)
+        
+        # Resources card
+        resources_card = QFrame()
+        resources_card.setObjectName("bentoCard")
+        resources_card.setMinimumHeight(150)
+        resources_layout = QVBoxLayout(resources_card)
+        resources_layout.setSpacing(10)
+        
+        resources_title = QLabel("Resources")
+        resources_title.setObjectName("cardTitle")
+        resources_layout.addWidget(resources_title)
+        
+        def create_icon_link(icon, text, url):
+            link_layout = QHBoxLayout()
+            link_layout.setSpacing(8)
+            icon_label = QLabel(icon)
+            icon_label.setStyleSheet("color: #4a9eff; font-size: 14px; min-width: 20px;")
+            link_label = QLabel(f'<a href="{url}">{text}</a>')
+            link_label.setOpenExternalLinks(True)
+            link_label.setObjectName("linkLabel")
+            link_layout.addWidget(icon_label)
+            link_layout.addWidget(link_label)
+            link_layout.addStretch()
+            return link_layout
+        
+        resources_layout.addLayout(create_icon_link("▸", "GitHub Repository", "https://github.com/teamignitionvitc/Glance"))
+        resources_layout.addLayout(create_icon_link("▸", "Documentation", "https://glance.teamignition.space/"))
+        resources_layout.addLayout(create_icon_link("▸", "Team Website", "https://teamignition.space"))
+        resources_layout.addLayout(create_icon_link("▸", "Report Issues", "https://github.com/teamignitionvitc/Glance/issues"))
+        resources_layout.addStretch()
+        
+        # Social card
+        social_card = QFrame()
+        social_card.setObjectName("bentoCard")
+        social_card.setMinimumHeight(150)
+        social_layout = QVBoxLayout(social_card)
+        social_layout.setSpacing(10)
+        
+        social_title = QLabel("Connect")
+        social_title.setObjectName("cardTitle")
+        social_layout.addWidget(social_title)
+        
+        social_layout.addLayout(create_icon_link("◆", "Twitter / X", "https://x.com/ignitiontech23"))
+        social_layout.addLayout(create_icon_link("◆", "LinkedIn", "https://www.linkedin.com/in/teamignition/"))
+        social_layout.addLayout(create_icon_link("◆", "Instagram", "https://www.instagram.com/ignition_vitc"))
+        social_layout.addStretch()
+        
+        links_row.addWidget(resources_card)
+        links_row.addWidget(social_card)
+        
+        content_layout.addLayout(links_row)
+        
+        # Third row: Info cards
+        info_row = QHBoxLayout()
+        info_row.setSpacing(16)
+        
+        # About card
+        about_card = QFrame()
+        about_card.setObjectName("bentoCard")
+        about_card.setMinimumHeight(130)
+        about_layout = QVBoxLayout(about_card)
+        about_layout.setSpacing(8)
+        
+        about_title = QLabel("About Team")
+        about_title.setObjectName("cardTitle")
+        about_layout.addWidget(about_title)
+        
+        about_content = QLabel(
+            "Student rocketry team at VIT Chennai. We design, build, and launch experimental rockets with all subsystems developed in-house."
         )
-        team_info.setWordWrap(True)
-        team_info.setFont(QFont("Arial", 10))
-        team_info.setStyleSheet("color: #d0d0d0; line-height: 1.5;")
-        team_layout.addWidget(team_info)
+        about_content.setObjectName("cardContent")
+        about_content.setWordWrap(True)
+        about_layout.addWidget(about_content)
+        about_layout.addStretch()
         
-        content_layout.addWidget(team_card)
-        content_layout.addSpacing(8)
+        # Features card
+        features_card = QFrame()
+        features_card.setObjectName("bentoCard")
+        features_card.setMinimumHeight(130)
+        features_layout = QVBoxLayout(features_card)
+        features_layout.setSpacing(8)
         
-        # Links section
-        links_header = QLabel("Resources & Community")
-        links_header.setObjectName("sectionHeader")
-        content_layout.addWidget(links_header)
+        features_title = QLabel("Key Features")
+        features_title.setObjectName("cardTitle")
+        features_layout.addWidget(features_title)
         
-        links_card = QFrame()
-        links_card.setObjectName("card")
-        links_layout = QVBoxLayout(links_card)
-        links_layout.setContentsMargins(12, 10, 12, 10)
-        links_layout.setSpacing(10)
-        
-        def create_link(icon, text, url):
-            row = QHBoxLayout()
-            row.setSpacing(12)
-            icon_lbl = QLabel(icon)
-            icon_lbl.setFixedWidth(24)
-            icon_lbl.setFont(QFont("Arial", 14))
-            icon_lbl.setStyleSheet("color: #e8e8e8;")
-            link_lbl = QLabel(f'<a href="{url}">{text}</a>')
-            link_lbl.setOpenExternalLinks(True)
-            link_lbl.setFont(QFont("Arial", 10))
-            row.addWidget(icon_lbl)
-            row.addWidget(link_lbl)
-            row.addStretch()
-            return row
-        
-        links_layout.addLayout(create_link("📦", "GitHub Repository", "https://github.com/teamignitionvitc/Glance"))
-        links_layout.addLayout(create_link("📖", "Documentation", "https://glance.teamignition.space/"))
-        links_layout.addLayout(create_link("🌐", "Team Website", "https://teamignition.space"))
-        links_layout.addLayout(create_link("🐛", "Report Issues", "https://github.com/teamignitionvitc/Glance/issues"))
-        
-        content_layout.addWidget(links_card)
-        content_layout.addSpacing(8)
-        
-        # Contributing section
-        contrib_header = QLabel("Contributing")
-        contrib_header.setObjectName("sectionHeader")
-        content_layout.addWidget(contrib_header)
-        
-        contrib_card = QFrame()
-        contrib_card.setObjectName("card")
-        contrib_layout = QVBoxLayout(contrib_card)
-        contrib_layout.setContentsMargins(12, 12, 12, 12)
-        contrib_layout.setSpacing(8)
-        
-        contrib_text = QLabel(
-            "We welcome contributions from the community! Whether it's bug fixes, new features, "
-            "documentation improvements, or testing — your help makes this project better.<br><br>"
-            "To contribute: Fork the repository, create a feature branch, commit your changes, "
-            "and submit a pull request. Check our GitHub for contribution guidelines."
+        features_content = QLabel(
+            "▹ Real-time data streaming\n"
+            "▹ Signal filtering (Kalman, Low-pass)\n"
+            "▹ Multi-protocol support\n"
+            "▹ Data logging & export"
         )
-        contrib_text.setWordWrap(True)
-        contrib_text.setFont(QFont("Arial", 10))
-        contrib_text.setStyleSheet("color: #d0d0d0; line-height: 1.5;")
-        contrib_layout.addWidget(contrib_text)
+        features_content.setObjectName("cardContent")
+        features_layout.addWidget(features_content)
+        features_layout.addStretch()
         
-        content_layout.addWidget(contrib_card)
-        content_layout.addSpacing(8)
+        # License card
+        license_card = QFrame()
+        license_card.setObjectName("bentoCard")
+        license_card.setMinimumHeight(130)
+        license_layout = QVBoxLayout(license_card)
+        license_layout.setSpacing(8)
         
-        # Social media
-        social_header = QLabel("Connect With Us")
-        social_header.setObjectName("sectionHeader")
-        content_layout.addWidget(social_header)
+        license_title = QLabel("License")
+        license_title.setObjectName("cardTitle")
+        license_layout.addWidget(license_title)
         
-        social_links = QLabel(
-            '<a href="https://x.com/ignitiontech23">Twitter/X</a>  •  '
-            '<a href="https://www.linkedin.com/in/teamignition/">LinkedIn</a>  •  '
-            '<a href="https://www.instagram.com/ignition_vitc">Instagram</a>'
+        license_content = QLabel(
+            "GNU GPL v3.0 with additional restrictions\n\n"
+            "© 2025 Team Ignition\n"
+            "Software Department"
         )
-        social_links.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        social_links.setOpenExternalLinks(True)
-        social_links.setFont(QFont("Arial", 10))
-        social_links.setStyleSheet("padding: 6px 0;")
-        content_layout.addWidget(social_links)
+        license_content.setObjectName("cardContent")
+        license_layout.addWidget(license_content)
+        license_layout.addStretch()
         
-        content_layout.addSpacing(12)
+        info_row.addWidget(about_card)
+        info_row.addWidget(features_card)
+        info_row.addWidget(license_card)
         
-        # License section
-        license_header = QLabel("License")
-        license_header.setObjectName("sectionHeader")
-        content_layout.addWidget(license_header)
-        
-        license_text = QLabel(
-            "GNU General Public License v3.0 with additional restrictions<br>"
-            "© 2025 Team Ignition Software Department"
-        )
-        license_text.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        license_text.setFont(QFont("Arial", 9))
-        license_text.setStyleSheet("color: #888888; line-height: 1.4;")
-        content_layout.addWidget(license_text)
+        content_layout.addLayout(info_row)
         
         scroll.setWidget(content)
-        layout.addWidget(scroll)
+        main_layout.addWidget(scroll)
         
-        # Close button at bottom
+        # Bottom bar
         button_container = QWidget()
         button_container.setStyleSheet("background-color: #1e1e1e; border-top: 1px solid #2a2a2a;")
         button_layout = QHBoxLayout(button_container)
-        button_layout.setContentsMargins(16, 12, 16, 12)
+        button_layout.setContentsMargins(24, 12, 24, 12)
         
         close_btn = QPushButton("Close")
         close_btn.setMinimumWidth(100)
@@ -3393,9 +4219,8 @@ class MainWindow(QMainWindow):
         button_layout.addWidget(close_btn)
         button_layout.addStretch()
         
-        layout.addWidget(button_container)
+        main_layout.addWidget(button_container)
         
-        dialog.setLayout(layout)
         dialog.exec()
 
     # Convenience wrappers for Source menu
@@ -4254,6 +5079,7 @@ class MainWindow(QMainWindow):
         ]
         
         self.parameters.extend(default_params)
+        self.update_filter_menus()  # NEW: Update menus after adding default params
 
     def open_logging_config(self):
         """Open data logging configuration dialog"""
@@ -4362,6 +5188,18 @@ class MainWindow(QMainWindow):
             self.control_dock.setVisible(is_dashboard)
         if hasattr(self, 'header_dock') and self.header_dock:
             self.header_dock.setVisible(is_dashboard)
+        
+        # NEW: Customize menu bar based on phase
+        is_welcome = (which == "welcome")
+        
+        if is_welcome:
+            # Show minimal menu bar for welcome screen
+            self._build_welcome_menu_bar()
+        else:
+            # Show full menu bar for other phases
+            self._build_menu_bar()
+        
+        self.menuBar().setVisible(True)  # Always show menu bar
         
         # Update status bar visibility
         self.update_status_bar_visibility(which)
