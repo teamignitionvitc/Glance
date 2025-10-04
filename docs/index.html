@@ -41,7 +41,7 @@
             --bg-darker: #1c1c1e;
             --bg-light: #2c2c2e;
             --text-primary: #f5f5f7;
-            --text-secondary: #a1a1a6;
+            --text-secondary: #b0b0b5; /* Improved contrast */
             --border: #3a3a3c;
             --accent: #30d158;
             --warning: #ff9f0a;
@@ -128,6 +128,7 @@
             margin-left: 280px;
             width: calc(100% - 280px);
             padding: 3rem 5rem;
+            transition: filter 0.3s ease;
         }
         main > section { scroll-margin-top: 3rem; }
 
@@ -202,7 +203,7 @@
         .github-link:hover svg { color: white; }
 
         /* Utility & Components */
-        .info-box { background: var(--bg-light); border-left: 4px solid var(--primary); padding: 1rem 1.5rem; margin: 1.5rem 0; border-radius: 0 4px 4px 0; }
+        .info-box { background: var(--bg-light); border-left: 4px solid var(--primary); padding: 1rem 1.5rem; margin: 1.5rem 0; border-radius: 0 4px 4px 0; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
         .info-box.warning { border-color: var(--warning); }
         .info-box.danger { border-color: var(--danger); }
         .info-box.accent { border-color: var(--accent); }
@@ -218,8 +219,20 @@
         .copy-btn svg { width: 16px; height: 16px; vertical-align: middle; transition: transform 0.1s ease; }
         .copy-btn:active svg { transform: scale(0.9); }
 
-        /* Tables */
-        table { width: 100%; border-collapse: collapse; margin: 1.5rem 0; background: var(--bg-darker); border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+        /* Responsive Tables */
+        .table-wrapper {
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            margin: 1.5rem 0;
+        }
+        table { 
+            width: 100%; 
+            min-width: 600px;
+            border-collapse: collapse; 
+            background: var(--bg-darker); 
+        }
         th, td { padding: 0.75rem 1rem; text-align: left; border-bottom: 1px solid var(--border); }
         th { background: #333333; font-weight: 600; }
         tbody tr { transition: background-color 0.2s ease; }
@@ -279,6 +292,7 @@
             font-size: 1.5rem;
             font-weight: 400;
             transition: transform 0.2s ease;
+            transform-origin: center;
         }
         details[open] summary::after {
             transform: rotate(45deg);
@@ -290,7 +304,6 @@
         .details-content p, .details-content ul, .details-content ol {
             max-width: none;
         }
-
 
         /* Footer */
         footer { 
@@ -337,15 +350,58 @@
 
         /* Mobile Responsive Design */
         .mobile-nav-toggle { display: none; }
+        .mobile-nav-toggle .icon-close { display: none; }
+
         @media (max-width: 1024px) {
-            .sidebar { transform: translateX(-100%); position: fixed; box-shadow: 0 0 40px rgba(0,0,0,0.5); }
-            .sidebar.open { transform: translateX(0); }
-            .content { margin-left: 0; width: 100%; padding: 2.5rem 2rem; }
-            .mobile-nav-toggle { display: block; position: fixed; top: 1rem; left: 1rem; z-index: 1001; background: var(--bg-light); border: 1px solid var(--border); border-radius: 8px; padding: 0.75rem; cursor: pointer; }
-            .mobile-nav-toggle .icon { color: var(--text-primary); width: 24px; height: 24px; }
+            body.sidebar-is-open {
+                overflow: hidden; /* Prevent body scroll when menu is open */
+            }
+            body.sidebar-is-open .content,
+            body.sidebar-is-open .github-link {
+                filter: brightness(0.5) blur(2px);
+                pointer-events: none; /* Disable interaction with main content */
+            }
+
+            .sidebar { 
+                transform: translateX(-100%); 
+                position: fixed; 
+                box-shadow: 0 0 40px rgba(0,0,0,0.5); 
+            }
+            .sidebar.open { 
+                transform: translateX(0); 
+            }
+            .content { 
+                margin-left: 0; 
+                width: 100%; 
+                padding: 2.5rem 2rem; 
+            }
+            .mobile-nav-toggle { 
+                display: block; 
+                position: fixed; 
+                top: 1rem; 
+                left: 1rem; 
+                z-index: 1001; 
+                background: var(--bg-light); 
+                border: 1px solid var(--border); 
+                border-radius: 8px; 
+                padding: 0.75rem; 
+                cursor: pointer; 
+                transition: opacity 0.3s ease;
+            }
+            .mobile-nav-toggle .icon { 
+                color: var(--text-primary); 
+                width: 24px; 
+                height: 24px; 
+            }
             h1 { font-size: 2.25rem; }
             h2 { font-size: 1.75rem; }
-            .github-link { top: 1.25rem; right: 1.25rem; width: 44px; height: 44px; }
+            .github-link { 
+                top: 1.25rem; 
+                right: 1.25rem; 
+                width: 44px; 
+                height: 44px; 
+                transition: filter 0.3s ease;
+            }
             .github-link svg { width: 24px; height: 24px; }
             .overview-layout { flex-direction: column; }
         }
@@ -363,7 +419,8 @@
 </head>
 <body>
     <button class="mobile-nav-toggle" id="menu-toggle" aria-label="Toggle navigation">
-         <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16m-7 6h7"></path></svg>
+         <svg class="icon icon-menu" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16m-7 6h7"></path></svg>
+         <svg class="icon icon-close" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
     </button>
     <div class="container">
         <!-- Sidebar Navigation -->
@@ -401,6 +458,8 @@
                     <div class="nav-section-title">Technical Details</div>
                      <a href="#project-file" class="nav-item"><svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path></svg>Project File Structure</a>
                      <a href="#advanced-features" class="nav-item"><svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>Advanced Tools</a>
+                     <a href="#signal-filtering" class="nav-item"><svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path></svg>Signal Filtering</a>
+                    <a href="#keyboard-shortcuts" class="nav-item"><svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"></path></svg>Keyboard Shortcuts</a>
                     <a href="#development" class="nav-item"><svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"></path></svg>Development Guide</a>
                     <a href="#troubleshooting" class="nav-item"><svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>Troubleshooting</a>
                     <a href="#license" class="nav-item"><svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M10 21h7a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v11m0 5l4.879-4.879m0 0a3 3 0 104.243-4.242 3 3 0 00-4.243 4.242z"></path></svg>License</a>
@@ -482,21 +541,23 @@
             
             <section id="requirements">
                 <h2>System Requirements</h2>
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Component</th>
-                            <th>Minimum Requirement</th>
-                            <th>Recommended Specification</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr><td><strong>Operating System</strong></td><td>Windows 10, Ubuntu 20.04+, macOS 10.15+</td><td>Windows 11, Ubuntu 22.04+, macOS 12+</td></tr>
-                        <tr><td><strong>Python Version</strong></td><td>3.8 or higher</td><td>3.10 or higher</td></tr>
-                        <tr><td><strong>RAM</strong></td><td>4 GB</td><td>8 GB or more</td></tr>
-                        <tr><td><strong>Display</strong></td><td>1280x720 resolution</td><td>1920x1080 or higher</td></tr>
-                    </tbody>
-                </table>
+                <div class="table-wrapper">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Component</th>
+                                <th>Minimum Requirement</th>
+                                <th>Recommended Specification</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr><td><strong>Operating System</strong></td><td>Windows 10, Ubuntu 20.04+, macOS 10.15+</td><td>Windows 11, Ubuntu 22.04+, macOS 12+</td></tr>
+                            <tr><td><strong>Python Version</strong></td><td>3.8 or higher</td><td>3.10 or higher</td></tr>
+                            <tr><td><strong>RAM</strong></td><td>4 GB</td><td>8 GB or more</td></tr>
+                            <tr><td><strong>Display</strong></td><td>1280x720 resolution</td><td>1920x1080 or higher</td></tr>
+                        </tbody>
+                    </table>
+                </div>
             </section>
 
             <section id="installation">
@@ -644,17 +705,19 @@ cd Dashboard-Builder</code><button class="copy-btn" title="Copy code"><svg fill=
                      <p><strong>The Array Index is Critical:</strong> This zero-based number tells Glance where to find the data for this parameter in the incoming data packet. An incorrect index is the most common reason for data not appearing on a widget.</p>
                 </div>
                 <h4>Key Parameter Properties:</h4>
-                 <table>
-                    <thead><tr><th>Property</th><th>Description</th></tr></thead>
-                    <tbody>
-                        <tr><td><strong>ID & Name</strong></td><td>A unique programmatic ID (no spaces) and a human-readable display name.</td></tr>
-                        <tr><td><strong>Array Index</strong></td><td>The position (0, 1, 2, etc.) of this parameter's value within the incoming data packet.</td></tr>
-                        <tr><td><strong>Unit</strong></td><td>The measurement unit to display (e.g., °C, m/s², V).</td></tr>
-                        <tr><td><strong>Thresholds</strong></td><td>Four values (Low Critical, Low Warning, High Warning, High Critical) that define alarm states and color-coding in widgets. Must be in ascending order.</td></tr>
-                        <tr><td><strong>Sensor Group</strong></td><td>An optional text field for organizing parameters (e.g., "IMU", "Power System").</td></tr>
-                        <tr><td><strong>Description</strong></td><td>An optional field for more details about the parameter.</td></tr>
-                    </tbody>
-                </table>
+                <div class="table-wrapper">
+                     <table>
+                        <thead><tr><th>Property</th><th>Description</th></tr></thead>
+                        <tbody>
+                            <tr><td><strong>ID & Name</strong></td><td>A unique programmatic ID (no spaces) and a human-readable display name.</td></tr>
+                            <tr><td><strong>Array Index</strong></td><td>The position (0, 1, 2, etc.) of this parameter's value within the incoming data packet.</td></tr>
+                            <tr><td><strong>Unit</strong></td><td>The measurement unit to display (e.g., °C, m/s², V).</td></tr>
+                            <tr><td><strong>Thresholds</strong></td><td>Four values (Low Critical, Low Warning, High Warning, High Critical) that define alarm states and color-coding in widgets. Must be in ascending order.</td></tr>
+                            <tr><td><strong>Sensor Group</strong></td><td>An optional text field for organizing parameters (e.g., "IMU", "Power System").</td></tr>
+                            <tr><td><strong>Description</strong></td><td>An optional field for more details about the parameter.</td></tr>
+                        </tbody>
+                    </table>
+                </div>
             </section>
             
             <section id="widget-library">
@@ -789,6 +852,105 @@ cd Dashboard-Builder</code><button class="copy-btn" title="Copy code"><svg fill=
                  <div class="telemetry-images">
                     <img src="public/Doc Images/RTV.png" alt="Raw Telemetry Monitor showing data stream">
                     <img src="public/Doc Images/Standalone_RTV.png" alt="Controls for the Raw Telemetry Monitor">
+                </div>
+            </section>
+
+            <!-- NEW SECTION: Signal Filtering -->
+            <section id="signal-filtering">
+                <h2>Signal Filtering & Processing</h2>
+                <p>Glance includes a powerful real-time signal filtering system to help you reduce noise, smooth out sensor readings, and remove outliers directly within the application. Filters are applied non-destructively, meaning the raw data is always preserved for logging, while widgets display the cleaned-up, filtered values for clearer visualization.</p>
+                <p>You can manage filters from the main menu under <strong>Filters</strong>. You can add a new filter to any defined parameter or open the <strong>Manage Filters</strong> dialog to view, enable/disable, or remove all active filters for all parameters.</p>
+                
+                <h3>Available Filter Types</h3>
+                <p>Each filter is designed for a specific purpose. You can even chain multiple filters on a single parameter for advanced processing.</p>
+                <div class="table-wrapper">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Filter Type</th>
+                                <th>Best For</th>
+                                <th>Description & Key Parameter(s)</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><strong>Moving Average</strong></td>
+                                <td>General purpose smoothing</td>
+                                <td>A simple filter that smooths data by averaging the last 'N' data points. It's effective for reducing random noise but can introduce a slight lag.
+                                <ul><li><code>Window Size</code>: The number of recent data points (N) to include in the average. A larger window provides more smoothing.</li></ul>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td><strong>Low Pass Filter</strong></td>
+                                <td>Continuous smoothing</td>
+                                <td>An efficient exponential moving average (EMA) that gives more weight to recent data points. It provides very smooth output and is great for signals that don't change abruptly.
+                                <ul><li><code>Alpha (α)</code>: The smoothing factor from 0.01 to 1.0. A <strong>lower</strong> value results in more smoothing but a slower response to real changes in the signal.</li></ul>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td><strong>Median Filter</strong></td>
+                                <td>Removing outliers & spikes</td>
+                                <td>This filter is excellent for removing sharp, short-duration spikes (outliers) from a signal. It works by replacing each data point with the median value of its neighbors, effectively ignoring extreme, isolated values.
+                                <ul><li><code>Window Size</code>: The number of points to consider for the median calculation. An odd number (e.g., 3, 5, 7) is recommended.</li></ul>
+                               </td>
+                            </tr>
+                             <tr>
+                                <td><strong>Kalman Filter</strong></td>
+                                <td>Noisy sensors</td>
+                                <td>An advanced, adaptive filter ideal for noisy sensors. It works by predicting the next state of the system and then correcting its prediction based on the actual measurement. It's highly effective at producing a smooth, accurate estimate from an erratic signal.
+                                <ul>
+                                    <li><code>Process Variance (Q)</code>: How much you expect the signal to change between readings. A higher value means the filter adapts more quickly.</li>
+                                    <li><code>Measurement Variance (R)</code>: How much noise you expect in your sensor readings. A higher value means you trust the measurements less.</li>
+                                </ul>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- NEW SECTION: Keyboard Shortcuts -->
+            <section id="keyboard-shortcuts">
+                <h2>Keyboard Shortcuts</h2>
+                <p>Boost your productivity with these keyboard shortcuts available throughout the application.</p>
+                <div class="table-wrapper">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Action</th>
+                                <th>Shortcut</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr><th colspan="2">File Operations</th></tr>
+                            <tr><td>New Dashboard</td><td><code>Ctrl + N</code></td></tr>
+                            <tr><td>Load Project</td><td><code>Ctrl + O</code></td></tr>
+                            <tr><td>Save Project</td><td><code>Ctrl + S</code></td></tr>
+                            <tr><td>Save Project As</td><td><code>Ctrl + Shift + S</code></td></tr>
+                            <tr><td>Connection Settings</td><td><code>Ctrl + Shift + C</code></td></tr>
+                            <tr><td>Exit Application</td><td><code>Ctrl + Q</code></td></tr>
+                            
+                            <tr><th colspan="2">Editing & Configuration</th></tr>
+                            <tr><td>Manage Parameters</td><td><code>Ctrl + P</code></td></tr>
+                            <tr><td>Add Widget</td><td><code>Ctrl + W</code></td></tr>
+                            <tr><td>Remove Widget</td><td><code>Ctrl + Shift + W</code></td></tr>
+                            
+                            <tr><th colspan="2">View & Navigation</th></tr>
+                            <tr><td>Add New Tab</td><td><code>Ctrl + T</code></td></tr>
+                            <tr><td>Rename Current Tab</td><td><code>Ctrl + R</code></td></tr>
+                            <tr><td>Raw Telemetry Monitor</td><td><code>Ctrl + M</code></td></tr>
+                            <tr><td>Pause / Resume Stream</td><td><code>Spacebar</code></td></tr>
+                            
+                            <tr><th colspan="2">Data & Filters</th></tr>
+                            <tr><td>Configure Data Logging</td><td><code>Ctrl + L</code></td></tr>
+                            <tr><td>Start Data Logging</td><td><code>Ctrl + Shift + L</code></td></tr>
+                            <tr><td>Stop Data Logging</td><td><code>Ctrl + Alt + L</code></td></tr>
+                            <tr><td>Manage Filters</td><td><code>Ctrl + F</code></td></tr>
+
+                            <tr><th colspan="2">Help</th></tr>
+                            <tr><td>Open Documentation</td><td><code>F1</code></td></tr>
+                        </tbody>
+                    </table>
                 </div>
             </section>
 
@@ -1034,15 +1196,35 @@ main.py
             const menuToggle = document.getElementById('menu-toggle');
             const sidebar = document.getElementById('sidebar');
             const content = document.querySelector('.content');
+            const menuIcon = menuToggle.querySelector('.icon-menu');
+            const closeIcon = menuToggle.querySelector('.icon-close');
 
-            menuToggle.addEventListener('click', () => {
-                sidebar.classList.toggle('open');
+            menuToggle.addEventListener('click', (e) => {
+                e.stopPropagation(); // Prevent this click from immediately closing the menu
+                const isOpen = sidebar.classList.toggle('open');
+                document.body.classList.toggle('sidebar-is-open', isOpen);
+                
+                menuIcon.style.display = isOpen ? 'none' : 'block';
+                closeIcon.style.display = isOpen ? 'block' : 'none';
             });
 
-            // Close sidebar when clicking outside on mobile
-            content.addEventListener('click', () => {
-                if(sidebar.classList.contains('open')) {
+            // Function to close the sidebar
+            const closeSidebar = () => {
+                if (sidebar.classList.contains('open')) {
                     sidebar.classList.remove('open');
+                    document.body.classList.remove('sidebar-is-open');
+                    menuIcon.style.display = 'block';
+                    closeIcon.style.display = 'none';
+                }
+            };
+
+            // Close sidebar when clicking on the dimmed content area or any other body element
+            document.body.addEventListener('click', (e) => {
+                if (document.body.classList.contains('sidebar-is-open')) {
+                    // Check if the click is outside the sidebar and not on the toggle button itself
+                    if (!sidebar.contains(e.target) && !menuToggle.contains(e.target)) {
+                        closeSidebar();
+                    }
                 }
             });
 
@@ -1050,7 +1232,7 @@ main.py
             document.querySelectorAll('.nav-item').forEach(item => {
                 item.addEventListener('click', () => {
                     if (window.innerWidth <= 1024) {
-                        sidebar.classList.remove('open');
+                        closeSidebar();
                     }
                 });
             });
