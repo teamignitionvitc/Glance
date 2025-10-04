@@ -240,11 +240,63 @@
         tr:last-child td { border-bottom: none; }
         td ul { margin: 0 0 0 1rem; }
 
-        /* Cards & Grids */
-        .feature-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.5rem; margin-top: 2rem; }
-        .feature-card { background: var(--bg-light); border: 1px solid var(--border); padding: 1.5rem; border-radius: 8px; transition: transform 0.2s ease, box-shadow 0.2s ease; }
-        .feature-card:hover { transform: translateY(-5px); box-shadow: 0 10px 20px rgba(0,0,0,0.2); }
-        .feature-card h4 { margin-top: 0; }
+        /* --- NEW: Enhanced Feature Grid Styling --- */
+        .feature-grid { 
+            display: grid; 
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); 
+            gap: 1.5rem; 
+            margin-top: 2rem; 
+        }
+        .feature-card { 
+            background: var(--bg-light); 
+            border: 1px solid var(--border); 
+            padding: 1.5rem; 
+            border-radius: 12px; 
+            transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+            display: flex;
+            flex-direction: column;
+        }
+        .feature-card:hover { 
+            transform: translateY(-5px); 
+            box-shadow: 0 10px 30px rgba(0,0,0,0.25);
+            border-color: var(--primary);
+        }
+        .feature-icon {
+            color: var(--primary);
+            margin-bottom: 1rem;
+        }
+        .feature-icon svg {
+            width: 36px;
+            height: 36px;
+        }
+        .feature-card h4 { 
+            margin-top: 0;
+            margin-bottom: 0.5rem;
+            color: var(--text-primary);
+            font-size: 1.2rem;
+            font-weight: 600;
+        }
+        .feature-card p {
+            font-size: 0.95rem;
+            flex-grow: 1;
+        }
+        .card-link {
+            display: inline-block;
+            margin-top: 1rem;
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+        .card-link:hover {
+            text-decoration: none;
+        }
+        .card-link span {
+            transition: transform 0.2s ease;
+            display: inline-block;
+        }
+        .card-link:hover span {
+            transform: translateX(4px);
+        }
+        /* --- End of New Styles --- */
 
         /* Screenshots */
         .screenshot-gallery { display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; margin-top: 2rem; }
@@ -393,6 +445,23 @@
                 width: 24px; 
                 height: 24px; 
             }
+            .sidebar.open + .content + .mobile-nav-toggle,
+            body.sidebar-is-open .mobile-nav-toggle {
+                opacity: 1;
+            }
+            .sidebar-header .app-logo {
+                display: block;
+            }
+            .sidebar.open .mobile-nav-toggle .icon-menu,
+            .sidebar:not(.open) .mobile-nav-toggle .icon-close {
+                display: none;
+            }
+            
+            .sidebar.open .mobile-nav-toggle .icon-close,
+            .sidebar:not(.open) .mobile-nav-toggle .icon-menu {
+                display: block;
+            }
+
             h1 { font-size: 2.25rem; }
             h2 { font-size: 1.75rem; }
             .github-link { 
@@ -426,7 +495,7 @@
         <!-- Sidebar Navigation -->
         <aside class="sidebar" id="sidebar">
             <header class="sidebar-header">
-                <img src="public/Glance_nobg _jl.png" alt="Glance Logo">
+                <img src="public/Glance_nobg _jl.png" alt="Glance Logo" class="app-logo">
                 <div class="title">
                     <h1>Glance</h1>
                     <p>Dashboard Builder</p>
@@ -494,24 +563,63 @@
                 </div>
             </section>
 
+            <!-- UPDATED FEATURES SECTION -->
             <section id="features">
                 <h2>Key Features</h2>
-                 <div class="feature-grid">
+                <div class="feature-grid">
+                    <!-- Card 1: Connectivity -->
                     <div class="feature-card">
-                        <h4>Visualization</h4>
-                        <p>7+ widget types including time-series graphs, gauges, data tables, histograms, LED indicators, and GPS maps. Arrange them using a flexible drag-and-drop, multi-tab interface.</p>
+                        <div class="feature-icon">
+                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.111 16.404a5.5 5.5 0 017.778 0M12 20h.01m-7.08-7.071a10 10 0 0114.142 0M1.394 8.532a15 15 0 0121.212 0"></path></svg>
+                        </div>
+                        <h4>Multi-Source Connectivity</h4>
+                        <p>Connect seamlessly to hardware via Serial (RS232/USB) or stream data over a network using TCP and UDP. Includes a built-in simulator for development without hardware.</p>
+                        <a href="#data-sources" class="card-link">Learn More <span>&rarr;</span></a>
                     </div>
+                    <!-- Card 2: Visualization -->
                     <div class="feature-card">
-                        <h4>Technical Connectivity</h4>
-                        <p>Connect to hardware via Serial (RS232/USB), or stream data over a network using TCP and UDP. Parse incoming JSON, CSV, and raw binary data with configurable formats.</p>
+                        <div class="feature-icon">
+                           <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a2 2 0 01-2 2H6a2 2 0 01-2-2V4z"></path></svg>
+                        </div>
+                        <h4>Modular Visualization</h4>
+                        <p>Build your ideal dashboard with 7+ widget types, including interactive time-graphs, gauges, and maps. Arrange everything with a flexible drag-and-drop, multi-tab interface.</p>
+                        <a href="#widget-library" class="card-link">Learn More <span>&rarr;</span></a>
                     </div>
+                    <!-- Card 3: Filtering -->
                     <div class="feature-card">
-                        <h4>Data Management</h4>
-                        <p>Record sessions to CSV or JSON, select which parameters to log, and configure buffer sizes for optimal performance. Save and load entire dashboard configurations as portable project files.</p>
+                        <div class="feature-icon">
+                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path></svg>
+                        </div>
+                        <h4>Real-Time Signal Filtering</h4>
+                        <p>Clean up noisy sensor data on the fly. Apply non-destructive Kalman, Low-Pass, Median, and Moving Average filters to any parameter for clearer visualization.</p>
+                         <a href="#signal-filtering" class="card-link">Learn More <span>&rarr;</span></a>
                     </div>
+                    <!-- Card 4: Logging -->
                     <div class="feature-card">
-                        <h4>User Experience</h4>
-                        <p>A guided 4-phase setup wizard, modern dark theme, and professional UI/UX make configuration intuitive. Includes a Raw Telemetry Monitor for deep-level debugging.</p>
+                        <div class="feature-icon">
+                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7v8a2 2 0 002 2h4M8 7a2 2 0 012-2h4a2 2 0 012 2v8a2 2 0 01-2 2h-4a2 2 0 01-2-2l-4.5-4.5L8 7z"></path></svg>
+                        </div>
+                        <h4>Advanced Data Logging</h4>
+                        <p>Record sessions to CSV or JSON with a high-performance buffering system. Select specific parameters to log and manage file output with ease.</p>
+                        <a href="#data-logging" class="card-link">Learn More <span>&rarr;</span></a>
+                    </div>
+                    <!-- Card 5: Project Management -->
+                     <div class="feature-card">
+                        <div class="feature-icon">
+                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"></path></svg>
+                        </div>
+                        <h4>Project Management</h4>
+                        <p>Save and load your entire dashboard state—including connections, parameters, filters, and widget layouts—as a single, portable .json project file.</p>
+                         <a href="#project-file" class="card-link">Learn More <span>&rarr;</span></a>
+                    </div>
+                    <!-- Card 6: Developer Tools -->
+                    <div class="feature-card">
+                        <div class="feature-icon">
+                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 9l4-4 4 4m0 6l-4 4-4-4"></path></svg>
+                        </div>
+                        <h4>Developer Tools</h4>
+                        <p>Debug your data stream with the Raw Telemetry Monitor, inspect packets in hex or decimal, and leverage a comprehensive set of keyboard shortcuts.</p>
+                        <a href="#advanced-features" class="card-link">Learn More <span>&rarr;</span></a>
                     </div>
                 </div>
             </section>
@@ -565,7 +673,7 @@
                 <h3>1. Clone the Repository</h3>
                 <p>First, clone the project from GitHub to your local machine.</p>
                 <pre><code class="language-bash">git clone https://github.com/teamignitionvitc/Glance.git
-cd Dashboard-Builder</code><button class="copy-btn" title="Copy code"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg></button></pre>
+cd Glance</code><button class="copy-btn" title="Copy code"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg></button></pre>
                 
                 <h3>2. Set Up a Virtual Environment (Recommended)</h3>
                 <p>Using a virtual environment prevents conflicts with other Python projects.</p>
@@ -972,14 +1080,12 @@ cd Dashboard-Builder</code><button class="copy-btn" title="Copy code"><svg fill=
 ├── main.py              # Application entry point, launches the main window.
 ├── app/
 │   ├── backend.py       # DataReader class for Serial, TCP, UDP sources.
-│   ├── simulator.py     # DataSimulator class for generating dummy data.
 │   ├── widgets.py       # Contains all custom widget classes (ValueCard, TimeGraph, etc.).
 │   ├── dialogs.py       # UI for all dialog windows (Connection, Parameters, etc.).
 │   └── ui/
 │       └── main_window.py # Core MainWindow class, UI layout, and main application logic.
 ├── docs/                  # Documentation files and images for the web guide.
 ├── logs/                  # Default directory for saved data logs.
-├── LICENSE
 └── requirements.txt     # Python dependencies.
 </code><button class="copy-btn" title="Copy code"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg></button></pre>
                 
@@ -1270,3 +1376,4 @@ main.py
     </script>
 </body>
 </html>
+
