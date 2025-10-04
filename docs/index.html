@@ -31,7 +31,7 @@
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display.swap" rel="stylesheet">
     <style>
         /* General Reset & Root Variables */
         :root {
@@ -397,6 +397,10 @@
         .contributor-item .name { display: flex; flex-direction: column; }
         .contributor-item .name strong { font-size: 0.9rem; color: var(--text-primary); }
         .contributor-item .name span { font-size: 0.8rem; color: var(--text-secondary); }
+        .contributor-list-loading {
+            font-style: italic;
+            color: var(--text-secondary);
+        }
         
         .copyright { font-size: 0.85rem; color: #777; text-align: center; margin-top: 3rem; padding-top: 2rem; border-top: 1px solid var(--border); }
 
@@ -1263,31 +1267,8 @@ main.py
                     </div>
                     <div class="contributors">
                         <h4>Our Contributors</h4>
-                        <ul class="contributor-list">
-                            <li class="contributor-item">
-                                <a href="https://github.com/MuhammadRamzy" target="_blank">
-                                    <img src="https://avatars.githubusercontent.com/u/71557258?s=64&v=4" alt="Avatar for MuhammadRamzy">
-                                    <div class="name"><strong>MuhammadRamzy</strong><span>Muhammad Ramzy</span></div>
-                                </a>
-                            </li>
-                            <li class="contributor-item">
-                                <a href="https://github.com/shawnlit" target="_blank">
-                                    <img src="https://avatars.githubusercontent.com/u/78675587?s=64&v=4" alt="Avatar for shawnlit">
-                                    <div class="name"><strong>shawnlit</strong><span>Shawn</span></div>
-                                </a>
-                            </li>
-                            <li class="contributor-item">
-                                <a href="https://github.com/NeilBaranwal9" target="_blank">
-                                    <img src="https://avatars.githubusercontent.com/u/180085536?s=64&v=4" alt="Avatar for NeilBaranwal9">
-                                    <div class="name"><strong>NeilBaranwal9</strong><span>Neil Baranwal</span></div>
-                                </a>
-                            </li>
-                            <li class="contributor-item">
-                                <a href="https://github.com/anurag965" target="_blank">
-                                    <img src="https://avatars.githubusercontent.com/u/134576365?s=64&v=4" alt="Avatar for anurag965">
-                                    <div class="name"><strong>anurag965</strong><span>Anurag pradhan</span></div>
-                                </a>
-                            </li>
+                        <ul class="contributor-list" id="contributor-list">
+                            <li class="contributor-list-loading">Loading contributors...</li>
                         </ul>
                     </div>
                 </div>
@@ -1372,6 +1353,83 @@ main.py
             }, { rootMargin: '-30% 0px -70% 0px' });
 
             sections.forEach(section => observer.observe(section));
+
+            // --- UPDATED: Fetch GitHub Contributors with Caching ---
+            
+            const listElement = document.getElementById('contributor-list');
+
+            function displayContributors(contributors) {
+                listElement.innerHTML = ''; // Clear loading message
+
+                // Display top contributors (e.g., top 5)
+                const topContributors = contributors.slice(0, 5);
+
+                topContributors.forEach(contributor => {
+                    if (contributor.type === 'Bot') return; // Skip bots
+
+                    const listItem = document.createElement('li');
+                    listItem.className = 'contributor-item';
+
+                    listItem.innerHTML = `
+                        <a href="${contributor.html_url}" target="_blank" rel="noopener noreferrer">
+                            <img src="${contributor.avatar_url}" alt="Avatar for ${contributor.login}" loading="lazy">
+                            <div class="name">
+                                <strong>${contributor.login}</strong>
+                            </div>
+                        </a>
+                    `;
+                    listElement.appendChild(listItem);
+                });
+            }
+
+            async function fetchContributors() {
+                const owner = 'teamignitionvitc';
+                const repo = 'Glance'; // The repository name
+                const apiUrl = `https://api.github.com/repos/${owner}/${repo}/contributors`;
+                const cacheKey = 'githubContributors';
+                const cacheDuration = 24 * 60 * 60 * 1000; // 24 hours
+
+                // Try to load from cache first
+                const cachedData = localStorage.getItem(cacheKey);
+                if (cachedData) {
+                    const { timestamp, data } = JSON.parse(cachedData);
+                    if (Date.now() - timestamp < cacheDuration) {
+                        displayContributors(data);
+                        return; // Exit if cache is valid
+                    }
+                }
+
+                // If cache is invalid or missing, fetch from API
+                try {
+                    const response = await fetch(apiUrl);
+                    if (!response.ok) {
+                        throw new Error(`GitHub API error: ${response.status}`);
+                    }
+                    const contributors = await response.json();
+                    
+                    // Save to cache
+                    const cachePayload = {
+                        timestamp: Date.now(),
+                        data: contributors
+                    };
+                    localStorage.setItem(cacheKey, JSON.stringify(cachePayload));
+
+                    displayContributors(contributors);
+
+                } catch (error) {
+                    console.error('Failed to fetch contributors:', error);
+                    // If fetching fails, still try to use stale cache data if it exists
+                    if (cachedData) {
+                        const { data } = JSON.parse(cachedData);
+                        displayContributors(data);
+                    } else {
+                        listElement.innerHTML = '<li class="contributor-list-loading">Could not load contributors.</li>';
+                    }
+                }
+            }
+
+            // Fetch the contributors when the page loads
+            fetchContributors();
         });
     </script>
 </body>
