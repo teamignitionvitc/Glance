@@ -61,7 +61,8 @@
 
         body {
             font-family: var(--font-sans);
-            background: var(--bg-dark);
+            background-color: var(--bg-dark);
+            background-image: radial-gradient(ellipse at top, #212124, var(--bg-dark) 60%);
             color: var(--text-primary);
             line-height: 1.7;
             font-size: 16px;
@@ -156,6 +157,11 @@
         /* Content Styling */
         .main-header { text-align: center; margin-bottom: 3rem; padding-bottom: 2rem; border-bottom: 1px solid var(--border); }
         .main-header .main-logo { max-width: 150px; margin-bottom: 1.5rem; }
+        .main-header h1 {
+            background: linear-gradient(120deg, var(--primary), var(--accent));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
         .main-header p { margin-left: auto; margin-right: auto; }
         
         .overview-layout {
@@ -203,18 +209,47 @@
         .github-link:hover svg { color: white; }
 
         /* Utility & Components */
-        .info-box { background: var(--bg-light); border-left: 4px solid var(--primary); padding: 1rem 1.5rem; margin: 1.5rem 0; border-radius: 0 4px 4px 0; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+        .info-box { background: var(--bg-light); border-left: 4px solid var(--primary); padding: 1.25rem 1.5rem; margin: 1.5rem 0; border-radius: 0 8px 8px 0; box-shadow: 0 4px 15px rgba(0,0,0,0.2); display: flex; align-items: center; gap: 1rem; }
         .info-box.warning { border-color: var(--warning); }
         .info-box.danger { border-color: var(--danger); }
         .info-box.accent { border-color: var(--accent); }
+        .info-box::before {
+            content: '';
+            display: block;
+            width: 24px;
+            height: 24px;
+            flex-shrink: 0;
+            background-repeat: no-repeat;
+            background-size: contain;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke-width='1.5' stroke='%230a84ff'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' d='M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z' /%3E%3C/svg%3E");
+        }
+        .info-box.warning::before {
+             background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke-width='1.5' stroke='%23ff9f0a'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' d='M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z' /%3E%3C/svg%3E");
+        }
+        .info-box.danger::before {
+             background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke-width='1.5' stroke='%23ff453a'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' d='M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z' /%3E%3C/svg%3E");
+        }
+        .info-box.accent::before {
+             background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke-width='1.5' stroke='%2330d158'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' d='M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z' /%3E%3C/svg%3E");
+        }
         .info-box p { margin: 0; max-width: none;}
         
         /* Code Blocks */
         code { background: var(--bg-light); padding: 0.2em 0.4em; border-radius: 4px; font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace; font-size: 0.9em; color: #ff9f0a; }
-        pre { background: var(--bg-darker); border: 1px solid var(--border); border-radius: 8px; margin: 1.5rem 0; position: relative; }
-        pre code { background: none; padding: 1.5rem; display: block; overflow-x: auto; font-size: 0.85rem; line-height: 1.6; color: var(--text-primary); }
-        .copy-btn { position: absolute; top: 1rem; right: 1rem; background: var(--bg-light); border: 1px solid var(--border); color: var(--text-secondary); padding: 0.5rem; border-radius: 6px; cursor: pointer; opacity: 0.7; transition: all 0.2s ease; }
-        pre:hover .copy-btn { opacity: 1; }
+        pre { background: var(--bg-darker); border: 1px solid var(--border); border-radius: 8px; margin: 1.5rem 0; overflow: hidden; }
+        .code-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: var(--bg-light);
+            padding: 0.5rem 1rem;
+            border-bottom: 1px solid var(--border);
+            font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+        }
+        pre code { padding: 1.25rem 1.5rem; display: block; overflow-x: auto; font-size: 0.85rem; line-height: 1.6; color: var(--text-primary); }
+        .copy-btn { background: none; border: none; color: var(--text-secondary); padding: 0.5rem; border-radius: 6px; cursor: pointer; transition: all 0.2s ease; }
         .copy-btn:hover { background: var(--border); color: var(--text-primary); }
         .copy-btn svg { width: 16px; height: 16px; vertical-align: middle; transition: transform 0.1s ease; }
         .copy-btn:active svg { transform: scale(0.9); }
@@ -236,6 +271,7 @@
         th, td { padding: 0.75rem 1rem; text-align: left; border-bottom: 1px solid var(--border); }
         th { background: #333333; font-weight: 600; }
         tbody tr { transition: background-color 0.2s ease; }
+        tbody tr:nth-child(even) { background-color: rgba(255,255,255,0.02); }
         tbody tr:hover { background-color: var(--bg-light); }
         tr:last-child td { border-bottom: none; }
         td ul { margin: 0 0 0 1rem; }
@@ -317,7 +353,7 @@
             text-decoration-style: solid;
         }
 
-        /* --- NEW: Workflow Timeline Styling --- */
+        /* --- UPDATED: Workflow Timeline Styling --- */
         .workflow-timeline {
             margin-top: 3rem;
             position: relative;
@@ -381,7 +417,7 @@
             margin-bottom: 0;
             max-width: none;
         }
-        /* --- End of New Styles --- */
+        /* --- End of Updated Styles --- */
 
         /* Screenshots */
         .screenshot-gallery { display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; margin-top: 2rem; }
@@ -425,14 +461,16 @@
             display: none;
         }
         summary::after {
-            content: '+';
-            font-size: 1.5rem;
-            font-weight: 400;
+            content: '';
+            width: 1em;
+            height: 1em;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke-width='2.5' stroke='currentColor'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' d='M8.25 4.5l7.5 7.5-7.5 7.5' /%3E%3C/svg%3E");
+            background-size: contain;
             transition: transform 0.2s ease;
-            transform-origin: center;
+            transform: rotate(90deg);
         }
         details[open] summary::after {
-            transform: rotate(45deg);
+            transform: rotate(-90deg);
         }
         .details-content {
             padding: 0 1.5rem 1.5rem 1.5rem;
@@ -798,7 +836,7 @@
                     </table>
                 </div>
                 <div class="readme-link">
-                    For more details, see the <a href="../README.md#system-requirements" target="_blank">System Requirements section in the README</a>.
+                    For more details, see the <a href="https://github.com/teamignitionvitc/Glance?tab=readme-ov-file#system-requirements" target="_blank">System Requirements section in the README</a>.
                 </div>
             </section>
 
@@ -806,18 +844,21 @@
                 <h2>Installation Guide</h2>
                 <h3>1. Clone the Repository</h3>
                 <p>First, clone the project from GitHub to your local machine.</p>
+                <div class="code-header"><span>bash</span><button class="copy-btn" title="Copy code"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg></button></div>
                 <pre><code class="language-bash">git clone https://github.com/teamignitionvitc/Glance.git
-cd Glance</code><button class="copy-btn" title="Copy code"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg></button></pre>
+cd Glance</code></pre>
                 
                 <h3>2. Set Up a Virtual Environment (Recommended)</h3>
                 <p>Using a virtual environment prevents conflicts with other Python projects.</p>
+                 <div class="code-header"><span>bash</span><button class="copy-btn" title="Copy code"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg></button></div>
                 <pre><code class="language-bash">python -m venv venv
 # On Windows: venv\Scripts\activate
-# On macOS/Linux: source venv/bin/activate</code><button class="copy-btn" title="Copy code"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg></button></pre>
+# On macOS/Linux: source venv/bin/activate</code></pre>
 
                 <h3>3. Install Dependencies</h3>
                 <p>Install all required libraries using the <code>requirements.txt</code> file.</p>
-                <pre><code class="language-bash">pip install -r requirements.txt</code><button class="copy-btn" title="Copy code"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg></button></pre>
+                 <div class="code-header"><span>bash</span><button class="copy-btn" title="Copy code"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg></button></div>
+                <pre><code class="language-bash">pip install -r requirements.txt</code></pre>
                 
                 <div class="info-box">
                     <p>For the <strong>Map Widget</strong>, an optional dependency is required. Install it with: <code>pip install PySide6-WebEngine</code></p>
@@ -828,9 +869,10 @@ cd Glance</code><button class="copy-btn" title="Copy code"><svg fill="none" stro
 
                  <h3>4. Launch the Application</h3>
                  <p>Once dependencies are installed, you can start Glance.</p>
-                 <pre><code class="language-bash">python main.py</code><button class="copy-btn" title="Copy code"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg></button></pre>
+                  <div class="code-header"><span>bash</span><button class="copy-btn" title="Copy code"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg></button></div>
+                 <pre><code class="language-bash">python main.py</code></pre>
                  <div class="readme-link">
-                    For more details, see the <a href="../README.md#installation" target="_blank">Installation section in the README</a>.
+                    For more details, see the <a href="https://github.com/teamignitionvitc/Glance?tab=readme-ov-file#installation" target="_blank">Installation section in the README</a>.
                 </div>
             </section>
 
@@ -912,7 +954,7 @@ cd Glance</code><button class="copy-btn" title="Copy code"><svg fill="none" stro
                 <h3>Dummy</h3>
                 <p>A built-in data generator for testing and development. It produces a configurable number of channels with sine wave data and random noise, requiring no external hardware.</p>
                 <div class="readme-link">
-                    For more details, see the <a href="../README.md#quick-start" target="_blank">Data Sources section in the README</a>.
+                    For more details, see the <a href="https://github.com/teamignitionvitc/Glance?tab=readme-ov-file#connectivity--data-sources" target="_blank">Data Sources section in the README</a>.
                 </div>
             </section>
 
@@ -962,9 +1004,9 @@ cd Glance</code><button class="copy-btn" title="Copy code"><svg fill="none" stro
                 </ul>
                 <p><strong>Example:</strong> Your device sends 3 channels of data as 16-bit (2-byte) little-endian integers. Your total packet size is 3 channels * 2 bytes/channel = 6 bytes.</p>
                 <p>If the values are `[258, 515, 772]`, their hexadecimal representations are `[0x0102, 0x0203, 0x0304]`. The byte stream Glance expects to receive would be:</p>
-                <pre><code>02 01 03 02 04 03</code></pre>
+                <pre><div class="code-header"><span>hex</span><button class="copy-btn" title="Copy code"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg></button></div><code>02 01 03 02 04 03</code></pre>
                  <div class="readme-link">
-                    For more details, see the <a href="../README.md#quick-start" target="_blank">Data Formats section in the README</a>.
+                    For more details, see the <a href="https://github.com/teamignitionvitc/Glance?tab=readme-ov-file#connectivity--data-sources" target="_blank">Data Formats section in the README</a>.
                 </div>
             </section>
 
@@ -989,7 +1031,7 @@ cd Glance</code><button class="copy-btn" title="Copy code"><svg fill="none" stro
                     </table>
                 </div>
                 <div class="readme-link">
-                    For more details, see the <a href="../README.md#quick-start" target="_blank">Parameters section in the README</a>.
+                    For more details, see the <a href="https://github.com/teamignitionvitc/Glance?tab=readme-ov-file#4-define-parameters" target="_blank">Parameters section in the README</a>.
                 </div>
             </section>
             
@@ -1048,7 +1090,7 @@ cd Glance</code><button class="copy-btn" title="Copy code"><svg fill="none" stro
                     <p><strong>Note:</strong> The Map widget requires the <code>PySide6-WebEngine</code> optional dependency to be installed.</p>
                 </div>
                 <div class="readme-link">
-                    For more details, see the <a href="../README.md#widget-types" target="_blank">Widget Types section in the README</a>.
+                    For more details, see the <a href="https://github.com/teamignitionvitc/Glance?tab=readme-ov-file#widget-types" target="_blank">Widget Types section in the README</a>.
                 </div>
             </section>
 
@@ -1064,20 +1106,23 @@ cd Glance</code><button class="copy-btn" title="Copy code"><svg fill="none" stro
                  <h4>Output Formats</h4>
                  <p>The logger produces clean, well-structured files perfect for post-analysis.</p>
                  <p><strong>CSV Output Structure:</strong></p>
+                 <div class="code-header"><span>csv</span><button class="copy-btn" title="Copy code"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg></button></div>
                  <pre><code class="language-csv">timestamp,elapsed_time,temp_sensor_Temperature,humidity_Humidity
 2025-01-15 10:30:00.123,0.000,23.500,65.200
 2025-01-15 10:30:01.223,1.100,23.600,65.100</code></pre>
                 <p><strong>JSON Output Structure (JSON Lines):</strong></p>
+                 <div class="code-header"><span>json</span><button class="copy-btn" title="Copy code"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg></button></div>
                  <pre><code class="language-json">{ "timestamp": "2025-01-15T10:30:00.123", "elapsed_time": 0.0, "parameters": { "temp_sensor": 23.5, "humidity": 65.2 } }
 { "timestamp": "2025-01-15T10:30:01.223", "elapsed_time": 1.1, "parameters": { "temp_sensor": 23.6, "humidity": 65.1 } }</code></pre>
                  <div class="readme-link">
-                    For more details, see the <a href="../README.md#data-logging" target="_blank">Data Logging section in the README</a>.
+                    For more details, see the <a href="https://github.com/teamignitionvitc/Glance?tab=readme-ov-file#data-logging" target="_blank">Data Logging section in the README</a>.
                 </div>
             </section>
             
              <section id="project-file">
                 <h2>Project File Structure</h2>
                 <p>Glance projects are saved as <code>.json</code> files, which store the entire state of your dashboard. This makes your configurations portable and easy to share.</p>
+                 <div class="code-header"><span>json</span><button class="copy-btn" title="Copy code"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg></button></div>
                  <pre><code class="language-json">{
   "version": "1.0",
   "parameters": [
@@ -1115,9 +1160,9 @@ cd Glance</code><button class="copy-btn" title="Copy code"><svg fill="none" stro
     "selected_params": ["temp_sensor"],
     "buffer_size": 100
   }
-}</code><button class="copy-btn" title="Copy code"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg></button></pre>
+}</code></pre>
                  <div class="readme-link">
-                    For more details, see the <a href="../README.md#quick-start" target="_blank">Project File section in the README</a>.
+                    For more details, see the <a href="https://github.com/teamignitionvitc/Glance?tab=readme-ov-file#9-save-your-work" target="_blank">Project File section in the README</a>.
                 </div>
             </section>
             
@@ -1136,7 +1181,7 @@ cd Glance</code><button class="copy-btn" title="Copy code"><svg fill="none" stro
                     <img src="public/Doc Images/Standalone_RTV.png" alt="Controls for the Raw Telemetry Monitor">
                 </div>
                  <div class="readme-link">
-                    For more details, see the <a href="../README.md#monitoring--debugging" target="_blank">Monitoring & Debugging section in the README</a>.
+                    For more details, see the <a href="https://github.com/teamignitionvitc/Glance?tab=readme-ov-file#monitoring--debugging" target="_blank">Monitoring & Debugging section in the README</a>.
                 </div>
             </section>
 
@@ -1193,7 +1238,7 @@ cd Glance</code><button class="copy-btn" title="Copy code"><svg fill="none" stro
                     </table>
                 </div>
                  <div class="readme-link">
-                    For more details, see the <a href="../README.md#signal-filtering" target="_blank">Signal Filtering section in the README</a>.
+                    For more details, see the <a href="https://github.com/teamignitionvitc/Glance?tab=readme-ov-file#signal-filtering" target="_blank">Signal Filtering section in the README</a>.
                 </div>
             </section>
 
@@ -1241,7 +1286,7 @@ cd Glance</code><button class="copy-btn" title="Copy code"><svg fill="none" stro
                     </table>
                 </div>
                  <div class="readme-link">
-                    For a complete list, see the <a href="../README.md#keyboard-shortcuts" target="_blank">Keyboard Shortcuts section in the README</a>.
+                    For a complete list, see the <a href="https://github.com/teamignitionvitc/Glance?tab=readme-ov-file#keyboard-shortcuts" target="_blank">Keyboard Shortcuts section in the README</a>.
                 </div>
             </section>
 
@@ -1259,6 +1304,7 @@ cd Glance</code><button class="copy-btn" title="Copy code"><svg fill="none" stro
                 
                 <h3>Project Code Structure</h3>
                 <p>The project is organized into modules with specific responsibilities.</p>
+                <div class="code-header"><span>bash</span><button class="copy-btn" title="Copy code"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg></button></div>
                 <pre><code class="language-bash">.
 ├── main.py              # Application entry point, launches the main window.
 ├── app/
@@ -1270,7 +1316,7 @@ cd Glance</code><button class="copy-btn" title="Copy code"><svg fill="none" stro
 ├── docs/                  # Documentation files and images for the web guide.
 ├── logs/                  # Default directory for saved data logs.
 └── requirements.txt     # Python dependencies.
-</code><button class="copy-btn" title="Copy code"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg></button></pre>
+</code></pre>
                 
                 <h3>Core Data Flow</h3>
                 <p>Understanding the data flow is key to modifying or extending Glance.</p>
@@ -1288,6 +1334,7 @@ cd Glance</code><button class="copy-btn" title="Copy code"><svg fill="none" stro
                 <ol>
                     <li><strong>Create the Widget Class in <code>app/widgets.py</code>:</strong>
                         <p>Your class must inherit from a Qt widget (like <code>QWidget</code> or <code>QFrame</code>) and have an update method.</p>
+                        <div class="code-header"><span>python</span><button class="copy-btn" title="Copy code"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg></button></div>
                         <pre><code class="language-python"># In app/widgets.py
 from PySide6.QtWidgets import QWidget, QLabel, QVBoxLayout
 
@@ -1308,33 +1355,35 @@ class MyCustomWidget(QWidget):
         if param_id in history and history[param_id]:
             latest_value = history[param_id][-1]['value']
             self.value_label.setText(f"{latest_value:.2f} {self.param['unit']}")
-</code><button class="copy-btn" title="Copy code"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg></button></pre>
+</code></pre>
                     </li>
                     <li><strong>Register in <code>app/dialogs.py</code>:</strong>
                         <p>In the `AddWidgetDialog` class, add the name of your new widget to the `display_types` list to make it selectable by the user.</p>
                     </li>
                     <li><strong>Add Handler in <code>app/ui/main_window.py</code>:</strong>
                         <p>In the `MainWindow.add_widget_to_dashboard` method, add a new `elif` block to instantiate your widget class when its display type is chosen.</p>
+                        <div class="code-header"><span>python</span><button class="copy-btn" title="Copy code"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg></button></div>
                         <pre><code class="language-python"># In MainWindow.add_widget_to_dashboard(...)
 # ...
 elif config['displayType'] == 'My Custom Widget' and len(param_configs) == 1:
     widget = MyCustomWidget(param_configs)
 # ...
-</code><button class="copy-btn" title="Copy code"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg></button></pre>
+</code></pre>
                     </li>
                 </ol>
 
                  <h3>Building an Executable</h3>
                 <p>To create a standalone executable, you can use PyInstaller. This packages your application and its dependencies into a single file.</p>
+                <div class="code-header"><span>bash</span><button class="copy-btn" title="Copy code"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg></button></div>
                 <pre><code class="language-bash"># Install PyInstaller
 pip install pyinstaller
 
 # Build the executable from the project root directory
 pyinstaller --onefile --windowed --name "Glance" \
 --icon="docs/public/Glance_nobg.ico" \
---add-data "docs/public:docs/public" \
+--add-data "docs/public:public" \
 main.py
-</code><button class="copy-btn" title="Copy code"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg></button></pre>
+</code></pre>
                 <div class="info-box">
                     <p><strong>Note:</strong> The <code>--add-data</code> flag is crucial for bundling assets like images. The syntax is <code>"source:destination_in_bundle"</code>. You may need to adjust paths depending on your OS.</p>
                 </div>
@@ -1349,7 +1398,7 @@ main.py
                     <li><strong>Open a Pull Request</strong> on the main Glance repository to propose your changes. Please provide a detailed description of your changes in the PR.</li>
                 </ol>
                 <div class="readme-link">
-                    For more details, see the <a href="../README.md#development" target="_blank">Development section in the README</a>.
+                    For more details, see the <a href="https://github.com/teamignitionvitc/Glance?tab=readme-ov-file#development" target="_blank">Development section in the README</a>.
                 </div>
             </section>
             
@@ -1426,7 +1475,7 @@ main.py
                     </div>
                 </details>
                 <div class="readme-link">
-                    For more details, see the <a href="../README.md#troubleshooting" target="_blank">Troubleshooting section in the README</a>.
+                    For more details, see the <a href="https://github.com/teamignitionvitc/Glance?tab=readme-ov-file#troubleshooting" target="_blank">Troubleshooting section in the README</a>.
                 </div>
             </section>
 
@@ -1434,7 +1483,7 @@ main.py
                 <h2>License</h2>
                 <p>This project is licensed under the <strong>GNU General Public License v3.0</strong>, with the restriction that it may not be used for commercial purposes without explicit written permission from Team Ignition.</p>
                 <div class="readme-link">
-                    For more details, see the <a href="../README.md#license" target="_blank">License section in the README</a>.
+                    For more details, see the <a href="https://github.com/teamignitionvitc/Glance?tab=readme-ov-file#license" target="_blank">License section in the README</a>.
                 </div>
             </section>
 
@@ -1512,9 +1561,10 @@ main.py
             });
 
             // Copy-to-clipboard for code blocks
-            document.querySelectorAll('pre').forEach(pre => {
-                const button = pre.querySelector('.copy-btn');
-                if (button) {
+            document.querySelectorAll('.code-header').forEach(header => {
+                const button = header.querySelector('.copy-btn');
+                const pre = header.nextElementSibling;
+                if (button && pre && pre.tagName === 'PRE') {
                     button.addEventListener('click', () => {
                         const code = pre.querySelector('code').innerText;
                         navigator.clipboard.writeText(code).then(() => {
@@ -1585,8 +1635,9 @@ main.py
                 const cacheKey = 'githubContributors';
                 const cacheDuration = 24 * 60 * 60 * 1000; // 24 hours
 
-                // Try to load from cache first
                 const cachedData = localStorage.getItem(cacheKey);
+
+                // Check for fresh cache first
                 if (cachedData) {
                     const { timestamp, data } = JSON.parse(cachedData);
                     if (Date.now() - timestamp < cacheDuration) {
@@ -1595,15 +1646,10 @@ main.py
                     }
                 }
 
-                // If cache is invalid or missing, fetch from API
+                // If cache is stale or missing, fetch from API
                 try {
                     const response = await fetch(apiUrl);
                     if (!response.ok) {
-                        // If the API call fails, still try to use old cache data if it exists.
-                        if (cachedData) {
-                             const { data } = JSON.parse(cachedData);
-                             displayContributors(data);
-                        }
                         throw new Error(`GitHub API error: ${response.status}`);
                     }
                     const contributors = await response.json();
@@ -1613,16 +1659,17 @@ main.py
                         data: contributors
                     };
                     localStorage.setItem(cacheKey, JSON.stringify(cachePayload));
-
                     displayContributors(contributors);
 
                 } catch (error) {
-                    console.error('Failed to fetch contributors:', error);
-                    // If fetching fails, still try to use stale cache data if it exists
+                    // Fallback to stale cache if API fails
                     if (cachedData) {
+                        console.log('GitHub API request failed, serving stale data from cache.', error.message);
                         const { data } = JSON.parse(cachedData);
                         displayContributors(data);
                     } else {
+                        // Only show error if there's no cache at all
+                        console.error('Failed to fetch contributors and no cache is available:', error);
                         listElement.innerHTML = '<li class="contributor-list-loading">Could not load contributors.</li>';
                     }
                 }
@@ -1633,4 +1680,3 @@ main.py
     </script>
 </body>
 </html>
-
