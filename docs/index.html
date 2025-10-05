@@ -240,7 +240,7 @@
         tr:last-child td { border-bottom: none; }
         td ul { margin: 0 0 0 1rem; }
 
-        /* --- NEW: Enhanced Feature Grid Styling --- */
+        /* Enhanced Feature Grid Styling */
         .feature-grid { 
             display: grid; 
             grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); 
@@ -295,6 +295,91 @@
         }
         .card-link:hover span {
             transform: translateX(4px);
+        }
+
+        /* README Link Styling */
+        .readme-link {
+            margin-top: 2rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid var(--border);
+            font-size: 0.9rem;
+            font-style: italic;
+            color: var(--text-secondary);
+        }
+        .readme-link a {
+            color: var(--text-secondary);
+            text-decoration: underline;
+            text-decoration-style: dotted;
+            text-underline-offset: 3px;
+        }
+        .readme-link a:hover {
+            color: var(--primary);
+            text-decoration-style: solid;
+        }
+
+        /* --- NEW: Workflow Timeline Styling --- */
+        .workflow-timeline {
+            margin-top: 3rem;
+            position: relative;
+            padding-left: 50px; /* Space for the line and icons */
+        }
+        .workflow-timeline::before {
+            content: '';
+            position: absolute;
+            left: 20px;
+            top: 10px;
+            bottom: 10px;
+            width: 3px;
+            background-color: var(--border);
+            border-radius: 2px;
+        }
+        .workflow-step {
+            position: relative;
+            margin-bottom: 2.5rem;
+        }
+        .workflow-step:last-child {
+            margin-bottom: 0;
+        }
+        .workflow-icon-container {
+            position: absolute;
+            left: -30px; /* (50px padding - 20px icon width) / 2 - 20px */
+            top: 0;
+        }
+        .workflow-icon {
+            width: 42px;
+            height: 42px;
+            background-color: var(--bg-light);
+            border: 3px solid var(--border);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 1.1rem;
+            color: var(--text-secondary);
+            transition: all 0.2s ease;
+        }
+        .workflow-step:hover .workflow-icon {
+            background-color: var(--primary);
+            border-color: var(--primary);
+            color: white;
+            transform: scale(1.1);
+        }
+        .workflow-content {
+            background-color: var(--bg-darker);
+            border: 1px solid var(--border);
+            padding: 1.5rem;
+            border-radius: 12px;
+            margin-left: 2rem;
+        }
+        .workflow-content h4 {
+            margin-top: 0;
+            margin-bottom: 0.5rem;
+            color: var(--primary);
+        }
+        .workflow-content p {
+            margin-bottom: 0;
+            max-width: none;
         }
         /* --- End of New Styles --- */
 
@@ -390,13 +475,55 @@
             text-align: left;
         }
         .contributors h4 { color: var(--text-primary); margin: 0 0 1rem 0; font-size: 1rem; }
-        .contributor-list { list-style: none; padding: 0; margin: 0; }
-        .contributor-item { margin-bottom: 0.75rem; }
-        .contributor-item a { display: flex; align-items: center; gap: 0.75rem; }
-        .contributor-item img { width: 32px; height: 32px; border-radius: 50%; }
-        .contributor-item .name { display: flex; flex-direction: column; }
-        .contributor-item .name strong { font-size: 0.9rem; color: var(--text-primary); }
-        .contributor-item .name span { font-size: 0.8rem; color: var(--text-secondary); }
+        
+        /* Contributor List Styling */
+        .contributor-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            display: flex;
+            align-items: center;
+        }
+        .contributor-item {
+            margin: 0;
+            margin-left: -12px; /* Negative margin for stacking */
+            transition: transform 0.2s ease;
+        }
+        .contributor-item:first-child {
+            margin-left: 0;
+        }
+        .contributor-item a {
+            display: block;
+            position: relative;
+        }
+        .contributor-item img {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            border: 3px solid var(--bg-darker);
+            transition: transform 0.2s ease;
+            background-color: var(--bg-light);
+        }
+        .contributor-item:hover {
+            transform: translateY(-4px);
+            z-index: 10;
+        }
+        .contributor-overflow {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background-color: var(--bg-light);
+            border: 3px solid var(--bg-darker);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+            margin-left: -12px;
+            z-index: 0;
+            cursor: default;
+        }
         .contributor-list-loading {
             font-style: italic;
             color: var(--text-secondary);
@@ -670,6 +797,9 @@
                         </tbody>
                     </table>
                 </div>
+                <div class="readme-link">
+                    For more details, see the <a href="../README.md#system-requirements" target="_blank">System Requirements section in the README</a>.
+                </div>
             </section>
 
             <section id="installation">
@@ -699,30 +829,52 @@ cd Glance</code><button class="copy-btn" title="Copy code"><svg fill="none" stro
                  <h3>4. Launch the Application</h3>
                  <p>Once dependencies are installed, you can start Glance.</p>
                  <pre><code class="language-bash">python main.py</code><button class="copy-btn" title="Copy code"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg></button></pre>
+                 <div class="readme-link">
+                    For more details, see the <a href="../README.md#installation" target="_blank">Installation section in the README</a>.
+                </div>
             </section>
 
             <section id="workflow">
                 <h2>The Glance Workflow</h2>
-                <p>Glance is built around a simple four-phase workflow that guides you from a blank slate to a fully functional dashboard.</p>
-                
-                <ol>
-                    <li>
-                        <h4>Phase 1: Welcome</h4>
-                        <p>The initial screen provides two main paths: creating a new dashboard from scratch or loading a previously saved project configuration file (.json). This is your starting point for any session.</p>
-                    </li>
-                    <li>
-                        <h4>Phase 2: Connection & Data Setup</h4>
-                        <p>Here, you tell Glance where your data is coming from and how it's formatted. You'll select a <a href="#data-sources">Data Source</a> (like Serial or TCP) and specify the structure of the incoming data packets (e.g., JSON array, CSV). This step is crucial for ensuring the application can correctly read and parse your telemetry stream.</p>
-                    </li>
-                    <li>
-                        <h4>Phase 3: Initial Widget Layout</h4>
-                        <p>After setting up the data source, you can pre-configure the widgets you want to see on your dashboard. You can select a widget type, link it to one or more defined <a href="#parameters">Parameters</a>, and add it to the initial layout. You can also skip this step and add widgets manually later on.</p>
-                    </li>
-                    <li>
-                        <h4>Phase 4: The Live Dashboard</h4>
-                        <p>This is the main interface where you monitor your data in real-time. The dashboard is a fully interactive environment where you can drag, drop, resize, and float widgets to create a layout that suits your needs. You can add more widgets, manage parameters, and control data logging directly from here.</p>
-                    </li>
-                </ol>
+                <p>Glance guides you from a blank slate to a fully functional dashboard in four clear phases.</p>
+                <div class="workflow-timeline">
+                    <div class="workflow-step">
+                        <div class="workflow-icon-container">
+                            <div class="workflow-icon">1</div>
+                        </div>
+                        <div class="workflow-content">
+                            <h4>Phase 1: Welcome</h4>
+                            <p>The initial screen provides two main paths: creating a new dashboard from scratch or loading a previously saved project configuration file (.json). This is your starting point for any session.</p>
+                        </div>
+                    </div>
+                    <div class="workflow-step">
+                        <div class="workflow-icon-container">
+                            <div class="workflow-icon">2</div>
+                        </div>
+                        <div class="workflow-content">
+                            <h4>Phase 2: Connection & Data Setup</h4>
+                            <p>Here, you tell Glance where your data is coming from and how it's formatted. You'll select a <a href="#data-sources">Data Source</a> (like Serial or TCP) and specify the structure of the incoming data packets. This is crucial for a successful connection.</p>
+                        </div>
+                    </div>
+                    <div class="workflow-step">
+                        <div class="workflow-icon-container">
+                            <div class="workflow-icon">3</div>
+                        </div>
+                        <div class="workflow-content">
+                            <h4>Phase 3: Initial Widget Layout</h4>
+                            <p>After setting up the data source, you can pre-configure the widgets you want to see. Select a widget type, link it to one or more defined <a href="#parameters">Parameters</a>, and add it to the initial layout. You can also skip this and add widgets manually later.</p>
+                        </div>
+                    </div>
+                     <div class="workflow-step">
+                        <div class="workflow-icon-container">
+                            <div class="workflow-icon">4</div>
+                        </div>
+                        <div class="workflow-content">
+                            <h4>Phase 4: The Live Dashboard</h4>
+                            <p>This is the main interface where you monitor your data in real-time. It's a fully interactive environment where you can drag, drop, resize, and float widgets to create a layout that suits your needs.</p>
+                        </div>
+                    </div>
+                </div>
             </section>
 
              <section id="data-sources">
@@ -759,6 +911,9 @@ cd Glance</code><button class="copy-btn" title="Copy code"><svg fill="none" stro
 
                 <h3>Dummy</h3>
                 <p>A built-in data generator for testing and development. It produces a configurable number of channels with sine wave data and random noise, requiring no external hardware.</p>
+                <div class="readme-link">
+                    For more details, see the <a href="../README.md#quick-start" target="_blank">Data Sources section in the README</a>.
+                </div>
             </section>
 
             <section id="data-formats">
@@ -808,6 +963,9 @@ cd Glance</code><button class="copy-btn" title="Copy code"><svg fill="none" stro
                 <p><strong>Example:</strong> Your device sends 3 channels of data as 16-bit (2-byte) little-endian integers. Your total packet size is 3 channels * 2 bytes/channel = 6 bytes.</p>
                 <p>If the values are `[258, 515, 772]`, their hexadecimal representations are `[0x0102, 0x0203, 0x0304]`. The byte stream Glance expects to receive would be:</p>
                 <pre><code>02 01 03 02 04 03</code></pre>
+                 <div class="readme-link">
+                    For more details, see the <a href="../README.md#quick-start" target="_blank">Data Formats section in the README</a>.
+                </div>
             </section>
 
             <section id="parameters">
@@ -829,6 +987,9 @@ cd Glance</code><button class="copy-btn" title="Copy code"><svg fill="none" stro
                             <tr><td><strong>Description</strong></td><td>An optional field for more details about the parameter.</td></tr>
                         </tbody>
                     </table>
+                </div>
+                <div class="readme-link">
+                    For more details, see the <a href="../README.md#quick-start" target="_blank">Parameters section in the README</a>.
                 </div>
             </section>
             
@@ -886,6 +1047,9 @@ cd Glance</code><button class="copy-btn" title="Copy code"><svg fill="none" stro
                  <div class="info-box">
                     <p><strong>Note:</strong> The Map widget requires the <code>PySide6-WebEngine</code> optional dependency to be installed.</p>
                 </div>
+                <div class="readme-link">
+                    For more details, see the <a href="../README.md#widget-types" target="_blank">Widget Types section in the README</a>.
+                </div>
             </section>
 
             <section id="data-logging">
@@ -906,6 +1070,9 @@ cd Glance</code><button class="copy-btn" title="Copy code"><svg fill="none" stro
                 <p><strong>JSON Output Structure (JSON Lines):</strong></p>
                  <pre><code class="language-json">{ "timestamp": "2025-01-15T10:30:00.123", "elapsed_time": 0.0, "parameters": { "temp_sensor": 23.5, "humidity": 65.2 } }
 { "timestamp": "2025-01-15T10:30:01.223", "elapsed_time": 1.1, "parameters": { "temp_sensor": 23.6, "humidity": 65.1 } }</code></pre>
+                 <div class="readme-link">
+                    For more details, see the <a href="../README.md#data-logging" target="_blank">Data Logging section in the README</a>.
+                </div>
             </section>
             
              <section id="project-file">
@@ -949,6 +1116,9 @@ cd Glance</code><button class="copy-btn" title="Copy code"><svg fill="none" stro
     "buffer_size": 100
   }
 }</code><button class="copy-btn" title="Copy code"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg></button></pre>
+                 <div class="readme-link">
+                    For more details, see the <a href="../README.md#quick-start" target="_blank">Project File section in the README</a>.
+                </div>
             </section>
             
             <section id="advanced-features">
@@ -964,6 +1134,9 @@ cd Glance</code><button class="copy-btn" title="Copy code"><svg fill="none" stro
                  <div class="telemetry-images">
                     <img src="public/Doc Images/RTV.png" alt="Raw Telemetry Monitor showing data stream">
                     <img src="public/Doc Images/Standalone_RTV.png" alt="Controls for the Raw Telemetry Monitor">
+                </div>
+                 <div class="readme-link">
+                    For more details, see the <a href="../README.md#monitoring--debugging" target="_blank">Monitoring & Debugging section in the README</a>.
                 </div>
             </section>
 
@@ -1019,6 +1192,9 @@ cd Glance</code><button class="copy-btn" title="Copy code"><svg fill="none" stro
                         </tbody>
                     </table>
                 </div>
+                 <div class="readme-link">
+                    For more details, see the <a href="../README.md#signal-filtering" target="_blank">Signal Filtering section in the README</a>.
+                </div>
             </section>
 
             <!-- NEW SECTION: Keyboard Shortcuts -->
@@ -1063,6 +1239,9 @@ cd Glance</code><button class="copy-btn" title="Copy code"><svg fill="none" stro
                             <tr><td>Open Documentation</td><td><code>F1</code></td></tr>
                         </tbody>
                     </table>
+                </div>
+                 <div class="readme-link">
+                    For a complete list, see the <a href="../README.md#keyboard-shortcuts" target="_blank">Keyboard Shortcuts section in the README</a>.
                 </div>
             </section>
 
@@ -1169,6 +1348,9 @@ main.py
                     <li><strong>Push</strong> your branch to your forked repository.</li>
                     <li><strong>Open a Pull Request</strong> on the main Glance repository to propose your changes. Please provide a detailed description of your changes in the PR.</li>
                 </ol>
+                <div class="readme-link">
+                    For more details, see the <a href="../README.md#development" target="_blank">Development section in the README</a>.
+                </div>
             </section>
             
             <section id="troubleshooting">
@@ -1243,12 +1425,17 @@ main.py
                         </ul>
                     </div>
                 </details>
-
+                <div class="readme-link">
+                    For more details, see the <a href="../README.md#troubleshooting" target="_blank">Troubleshooting section in the README</a>.
+                </div>
             </section>
 
             <section id="license">
                 <h2>License</h2>
                 <p>This project is licensed under the <strong>GNU General Public License v3.0</strong>, with the restriction that it may not be used for commercial purposes without explicit written permission from Team Ignition.</p>
+                <div class="readme-link">
+                    For more details, see the <a href="../README.md#license" target="_blank">License section in the README</a>.
+                </div>
             </section>
 
             <footer>
@@ -1354,37 +1541,46 @@ main.py
 
             sections.forEach(section => observer.observe(section));
 
-            // --- UPDATED: Fetch GitHub Contributors with Caching ---
+            // --- UPDATED: Fetch GitHub Contributors with Caching and Stacked Avatars ---
             
             const listElement = document.getElementById('contributor-list');
 
             function displayContributors(contributors) {
                 listElement.innerHTML = ''; // Clear loading message
 
-                // Display top contributors (e.g., top 5)
-                const topContributors = contributors.slice(0, 5);
+                const maxVisible = 4; // Show max 4 avatars
+                const topContributors = contributors.filter(c => c.type !== 'Bot');
 
-                topContributors.forEach(contributor => {
-                    if (contributor.type === 'Bot') return; // Skip bots
-
+                // Display visible contributors
+                const visibleContributors = topContributors.slice(0, maxVisible);
+                
+                visibleContributors.forEach(contributor => {
                     const listItem = document.createElement('li');
                     listItem.className = 'contributor-item';
+                    listItem.title = contributor.login; // Add tooltip for name
 
                     listItem.innerHTML = `
                         <a href="${contributor.html_url}" target="_blank" rel="noopener noreferrer">
                             <img src="${contributor.avatar_url}" alt="Avatar for ${contributor.login}" loading="lazy">
-                            <div class="name">
-                                <strong>${contributor.login}</strong>
-                            </div>
                         </a>
                     `;
                     listElement.appendChild(listItem);
                 });
+
+                // Display overflow count if there are more contributors
+                if (topContributors.length > maxVisible) {
+                    const remainingCount = topContributors.length - maxVisible;
+                    const overflowItem = document.createElement('li');
+                    overflowItem.className = 'contributor-overflow';
+                    overflowItem.title = `${remainingCount} more contributors`;
+                    overflowItem.textContent = `+${remainingCount}`;
+                    listElement.appendChild(overflowItem);
+                }
             }
 
             async function fetchContributors() {
                 const owner = 'teamignitionvitc';
-                const repo = 'Glance'; // The repository name
+                const repo = 'Glance';
                 const apiUrl = `https://api.github.com/repos/${owner}/${repo}/contributors`;
                 const cacheKey = 'githubContributors';
                 const cacheDuration = 24 * 60 * 60 * 1000; // 24 hours
@@ -1395,7 +1591,7 @@ main.py
                     const { timestamp, data } = JSON.parse(cachedData);
                     if (Date.now() - timestamp < cacheDuration) {
                         displayContributors(data);
-                        return; // Exit if cache is valid
+                        return;
                     }
                 }
 
@@ -1403,11 +1599,15 @@ main.py
                 try {
                     const response = await fetch(apiUrl);
                     if (!response.ok) {
+                        // If the API call fails, still try to use old cache data if it exists.
+                        if (cachedData) {
+                             const { data } = JSON.parse(cachedData);
+                             displayContributors(data);
+                        }
                         throw new Error(`GitHub API error: ${response.status}`);
                     }
                     const contributors = await response.json();
                     
-                    // Save to cache
                     const cachePayload = {
                         timestamp: Date.now(),
                         data: contributors
@@ -1428,7 +1628,6 @@ main.py
                 }
             }
 
-            // Fetch the contributors when the page loads
             fetchContributors();
         });
     </script>
