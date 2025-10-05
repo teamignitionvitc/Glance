@@ -2265,7 +2265,7 @@ For commercial licensing inquiries, please contact us through our website.
 - ✗ Commercial use without permission
 - ⚠ Must include license and copyright
 
-[Full License Text](https://www.gnu.org/licenses/gpl-3.0.en.html)
+[Full License Text](LICENSE)
 
 </td>
 </tr>
