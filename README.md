@@ -359,8 +359,8 @@ With multi-source connectivity, advanced signal filtering, powerful data logging
 <p><em>Modern welcome screen with quick-start options</em></p>
 </td>
 <td width="50%">
-<img src="docs/public/Doc%20Images/dashboard.png" alt="Dashboard View"/>
-<p><em>Real-time multi-widget dashboard layout</em></p>
+<img src="docs/public/Doc%20Images/logging.png" alt="Data Logging"/>
+<p><em>Comprehensive data logging with format selection</em></p>
 </td>
 </tr>
 <tr>
@@ -375,8 +375,8 @@ With multi-source connectivity, advanced signal filtering, powerful data logging
 </tr>
 <tr>
 <td colspan="2">
-<img src="docs/public/Doc%20Images/logging.png" alt="Data Logging"/>
-<p><em>Comprehensive data logging with format selection</em></p>
+<img src="docs/public/Doc%20Images/dashboard.png" alt="Dashboard View"/>
+<p><em>Real-time multi-widget dashboard layout</em></p>
 </td>
 </tr>
 </table>
