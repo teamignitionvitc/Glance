@@ -14,7 +14,7 @@
 </p>
 
 <hr/>
-
+<img src="docs/public/ign_logo_wht.png" alt="Team Ignition Logo" width="150"/>
 <p><strong>Developed by Team Ignition Software Department</strong><br/>
 <em>Vellore Institute of Technology, Chennai</em></p>
 
