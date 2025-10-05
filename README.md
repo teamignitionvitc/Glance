@@ -1,8 +1,7 @@
 <div align="center">
 
-<img src="docs/public/Glance_nobg.png" alt="Glance Logo" width="400"/>
+<img src="docs/public/Glance.png" alt="Glance Logo" width="400"/>
 
-# Glance
 
 <h3>Professional Real-Time Telemetry Visualization Platform</h3>
 
