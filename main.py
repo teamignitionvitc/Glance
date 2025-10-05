@@ -3831,7 +3831,7 @@ class MainWindow(QMainWindow):
             timeout_timer.timeout.connect(on_timeout)
             
             # Start timeout (10 seconds)
-            timeout_timer.start(5000)
+            timeout_timer.start(10000)
             
             # Load URL
             print(f"Loading: {doc_url}")  # Debug
