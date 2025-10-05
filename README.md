@@ -39,7 +39,7 @@
 <tr>
 <td width="60%">
 
-**Glance** is a sophisticated real-time telemetry visualization platform designed for rockets, drones, embedded systems, and advanced data-acquisition applications. Built with PySide6 (Qt6), it offers a modular, widget-based dashboard that adapts to diverse telemetry needs.
+**Glance** is a real-time telemetry visualization platform designed for rockets, drones, embedded systems, and advanced data-acquisition applications. Built with PySide6 (Qt6), it offers a modular, widget-based dashboard that adapts to diverse telemetry needs.
 
 With multi-source connectivity, advanced signal filtering, powerful data logging, and professional UI/UX, Glance empowers engineers, researchers, and operators to gain actionable insights at a glance.
 
