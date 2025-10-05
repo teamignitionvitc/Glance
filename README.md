@@ -2619,5 +2619,6 @@ See [Contributing](#contributing) section. Fork the repository, make your change
 <p><sub>Made with ❤️ by Team Ignition Software Department</sub></p>
 
 <p><sub>Copyright © 2025 Team Ignition | VIT Chennai</sub></p>
+<img src="docs/public/ign_logo_wht.png" alt="Team Ignition" width="120"/>
 
 </div>
