@@ -359,8 +359,8 @@ With multi-source connectivity, advanced signal filtering, powerful data logging
 <p><em>Modern welcome screen with quick-start options</em></p>
 </td>
 <td width="50%">
-<img src="docs/public/Doc%20Images/logging.png" alt="Data Logging"/>
-<p><em>Comprehensive data logging with format selection</em></p>
+<img src="docs/public/Doc%20Images/Connection.png" alt="Connection Settings"/>
+<p><em>Flexible data source configuration</em></p>
 </td>
 </tr>
 <tr>
@@ -369,8 +369,8 @@ With multi-source connectivity, advanced signal filtering, powerful data logging
 <p><em>Parameter configuration with array index mapping</em></p>
 </td>
 <td width="50%">
-<img src="docs/public/Doc%20Images/Connection.png" alt="Connection Settings"/>
-<p><em>Flexible data source configuration</em></p>
+<img src="docs/public/Doc%20Images/logging.png" alt="Data Logging"/>
+<p><em>Comprehensive data logging with format selection</em></p>
 </td>
 </tr>
 <tr>
