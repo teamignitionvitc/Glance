@@ -1449,8 +1449,84 @@ class DataSimulator(QThread):
             'little_endian': True,
             'csv_separator': ',',
         }
+        self.reader = None
+        self._connection_error_shown = False
+
+    def _init_backend_connection(self):
+        """Initialize backend connection if not already done"""
+        if self.reader is not None:
+            # Check if existing connection is still valid
+            try:
+                if hasattr(self.reader, 'sock') and self.reader.sock:
+                    # For TCP/UDP, check if socket is still connected
+                    return True
+                elif hasattr(self.reader, 'ser') and self.reader.ser and self.reader.ser.is_open:
+                    # For serial, check if port is still open
+                    return True
+                else:
+                    # Connection was lost, clean up
+                    try:
+                        self.reader.close()
+                    except:
+                        pass
+                    self.reader = None
+            except:
+                self.reader = None
+        
+        try:
+            cs = self.connection_settings
+            mode = cs.get('mode', 'serial')
+            
+            if not self._connection_error_shown:
+                print(f"Attempting {mode.upper()} connection to {cs.get('tcp_host' if mode == 'tcp' else 'udp_host', '???')}:{cs.get('tcp_port' if mode == 'tcp' else 'udp_port', '???')}...")
+            
+            self.reader = DataReader(
+                mode=mode,
+                serial_port=cs.get('serial_port','COM4'),
+                baudrate=cs.get('baudrate',115200),
+                tcp_host=cs.get('tcp_host','127.0.0.1'),
+                tcp_port=cs.get('tcp_port',9000),
+                udp_host=cs.get('udp_host','0.0.0.0'),
+                udp_port=cs.get('udp_port',9000),
+                timeout=cs.get('timeout',1.0),
+                data_format=cs.get('data_format','json_array'),
+                channel_count=int(cs.get('channel_count',32)),
+                sample_width_bytes=int(cs.get('sample_width_bytes',2)),
+                little_endian=bool(cs.get('little_endian',True)),
+                csv_separator=cs.get('csv_separator',',')
+            )
+            
+            # CRITICAL: Verify the connection actually works
+            if mode == 'tcp' or mode == 'udp':
+                if not hasattr(self.reader, 'sock') or self.reader.sock is None:
+                    raise ConnectionError(f"{mode.upper()} socket not created")
+            elif mode == 'serial':
+                if not hasattr(self.reader, 'ser') or self.reader.ser is None or not self.reader.ser.is_open:
+                    raise ConnectionError("Serial port not opened")
+            
+            print(f"✓ {mode.upper()} connection established!")
+            self._connection_error_shown = False
+            return True
+            
+        except Exception as e:
+            # Connection failed
+            if self.reader:
+                try:
+                    self.reader.close()
+                except:
+                    pass
+                self.reader = None
+            
+            if not self._connection_error_shown:
+                print(f"✗ Connection failed: {e}")
+                self._connection_error_shown = True
+            
+            return False
 
     def run(self):
+        retry_delay = 1.0  # Start with 1 second delay
+        max_retry_delay = 30.0  # Maximum 30 seconds between retries
+        
         while self._is_running:
             if not self._is_paused:
                 if self.mode == "dummy":
@@ -1464,35 +1540,45 @@ class DataSimulator(QThread):
                         if random.random() > 0.98:
                             value = random.uniform(-10, 120)
                         packet[i] = value
-                    self.newData.emit(packet)   
+                    self.newData.emit(packet)
+                    time.sleep(0.1)
 
                 elif self.mode == "backend":
-                    if not hasattr(self,"reader"):
-                        # establish backend connection
-                        cs = self.connection_settings
-                        self.reader = DataReader(
-                            mode=cs.get('mode','serial'),
-                            serial_port=cs.get('serial_port','COM4'),
-                            baudrate=cs.get('baudrate',115200),
-                            tcp_host=cs.get('tcp_host','127.0.0.1'),
-                            tcp_port=cs.get('tcp_port',9000),
-                            udp_host=cs.get('udp_host','0.0.0.0'),
-                            udp_port=cs.get('udp_port',9000),
-                            timeout=cs.get('timeout',1.0),
-                            data_format=cs.get('data_format','json_array'),
-                            channel_count=int(cs.get('channel_count',32)),
-                            sample_width_bytes=int(cs.get('sample_width_bytes',2)),
-                            little_endian=bool(cs.get('little_endian',True)),
-                            csv_separator=cs.get('csv_separator',',')
-                        )
-                    line = self.reader.read_line()
+                    # Try to initialize connection if needed
+                    if not self._init_backend_connection():
+                        print(f"Connection failed. Retrying in {retry_delay:.1f}s...")
+                        time.sleep(retry_delay)
+                        # Exponential backoff
+                        retry_delay = min(retry_delay * 1.5, max_retry_delay)
+                        continue
                     
-                    if isinstance(line,list):
-                        packet = line
-                        timestamp = time.time()
-                        self.newData.emit(packet)
+                    # Connection successful, reset retry delay
+                    retry_delay = 1.0
                     
-            time.sleep(0.1)
+                    try:
+                        line = self.reader.read_line()
+                        
+                        if isinstance(line, list):
+                            packet = line
+                            self.newData.emit(packet)
+                        
+                        time.sleep(0.01)  # Small delay to prevent CPU hogging
+                        
+                    except Exception as e:
+                        print(f"Error reading data: {e}")
+                        # Close and reset reader on error to trigger reconnection
+                        try:
+                            if self.reader:
+                                self.reader.close()
+                        except:
+                            pass
+                        self.reader = None
+                        self._connection_error_shown = False
+                        # Don't sleep here - let the retry logic handle it
+                        
+            else:
+                # Paused - just sleep
+                time.sleep(0.1)
 
     def toggle_pause(self):
         self._is_paused = not self._is_paused
@@ -1500,71 +1586,111 @@ class DataSimulator(QThread):
 
     def stop(self):
         self._is_running = False
+        if self.reader:
+            try:
+                self.reader.close()
+            except:
+                pass
 
 class ValueCard(QFrame):
     def __init__(self, param_name, unit, priority):
         super().__init__()
-        self.setFrameShape(QFrame.Shape.StyledPanel)
+        self.param_name = param_name
+        self.unit = unit
+        self.priority = priority
+        
+        # Clean, frameless container
+        self.setFrameShape(QFrame.Shape.NoFrame)
+        
+        # Main layout
         layout = QVBoxLayout(self)
-        layout.setContentsMargins(16, 16, 16, 16)
-        layout.setSpacing(8)
+        layout.setContentsMargins(24, 24, 24, 24)
+        layout.setSpacing(4)
         
- 
-        # Title with icon
-        title_layout = QHBoxLayout()
-        title_label = QLabel(param_name)
-        title_label.setFont(QFont("Arial", 12, QFont.Weight.Bold))
-        title_label.setStyleSheet("color: #ffffff;")
-        title_layout.addWidget(title_label)
-        title_layout.addStretch()
+        # Parameter name - top
+        self.name_label = QLabel(param_name)
+        self.name_label.setFont(QFont("Arial", 11))
+        self.name_label.setStyleSheet("color: #999999;")
+        self.name_label.setAlignment(Qt.AlignmentFlag.AlignLeft)
         
-        # Unit label
-        unit_label = QLabel(unit)
-        unit_label.setFont(QFont("Arial", 10))
-        unit_label.setStyleSheet("color: #aaaaaa;")
-        title_layout.addWidget(unit_label)
-        
-        # Value display
+        # Main value - huge and centered
         self.value_label = QLabel("---")
-        value_font = QFont("Monospace", 28, QFont.Weight.Bold)
-        value_font.setStyleStrategy(QFont.PreferAntialias)
+        value_font = QFont("Arial", 70, QFont.Weight.Bold)
         self.value_label.setFont(value_font)
         self.value_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.value_label.setStyleSheet("color: #00ff88; padding: 8px;")
+        self.value_label.setStyleSheet("color: #ffffff; padding: 20px 0px;")
         
-        layout.addLayout(title_layout)
+        # Unit - small, right below value
+        self.unit_label = QLabel(unit)
+        self.unit_label.setFont(QFont("Arial", 14))
+        self.unit_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.unit_label.setStyleSheet("color: #666666;")
+        
+        # Add to layout
+        layout.addWidget(self.name_label)
+        layout.addStretch()
         layout.addWidget(self.value_label)
+        layout.addWidget(self.unit_label)
+        layout.addStretch()
         
-        self.priority = priority
-        self.set_alarm_state('Nominal')
+        # Set base style
+        self.setStyleSheet("""
+            QFrame {
+                background-color: #1e1e1e;
+                border-radius: 8px;
+            }
+        """)
+        
+        # Minimum size
+        self.setMinimumSize(240, 200)
+        self.setMaximumHeight(280)
     
     def update_value(self, value, alarm_state):
         if value is not None:
-            self.value_label.setText(f"{value:.2f}")
+            # Smart formatting
+            if abs(value) >= 1000:
+                display_value = f"{value:,.1f}"
+            elif abs(value) >= 100:
+                display_value = f"{value:.1f}"
+            elif abs(value) >= 10:
+                display_value = f"{value:.2f}"
+            elif abs(value) >= 1:
+                display_value = f"{value:.2f}"
+            else:
+                display_value = f"{value:.3f}"
+            
+            self.value_label.setText(display_value)
+            
+            # Color based on state
+            if alarm_state == 'Critical':
+                value_color = '#ff4757'
+                bg_color = '#1e1e1e'
+                glow = 'text-shadow: 0 0 20px rgba(255, 71, 87, 0.5);'
+            elif alarm_state == 'Warning':
+                value_color = '#ffa502'
+                bg_color = '#1e1e1e'
+                glow = 'text-shadow: 0 0 20px rgba(255, 165, 2, 0.5);'
+            else:
+                value_color = '#ffffff'
+                bg_color = '#1e1e1e'
+                glow = ''
+            
+            self.value_label.setStyleSheet(f"color: {value_color}; padding: 20px 0px; {glow}")
+            self.setStyleSheet(f"""
+                QFrame {{
+                    background-color: {bg_color};
+                    border-radius: 8px;
+                }}
+            """)
         else:
-            self.value_label.setText("NO DATA")
-            self.value_label.setStyleSheet("color: #ff4444; padding: 8px;")
+            self.value_label.setText("--")
+            self.value_label.setStyleSheet("color: #555555; padding: 20px 0px;")
+        
         self.set_alarm_state(alarm_state)
     
     def set_alarm_state(self, state):
-        alarm_colors = {
-            'Critical': '#FF3131', 
-            'Warning': '#FFBF00', 
-            'Nominal': '#1a1a1a'
-        }
-        priority_colors = {
-            'High': '#FF3131', 
-            'Medium': '#0078FF', 
-            'Low': 'transparent'
-        }
-        bg_color = alarm_colors.get(state, '#1a1a1a')
-        border_color = priority_colors.get(self.priority, 'transparent')
-        self.setStyleSheet(f"""
-            background-color: {bg_color}; 
-            border-radius: 12px; 
-            border: 3px solid {border_color};
-            padding: 4px;
-        """)
+        # Just update the internal state, visual already handled in update_value
+        pass
 
 class TimeGraph(QWidget):
     def __init__(self, param_configs):
@@ -2877,20 +3003,24 @@ class MainWindow(QMainWindow):
             self.simulator.stop()
             self.simulator.wait()
         
+        # Create new simulator with connection settings
         self.simulator = DataSimulator(num_channels=32, connection_settings=self.connection_settings)
         
-        # Set mode based on connection settings
-        mode = self.connection_settings.get('mode', 'dummy')
-        if mode == 'dummy':
+        # CRITICAL: Set mode based on connection settings
+        conn_mode = self.connection_settings.get('mode', 'dummy')
+        if conn_mode == 'dummy':
             self.simulator.mode = "dummy"
         else:
+            # For serial, tcp, udp - all use backend mode
             self.simulator.mode = "backend"
         
         # Connect the signal for both modes
         self.simulator.newData.connect(self.update_data)
         self.simulator.start()
-        self.update_status_bar()
-        self.update_connection_status()
+        
+        # Give the connection a moment to establish
+        QTimer.singleShot(500, self.update_status_bar)
+        QTimer.singleShot(500, self.update_connection_status)
 
     # --- All other MainWindow methods are unchanged ---
     def open_add_widget_dialog(self):
@@ -3282,8 +3412,9 @@ class MainWindow(QMainWindow):
             self.stream_status_label.setText("PAUSED")
             self.stream_status_label.setStyleSheet("color: #FF3131;")
         
-        # Update connection status
+        # Update connection status every second
         self.update_connection_status()
+
     def mark_as_unsaved(self):
         """Mark the project as having unsaved changes"""
         self.has_unsaved_changes = True
@@ -5147,32 +5278,70 @@ class MainWindow(QMainWindow):
             self.connection_status_label.setText("Connected (Dummy Data)")
             self.connection_status_label.setStyleSheet("color: #21b35a; font-weight: bold;")
         else:
-            # Check if backend connection is active
+            # Check if backend connection is actually alive
+            is_connected = False
+            
             if hasattr(self.simulator, 'reader') and self.simulator.reader:
                 if mode == 'serial':
-                    if hasattr(self.simulator.reader, 'ser') and self.simulator.reader.ser:
-                        self.connection_status_label.setText(f"Connected (Serial: {self.connection_settings.get('serial_port', 'N/A')})")
-                        self.connection_status_label.setStyleSheet("color: #21b35a; font-weight: bold;")
-                    else:
-                        self.connection_status_label.setText("Disconnected (Serial)")
-                        self.connection_status_label.setStyleSheet("color: #ff3131; font-weight: bold;")
+                    try:
+                        is_connected = (hasattr(self.simulator.reader, 'ser') and 
+                                    self.simulator.reader.ser and 
+                                    self.simulator.reader.ser.is_open)
+                    except:
+                        is_connected = False
+                        
                 elif mode == 'tcp':
-                    if hasattr(self.simulator.reader, 'sock') and self.simulator.reader.sock:
-                        self.connection_status_label.setText(f"Connected (TCP: {self.connection_settings.get('tcp_host', 'N/A')}:{self.connection_settings.get('tcp_port', 'N/A')})")
-                        self.connection_status_label.setStyleSheet("color: #21b35a; font-weight: bold;")
-                    else:
-                        self.connection_status_label.setText("Disconnected (TCP)")
-                        self.connection_status_label.setStyleSheet("color: #ff3131; font-weight: bold;")
+                    try:
+                        is_connected = (hasattr(self.simulator.reader, 'sock') and 
+                                    self.simulator.reader.sock is not None)
+                        # Additional check: try to get socket error state
+                        if is_connected:
+                            try:
+                                # Check if socket is still connected using getsockopt
+                                import socket
+                                error = self.simulator.reader.sock.getsockopt(socket.SOL_SOCKET, socket.SO_ERROR)
+                                is_connected = (error == 0)
+                            except:
+                                is_connected = False
+                    except:
+                        is_connected = False
+                        
                 elif mode == 'udp':
-                    if hasattr(self.simulator.reader, 'sock') and self.simulator.reader.sock:
-                        self.connection_status_label.setText(f"Connected (UDP: {self.connection_settings.get('udp_host', 'N/A')}:{self.connection_settings.get('udp_port', 'N/A')})")
-                        self.connection_status_label.setStyleSheet("color: #21b35a; font-weight: bold;")
-                    else:
-                        self.connection_status_label.setText("Disconnected (UDP)")
-                        self.connection_status_label.setStyleSheet("color: #ff3131; font-weight: bold;")
+                    try:
+                        is_connected = (hasattr(self.simulator.reader, 'sock') and 
+                                    self.simulator.reader.sock is not None)
+                    except:
+                        is_connected = False
+            
+            # Update UI based on actual connection state
+            if is_connected:
+                if mode == 'serial':
+                    port = self.connection_settings.get('serial_port', 'N/A')
+                    self.connection_status_label.setText(f"Connected (Serial: {port})")
+                elif mode == 'tcp':
+                    host = self.connection_settings.get('tcp_host', 'N/A')
+                    port = self.connection_settings.get('tcp_port', 'N/A')
+                    self.connection_status_label.setText(f"Connected (TCP: {host}:{port})")
+                elif mode == 'udp':
+                    host = self.connection_settings.get('udp_host', 'N/A')
+                    port = self.connection_settings.get('udp_port', 'N/A')
+                    self.connection_status_label.setText(f"Connected (UDP: {host}:{port})")
+                
+                self.connection_status_label.setStyleSheet("color: #21b35a; font-weight: bold;")
             else:
-                self.connection_status_label.setText("Not Connected")
-                self.connection_status_label.setStyleSheet("color: #ff3131; font-weight: bold;")
+                # Not connected - show attempting
+                if mode == 'serial':
+                    port = self.connection_settings.get('serial_port', 'N/A')
+                    self.connection_status_label.setText(f"Disconnected (Serial: {port})")
+                elif mode == 'tcp':
+                    host = self.connection_settings.get('tcp_host', 'N/A')
+                    port = self.connection_settings.get('tcp_port', 'N/A')
+                    self.connection_status_label.setText(f"Connecting (TCP: {host}:{port})...")
+                elif mode == 'udp':
+                    port = self.connection_settings.get('udp_port', 'N/A')
+                    self.connection_status_label.setText(f"Listening (UDP: {port})")
+                
+                self.connection_status_label.setStyleSheet("color: #ff9800; font-weight: bold;")
 
     def _build_dashboard_page(self):
         self.dashboard_page = QWidget(); layout = QVBoxLayout(self.dashboard_page)
@@ -5220,8 +5389,18 @@ class MainWindow(QMainWindow):
         if dialog.exec() == QDialog.DialogCode.Accepted:
             self.connection_settings = dialog.get_settings()
             self.mark_as_unsaved()
+            
+            # Stop current simulator
+            if self.simulator:
+                self.simulator.stop()
+                self.simulator.wait()
+            
+            # Restart with new settings
             self.restart_simulator()
-            self.update_status_bar()
+            
+            # Force immediate status update
+            QTimer.singleShot(500, self.update_status_bar)
+            QTimer.singleShot(500, self.update_connection_status)
     def apply_stylesheet(self):
         self.setStyleSheet("""
             QMainWindow, QDialog { background-color: #1e1e1e; color: #d4d4d4; }
