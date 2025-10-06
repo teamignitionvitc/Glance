@@ -4710,12 +4710,29 @@ class MainWindow(QMainWindow):
 
     def _build_welcome_page(self):
         self.welcome_page = QWidget()
+        
+        # Apply gradient background from bottom
+        self.welcome_page.setStyleSheet("""
+            QWidget#welcomePage {
+                background: qradialgradient(
+                    cx: 0.5, cy: 1.0,
+                    fx: 0.5, fy: 1.0,
+                    radius: 1.2,
+                    stop: 0 #212124,
+                    stop: 0.6 #111111,
+                    stop: 1 #111111
+                );
+            }
+        """)
+        self.welcome_page.setObjectName("welcomePage")
+        
         v = QVBoxLayout(self.welcome_page)
         v.setContentsMargins(60, 40, 60, 40)
         v.setSpacing(24)
         
         # Logo section
         logo_container = QWidget()
+        logo_container.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
         logo_layout = QVBoxLayout(logo_container)
         logo_layout.setContentsMargins(0, 0, 0, 0)
         try:
@@ -4723,8 +4740,9 @@ class MainWindow(QMainWindow):
             logo = QLabel("")
             pix = QPixmap("docs/public/Glance_nobg.png")
             if not pix.isNull():
-                logo.setPixmap(pix.scaledToWidth(300, Qt.SmoothTransformation))
+                logo.setPixmap(pix.scaledToWidth(300, Qt.TransformationMode.SmoothTransformation))
                 logo.setAlignment(Qt.AlignmentFlag.AlignCenter)
+                logo.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
                 logo_layout.addWidget(logo)
         except Exception:
             pass
@@ -4733,9 +4751,11 @@ class MainWindow(QMainWindow):
         subtitle = QLabel("<p style='color: #cccccc; font-size: 14px; margin: 8px 0;'>Professional industrial data visualization and monitoring</p>")
         subtitle.setAlignment(Qt.AlignmentFlag.AlignCenter)
         subtitle.setWordWrap(True)
+        subtitle.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
         
         # Feature highlights
         features = QWidget()
+        features.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
         features_layout = QHBoxLayout(features)
         features_layout.setSpacing(30)
         
@@ -4745,10 +4765,12 @@ class MainWindow(QMainWindow):
         
         for f in [feature1, feature2, feature3]:
             f.setStyleSheet("color: #aaaaaa; padding: 8px;")
+            f.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
             features_layout.addWidget(f)
         
         # Action buttons
         btn_container = QWidget()
+        btn_container.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
         btn_layout = QHBoxLayout(btn_container)
         btn_layout.setSpacing(16)
         
