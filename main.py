@@ -2402,11 +2402,12 @@ class MainWindow(QMainWindow):
         self._build_menu_bar()
         self._build_status_bar()
         self.apply_stylesheet()
+        self._build_splash_screen()
         self._build_welcome_page()
         self._build_setup_page()
         self._build_widgets_page()
         self._build_dashboard_page()
-        self.show_phase("welcome")
+        self.show_phase("splash")
         self.restart_simulator()
         self.update_control_states()
         
@@ -3799,6 +3800,82 @@ class MainWindow(QMainWindow):
         help_menu.addAction(documentation_action)
         help_menu.addAction(about_action)
 
+    def _build_splash_screen(self):
+        """Splash screen with animated logo that transitions to welcome screen"""
+        self.splash_page = QWidget()
+        self.splash_page.setStyleSheet("""
+            QWidget#splashPage {
+                background: qradialgradient(
+                    cx: 0.5, cy: 0.5,
+                    fx: 0.5, fy: 0.5,
+                    radius: 1.2,
+                    stop: 0 #212124,
+                    stop: 0.6 #111111,
+                    stop: 1 #0a0a0a
+                );
+            }
+        """)
+        self.splash_page.setObjectName("splashPage")
+        
+        layout = QVBoxLayout(self.splash_page)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        
+        # Logo container
+        self.splash_logo = QLabel()
+        self.splash_logo.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.splash_logo.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
+        
+
+        self.splash_logo.setText("Glance")
+        self.splash_logo.setStyleSheet("color: #ffffff; font-size: 72px; font-weight: bold;")
+        
+        layout.addWidget(self.splash_logo)
+        self.stack.addWidget(self.splash_page)
+        
+        # Timer to transition after 2 seconds
+        self.splash_timer = QTimer(self)
+        self.splash_timer.setSingleShot(True)
+        self.splash_timer.timeout.connect(self._animate_splash_to_welcome)
+
+    def _animate_splash_to_welcome(self):
+        """Transition from splash to welcome screen"""
+        self.show_phase("welcome")
+
+    def _animate_splash_to_welcome(self):
+        """Animate logo from splash screen to welcome screen position"""
+        from PySide6.QtCore import QPropertyAnimation, QEasingCurve, QPoint, QRect
+        from PySide6.QtWidgets import QGraphicsOpacityEffect
+        
+        # First, switch to welcome page
+        self.show_phase("welcome")
+        
+        # Create a temporary overlay widget for animation
+        overlay = QWidget(self)
+        overlay.setGeometry(self.rect())
+        overlay.setStyleSheet("background: transparent;")
+        overlay.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
+        overlay.raise_()
+        
+        # Create animated logo on overlay
+        anim_logo = QLabel(overlay)
+        anim_logo.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        
+        # Position at center
+        start_x = (self.width() - 500) // 2
+        start_y = (self.height() - 500) // 2
+        anim_logo.setGeometry(start_x, start_y, 500, 500)
+        
+        # Show overlay
+        overlay.show()
+        anim_logo.show()
+        
+        # Create fade out animation for overlay after movement
+        def cleanup_overlay():
+            overlay.deleteLater()
+        
+        QTimer.singleShot(800, cleanup_overlay)
+
     def _build_welcome_menu_bar(self):
         """Build minimal menu bar for welcome screen"""
         menubar = self.menuBar()
@@ -4603,6 +4680,13 @@ class MainWindow(QMainWindow):
     def update_status_bar_visibility(self, phase):
         """Show/hide status bar elements based on current phase"""
         is_dashboard = (phase == "dashboard")
+        is_splash = (phase == "splash")
+        
+        # Hide status bar completely during splash
+        if is_splash:
+            self.statusBar().setVisible(False)
+        else:
+            self.statusBar().setVisible(True)
         
         # Show all elements only in dashboard phase
         self.conn_label.setVisible(is_dashboard)
@@ -5382,20 +5466,29 @@ class MainWindow(QMainWindow):
         
         # NEW: Customize menu bar based on phase
         is_welcome = (which == "welcome")
+        is_splash = (which == "splash")
         
-        if is_welcome:
+        # Hide menu bar during splash
+        if is_splash:
+            self.menuBar().setVisible(False)
+        elif is_welcome:
             # Show minimal menu bar for welcome screen
             self._build_welcome_menu_bar()
+            self.menuBar().setVisible(True)
         else:
             # Show full menu bar for other phases
             self._build_menu_bar()
-        
-        self.menuBar().setVisible(True)  # Always show menu bar
+            self.menuBar().setVisible(True)
         
         # Update status bar visibility
         self.update_status_bar_visibility(which)
         
-        if which == "welcome":
+        # Handle splash screen
+        if which == "splash":
+            self.stack.setCurrentWidget(self.splash_page)
+            # Start timer to transition to welcome after 2 seconds
+            self.splash_timer.start(2000)
+        elif which == "welcome":
             self.stack.setCurrentWidget(self.welcome_page)
         elif which == "setup":
             self.stack.setCurrentWidget(self.setup_page)
