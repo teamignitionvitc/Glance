@@ -2108,7 +2108,7 @@ class MapWidget(QWidget):
             self._last_sent_lat = None
             self._last_sent_lon = None
             self._update_timer = QTimer(self)
-            self._update_timer.setInterval(10000)  # 10 seconds
+            self._update_timer.setInterval(20000)  # 10 seconds
             self._update_timer.timeout.connect(self._push_position)
             self._update_timer.start()
         else:
