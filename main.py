@@ -70,7 +70,7 @@ from PySide6.QtWidgets import (
     QTableWidget, QTableWidgetItem, QHeaderView, QGroupBox, QTabWidget,
     QDialog, QFormLayout, QDialogButtonBox, QDoubleSpinBox, QDockWidget,
     QSizePolicy, QInputDialog, QMessageBox, QTabBar, QAbstractItemView,
-    QSpinBox, QStackedWidget, QCheckBox # --- NEW ---
+    QSpinBox, QStackedWidget, QCheckBox, QTreeWidget, QTreeWidgetItem  # Added QTreeWidget, QTreeWidgetItem
 )
 from PySide6.QtCore import QThread, Signal, Qt, QTimer, QByteArray
 from PySide6.QtGui import QFont, QColor, QBrush, QAction, QPixmap
@@ -1672,17 +1672,14 @@ class ValueCard(QFrame):
             if alarm_state == 'Critical':
                 value_color = '#ff4757'
                 bg_color = '#1e1e1e'
-                glow = 'text-shadow: 0 0 20px rgba(255, 71, 87, 0.5);'
             elif alarm_state == 'Warning':
                 value_color = '#ffa502'
                 bg_color = '#1e1e1e'
-                glow = 'text-shadow: 0 0 20px rgba(255, 165, 2, 0.5);'
             else:
                 value_color = '#ffffff'
                 bg_color = '#1e1e1e'
-                glow = ''
-            
-            self.value_label.setStyleSheet(f"color: {value_color}; padding: 20px 0px; {glow}")
+
+            self.value_label.setStyleSheet(f"color: {value_color}; padding: 20px 0px;")
             self.setStyleSheet(f"""
                 QFrame {{
                     background-color: {bg_color};
@@ -1915,7 +1912,6 @@ class LEDWidget(QFrame):
                     border-radius: 20px; 
                     background: #ff3131; 
                     border: 3px solid #ff6666;
-                    box-shadow: 0 0 10px #ff3131;
                 """)
             elif v >= t.get('high_warn', 75):
                 # Warning - yellow
@@ -1923,7 +1919,6 @@ class LEDWidget(QFrame):
                     border-radius: 20px; 
                     background: #ffbf00; 
                     border: 3px solid #ffcc33;
-                    box-shadow: 0 0 10px #ffbf00;
                 """)
             elif v >= t.get('low_warn', 25):
                 # Normal - green
@@ -1931,7 +1926,6 @@ class LEDWidget(QFrame):
                     border-radius: 20px; 
                     background: #21b35a; 
                     border: 3px solid #4ade80;
-                    box-shadow: 0 0 10px #21b35a;
                 """)
             else:
                 # Low - blue
@@ -1939,7 +1933,6 @@ class LEDWidget(QFrame):
                     border-radius: 20px; 
                     background: #0078ff; 
                     border: 3px solid #3b82f6;
-                    box-shadow: 0 0 10px #0078ff;
                 """)
         else:
             # No data - gray
@@ -1948,7 +1941,6 @@ class LEDWidget(QFrame):
                 background: #555; 
                 border: 3px solid #333;
             """)
-
 # Optional: Map widget using QWebEngineView if available
 try:
     from PySide6.QtWebEngineWidgets import QWebEngineView  # type: ignore
@@ -3297,19 +3289,24 @@ class MainWindow(QMainWindow):
         
         # Buttons
         btn_layout = QHBoxLayout()
-        
+
+        add_btn = QPushButton("Add Filter...")
+        add_btn.clicked.connect(lambda: self.add_filter_from_tree(tree, dialog))
+
         enable_btn = QPushButton("Enable/Disable")
         enable_btn.clicked.connect(lambda: self.toggle_filter_from_tree(tree))
-        
+
         remove_btn = QPushButton("Remove Filter")
         remove_btn.clicked.connect(lambda: self.remove_filter_from_tree(tree))
-        
+
         reset_btn = QPushButton("Reset Filter State")
         reset_btn.clicked.connect(lambda: self.reset_filter_from_tree(tree))
-        
+
         close_btn = QPushButton("Close")
+
         close_btn.clicked.connect(dialog.accept)
-        
+
+        btn_layout.addWidget(add_btn)
         btn_layout.addWidget(enable_btn)
         btn_layout.addWidget(remove_btn)
         btn_layout.addWidget(reset_btn)
@@ -3319,6 +3316,187 @@ class MainWindow(QMainWindow):
         layout.addLayout(btn_layout)
         
         dialog.exec()
+
+    def add_filter_from_tree(self, tree, parent_dialog):
+        """Add a new filter to the selected parameter from the tree"""
+        item = tree.currentItem()
+        
+        # Get parameter ID - either from selected parameter or from selected filter's parent
+        param_id = None
+        param_name = None
+        
+        if item:
+            data = item.data(0, Qt.ItemDataRole.UserRole)
+            if data:
+                if data.get('type') == 'parameter':
+                    # Selected a parameter directly
+                    param_id = data['param_id']
+                    param_name = item.text(0)
+                elif data.get('type') == 'filter':
+                    # Selected a filter - get parent parameter
+                    param_id = data['param_id']
+                    parent = item.parent()
+                    if parent:
+                        param_name = parent.text(0)
+        
+        if not param_id:
+            QMessageBox.information(parent_dialog, "No Selection", 
+                                "Please select a parameter to add a filter to.")
+            return
+        
+        # Show filter type selection dialog
+        from PySide6.QtWidgets import QInputDialog
+        
+        filter_types = ["Moving Average", "Low Pass", "Kalman", "Median"]
+        filter_type, ok = QInputDialog.getItem(
+            parent_dialog, 
+            f"Add Filter to {param_name}",
+            "Select filter type:",
+            filter_types,
+            0,
+            False
+        )
+        
+        if not ok:
+            return
+        
+        # Map display name to internal name
+        filter_type_map = {
+            "Moving Average": "moving_average",
+            "Low Pass": "low_pass",
+            "Kalman": "kalman",
+            "Median": "median"
+        }
+        
+        internal_type = filter_type_map[filter_type]
+        
+        # Show configuration dialog
+        from PySide6.QtWidgets import QDialog, QVBoxLayout, QFormLayout, QDoubleSpinBox, QSpinBox, QDialogButtonBox
+        
+        config_dialog = QDialog(parent_dialog)
+        config_dialog.setWindowTitle(f"Configure {filter_type}")
+        config_dialog.setMinimumWidth(350)
+        
+        layout = QVBoxLayout(config_dialog)
+        form = QFormLayout()
+        
+        # Different parameters for different filter types
+        if internal_type == 'moving_average':
+            window_spin = QSpinBox()
+            window_spin.setRange(2, 100)
+            window_spin.setValue(5)
+            form.addRow("Window Size:", window_spin)
+            
+        elif internal_type == 'low_pass':
+            alpha_spin = QDoubleSpinBox()
+            alpha_spin.setRange(0.01, 1.0)
+            alpha_spin.setSingleStep(0.05)
+            alpha_spin.setValue(0.3)
+            alpha_spin.setDecimals(2)
+            form.addRow("Alpha (0-1, lower=smoother):", alpha_spin)
+            
+        elif internal_type == 'kalman':
+            process_var_spin = QDoubleSpinBox()
+            process_var_spin.setRange(0.001, 10.0)
+            process_var_spin.setSingleStep(0.01)
+            process_var_spin.setValue(0.01)
+            process_var_spin.setDecimals(3)
+            form.addRow("Process Variance:", process_var_spin)
+            
+            measurement_var_spin = QDoubleSpinBox()
+            measurement_var_spin.setRange(0.001, 10.0)
+            measurement_var_spin.setSingleStep(0.1)
+            measurement_var_spin.setValue(0.1)
+            measurement_var_spin.setDecimals(3)
+            form.addRow("Measurement Variance:", measurement_var_spin)
+            
+        elif internal_type == 'median':
+            window_spin = QSpinBox()
+            window_spin.setRange(3, 101)
+            window_spin.setSingleStep(2)
+            window_spin.setValue(5)
+            form.addRow("Window Size (odd):", window_spin)
+        
+        layout.addLayout(form)
+        
+        # Add buttons
+        buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel)
+        buttons.accepted.connect(config_dialog.accept)
+        buttons.rejected.connect(config_dialog.reject)
+        layout.addWidget(buttons)
+        
+        # Show dialog
+        if config_dialog.exec() == QDialog.DialogCode.Accepted:
+            # Create the filter based on type
+            filter_id = str(uuid.uuid4())
+            
+            if internal_type == 'moving_average':
+                filter_obj = MovingAverageFilter(filter_id, window_spin.value())
+            elif internal_type == 'low_pass':
+                filter_obj = LowPassFilter(filter_id, alpha_spin.value())
+            elif internal_type == 'kalman':
+                filter_obj = KalmanFilter(filter_id, process_var_spin.value(), measurement_var_spin.value())
+            elif internal_type == 'median':
+                filter_obj = MedianFilter(filter_id, window_spin.value())
+            else:
+                return
+            
+            # Add to filter manager
+            self.filter_manager.add_filter(param_id, filter_obj)
+            self.mark_as_unsaved()
+            
+            # Refresh the tree to show the new filter
+            self.refresh_manage_filters_tree(tree)
+            
+            QMessageBox.information(parent_dialog, "Filter Added", 
+                                f"{filter_obj.filter_name} filter added to parameter '{param_name}'")
+            self.update_filter_menus()
+
+    def refresh_manage_filters_tree(self, tree):
+        """Refresh the filter management tree widget"""
+        from PySide6.QtWidgets import QTreeWidgetItem  # Add this line
+        
+        tree.clear()
+        
+        # Populate tree
+        for param in self.parameters:
+            param_id = param['id']
+            param_name = param['name']
+            filters = self.filter_manager.get_filters(param_id)
+            
+            # Create parameter item
+            param_item = QTreeWidgetItem([param_name, "", "", f"{len(filters)} filter(s)"])
+            param_item.setData(0, Qt.ItemDataRole.UserRole, {'type': 'parameter', 'param_id': param_id})
+            
+            # Add filter children
+            for filter_obj in filters:
+                status = "Enabled" if filter_obj.enabled else "Disabled"
+                details = ""
+                
+                if isinstance(filter_obj, MovingAverageFilter):
+                    details = f"Window: {filter_obj.window_size}"
+                elif isinstance(filter_obj, LowPassFilter):
+                    details = f"Alpha: {filter_obj.alpha:.2f}"
+                elif isinstance(filter_obj, KalmanFilter):
+                    details = f"Q: {filter_obj.process_variance:.3f}, R: {filter_obj.measurement_variance:.3f}"
+                elif isinstance(filter_obj, MedianFilter):
+                    details = f"Window: {filter_obj.window_size}"
+                
+                filter_item = QTreeWidgetItem([f"  → {filter_obj.filter_name}", 
+                                            filter_obj.__class__.__name__, 
+                                            status, 
+                                            details])
+                filter_item.setData(0, Qt.ItemDataRole.UserRole, {
+                    'type': 'filter',
+                    'param_id': param_id,
+                    'filter_id': filter_obj.filter_id,
+                    'filter_obj': filter_obj
+                })
+                param_item.addChild(filter_item)
+            
+            tree.addTopLevelItem(param_item)
+        
+        tree.expandAll()
 
     def toggle_filter_from_tree(self, tree):
         """Toggle filter enabled/disabled state"""
@@ -3351,6 +3529,7 @@ class MainWindow(QMainWindow):
                 parent.removeChild(item)
                 parent.setText(3, f"{parent.childCount()} filter(s)")
                 self.mark_as_unsaved()
+                self.refresh_manage_filters_tree(tree)
                 self.update_filter_menus()
 
     def reset_filter_from_tree(self, tree):
