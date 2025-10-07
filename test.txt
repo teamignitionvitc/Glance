@@ -1,0 +1,23 @@
+# Run all tests
+pytest test.py
+
+# Run with coverage
+pytest test.py --cov=main --cov-report=html
+
+# Run specific test class
+pytest test.py::TestDataLogger -v
+
+# Run tests with specific marker
+pytest test.py -m "not slow"
+
+# Run tests matching pattern
+pytest test.py -k "filter" -v
+
+# Run with detailed output
+pytest test.py -vv --tb=long
+
+# Run and stop on first failure
+pytest test.py -x
+
+# Run in parallel (requires pytest-xdist)
+pytest test.py -n auto
