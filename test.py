@@ -562,6 +562,8 @@ class TestRawTelemetryMonitor:
         assert monitor.is_paused is False
         assert monitor.pause_btn.text() == "Pause"
         
+        # Trigger the button click properly
+        monitor.pause_btn.setChecked(True)
         monitor.toggle_pause()
         assert monitor.is_paused is True
         assert monitor.pause_btn.text() == "Resume"
@@ -1486,7 +1488,7 @@ class TestCleanup:
         time.sleep(0.1)
         
         simulator.stop()
-        simulator.wait(timeout=1000)
+        simulator.wait(1000)
         
         assert simulator._is_running is False
     
