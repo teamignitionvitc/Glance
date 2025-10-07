@@ -410,6 +410,13 @@ class MedianFilter(SignalFilter):
 
 class FilterManager:
     """Manages filters for all parameters"""
+    # Class-level registry of filter types
+    FILTER_CLASSES = {
+        'moving_average': MovingAverageFilter,
+        'low_pass': LowPassFilter,
+        'kalman': KalmanFilter,
+        'median': MedianFilter
+    }
     
     def __init__(self):
         self.parameter_filters = {}  # param_id -> list of filters
@@ -3435,6 +3442,7 @@ class MainWindow(QMainWindow):
         else:
             title = f"{base_title} - Untitled"
         
+        # Only show asterisk if there are actual unsaved changes
         if self.has_unsaved_changes:
             title += " *"
         
@@ -5145,8 +5153,8 @@ class MainWindow(QMainWindow):
         self.configured_widgets = []
         
         # Add default parameters if none exist
-        if not self.parameters:
-            self.create_default_parameters()
+        # if not self.parameters:
+        #     self.create_default_parameters()
 
     def add_widget_to_config(self):
         """Add a widget to the configuration list"""
