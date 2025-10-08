@@ -2331,7 +2331,13 @@ class ManageParametersDialog(QDialog):
 # --- 3. MAIN APPLICATION WINDOW ---
 class MainWindow(QMainWindow):
     def __init__(self):
-        super().__init__(); self.setWindowTitle("Ignition Dashboard (PySide6)")
+        super().__init__()
+        self.setWindowTitle("Ignition Dashboard (PySide6)")
+        
+        # CRITICAL: Initialize fullscreen state before anything else
+        self.is_fullscreen = False
+        self.normal_geometry = None
+        
         # Improved initial sizing and centering
         self.setMinimumSize(1200, 720)
         self.resize(1200, 720)
@@ -2344,6 +2350,12 @@ class MainWindow(QMainWindow):
                 self.move(x, y)
         except Exception:
             pass
+        
+        self.graph_color_palette = ['#00BFFF', '#FF3131', '#39CCCC', '#F012BE', '#FFDC00', '#7FDBFF', '#01FF70', '#FF851B']
+        self.next_graph_color_index = 0
+        self.parameters = []
+        self.data_history = {}
+        self.tab_data = {}
         self.graph_color_palette = ['#00BFFF', '#FF3131', '#39CCCC', '#F012BE', '#FFDC00', '#7FDBFF', '#01FF70', '#FF851B']
         self.next_graph_color_index = 0
         self.parameters = []; self.data_history = {}; self.tab_data = {}
@@ -2374,6 +2386,11 @@ class MainWindow(QMainWindow):
         self.setCentralWidget(self.stack)
         self.tab_widget = QTabWidget(); self.tab_widget.setTabsClosable(True)
         self.tab_widget.currentChanged.connect(self.on_tab_changed); self.tab_widget.tabCloseRequested.connect(self.close_tab)
+
+        # Add these lines:
+        self._setup_tab_double_click()
+        self._setup_tab_context_menu()
+        self._setup_tab_drag_drop()
         # Minimal list to track active displays; not shown in UI currently
         self.active_displays_list = QListWidget()
         header_widget = QWidget(); header_layout = QHBoxLayout(header_widget)
@@ -2412,6 +2429,53 @@ class MainWindow(QMainWindow):
         
         # Initialize window title
         self.update_window_title()
+
+    def toggle_fullscreen(self):
+        """Toggle fullscreen mode"""
+        if self.is_fullscreen:
+            # Exit fullscreen
+            self.showNormal()
+            
+            if self.normal_geometry:
+                self.setGeometry(self.normal_geometry)
+            
+            self.menuBar().setVisible(True)
+            self.statusBar().setVisible(True)
+            
+            if hasattr(self, 'header_dock') and self.header_dock:
+                if self.stack.currentWidget() == self.dashboard_page:
+                    self.header_dock.setVisible(True)
+            
+            self.is_fullscreen = False
+        else:
+            # Enter fullscreen
+            self.normal_geometry = self.geometry()
+            
+            self.menuBar().setVisible(False)
+            self.statusBar().setVisible(False)
+            
+            if hasattr(self, 'header_dock') and self.header_dock:
+                self.header_dock.setVisible(False)
+            
+            self.showFullScreen()
+            
+            self.is_fullscreen = True
+            
+            # Show hint (optional)
+            QTimer.singleShot(100, self.show_fullscreen_hint)
+
+    def keyPressEvent(self, event):
+        """Handle key press events"""
+        # F11 for fullscreen
+        if event.key() == Qt.Key.Key_F11:
+            self.toggle_fullscreen()
+            event.accept()
+        # ESC to exit fullscreen
+        elif event.key() == Qt.Key.Key_Escape and self.is_fullscreen:
+            self.toggle_fullscreen()
+            event.accept()
+        else:
+            super().keyPressEvent(event)
 
     def refresh_setup_serial_ports(self):
         """Refresh the list of available serial ports in setup page"""
@@ -2632,6 +2696,7 @@ class MainWindow(QMainWindow):
 
     def _show_dock_context_menu(self, dock, pos):
         """Right-click context menu for dock widgets"""
+        self._add_dock_context_menu_transfer(dock, pos)
         from PySide6.QtWidgets import QMenu
         menu = QMenu(self)
         # Get widget info - store the dock reference directly
@@ -3560,19 +3625,537 @@ class MainWindow(QMainWindow):
         tab_main_window = QMainWindow()
         tab_main_window.setDockNestingEnabled(True)
         tab_index = self.tab_widget.addTab(tab_main_window, name)
-        self.tab_data[tab_index] = {'mainwindow': tab_main_window, 'widgets': {}, 'docks': {}, 'configs': {}}
+        self.tab_data[tab_index] = {
+            'mainwindow': tab_main_window, 
+            'widgets': {}, 
+            'docks': {}, 
+            'configs': {},
+            'is_floating': False,
+            'floating_window': None
+        }
         if not is_closable:
             self.tab_widget.tabBar().setTabButton(tab_index, QTabBar.ButtonPosition.RightSide, None)
         self.tab_widget.setCurrentIndex(tab_index)
         return tab_index
-    def close_tab(self, index):
-        if index < 0 or index not in self.tab_data: return
-        tab_info = self.tab_data[index]
-        for dock in tab_info['docks'].values(): dock.deleteLater()
-        tab_info['mainwindow'].deleteLater()
-        del self.tab_data[index]
-        self.tab_widget.removeTab(index)
+
+    def _setup_tab_double_click(self):
+        """Setup double-click handler for tab bar"""
+        self.tab_widget.tabBar().setMouseTracking(True)
+        self.tab_widget.tabBar().mouseDoubleClickEvent = self._on_tab_double_click
+
+    def _on_tab_double_click(self, event):
+        """Handle double-click on tab to float/unfloat"""
+        tab_index = self.tab_widget.tabBar().tabAt(event.pos())
+        if tab_index >= 0:
+            self.toggle_float_tab(tab_index)
+
+    def toggle_float_tab(self, tab_index):
+        """Toggle tab between docked and floating state"""
+        if tab_index not in self.tab_data:
+            return
+        
+        tab_info = self.tab_data[tab_index]
+        
+        if tab_info['is_floating']:
+            # Dock the tab back
+            self._dock_tab(tab_index)
+        else:
+            # Float the tab
+            self._float_tab(tab_index)
+
+    def _float_tab(self, tab_index):
+        """Detach tab into floating window"""
+        tab_info = self.tab_data[tab_index]
+        tab_name = self.tab_widget.tabText(tab_index)
+        
+        # Create floating window
+        floating_window = QMainWindow()
+        floating_window.setWindowTitle(f"{tab_name} - Glance")
+        floating_window.setMinimumSize(800, 600)
+        
+        # Get current tab widget
+        tab_main_window = tab_info['mainwindow']
+        
+        # Store the tab name before removing
+        tab_info['stored_tab_name'] = tab_name
+        tab_info['stored_tab_index'] = tab_index
+        
+        # Remove from tab widget (but don't delete)
+        self.tab_widget.removeTab(tab_index)
+        
+        # Set as central widget of floating window
+        floating_window.setCentralWidget(tab_main_window)
+        
+        # Update tab info
+        tab_info['is_floating'] = True
+        tab_info['floating_window'] = floating_window
+        
+        # Add menu bar to floating window
+        self._add_floating_window_menu(floating_window, tab_index, tab_name)
+        
+        # Show floating window
+        floating_window.show()
+        floating_window.raise_()
+        floating_window.activateWindow()
+        
+        # Handle close event
+        original_close = floating_window.closeEvent
+        def on_close(event):
+            # Only dock if not being destroyed during app shutdown
+            if not self.isHidden():
+                self._dock_tab(tab_index)
+            if original_close:
+                original_close(event)
+            event.accept()
+        
+        floating_window.closeEvent = on_close
+
+    def _dock_tab(self, tab_index):
+        """Dock floating tab back to main window"""
+        if tab_index not in self.tab_data:
+            return
+        
+        tab_info = self.tab_data[tab_index]
+        
+        if not tab_info.get('is_floating', False):
+            return
+        
+        # Get the floating window
+        floating_window = tab_info.get('floating_window')
+        
+        if not floating_window:
+            return
+        
+        # Get the main window widget back
+        tab_main_window = floating_window.centralWidget()
+        
+        if not tab_main_window:
+            return
+        
+        # Disconnect from floating window
+        floating_window.setCentralWidget(None)
+        
+        # Get stored tab name
+        tab_name = tab_info.get('stored_tab_name', 'Tab')
+        
+        # Find a good position to insert (append to end)
+        insert_position = self.tab_widget.count()
+        
+        # Add back to tab widget
+        new_index = self.tab_widget.addTab(tab_main_window, tab_name)
+        
+        # Update tab info
+        tab_info['is_floating'] = False
+        tab_info['floating_window'] = None
+        
+        # Close floating window
+        try:
+            floating_window.closeEvent = None  # Prevent recursion
+            floating_window.close()
+            floating_window.deleteLater()
+        except:
+            pass
+        
+        # Switch to the docked tab
+        self.tab_widget.setCurrentIndex(new_index)
+        
+        # If the index changed, update the mapping
+        if new_index != tab_index:
+            # Move data to new index
+            self.tab_data[new_index] = self.tab_data.pop(tab_index)
+
+    def _enable_dock_drag_drop(self):
+        """Enable drag and drop for dock widgets across tabs"""
+        # This is automatically handled by Qt's dock system
+        # We just need to handle cross-tab transfers
+        pass
+
+    def _add_dock_context_menu_transfer(self, dock, pos):
+        """Enhanced dock context menu with transfer option"""
+        from PySide6.QtWidgets import QMenu
+        menu = QMenu(self)
+        
+        # Store the dock reference
+        self._context_dock = dock
+        current_index = self.tab_widget.currentIndex()
+        tinfo = self.tab_data.get(current_index, {})
+        widget_id = None
+        
+        for wid, d in tinfo.get('docks', {}).items():
+            if d == dock:
+                widget_id = wid
+                break
+        
+        if widget_id:
+            # Existing actions
+            rename_action = menu.addAction("Rename Widget")
+            rename_action.triggered.connect(self._rename_widget_direct)
+            
+            float_action = menu.addAction("Float / Dock")
+            float_action.triggered.connect(self._toggle_float_direct)
+            
+            menu.addSeparator()
+            
+            # NEW: Transfer to tab submenu
+            if self.tab_widget.count() > 1:
+                transfer_menu = menu.addMenu("Move to Tab")
+                
+                for i in range(self.tab_widget.count()):
+                    if i != current_index:  # Don't show current tab
+                        tab_name = self.tab_widget.tabText(i)
+                        transfer_action = transfer_menu.addAction(tab_name)
+                        transfer_action.triggered.connect(
+                            lambda checked, src=current_index, dst=i, wid=widget_id: 
+                            self._transfer_widget_to_tab(src, dst, wid)
+                        )
+                
+                menu.addSeparator()
+            
+            close_action = menu.addAction("Close Widget")
+            close_action.triggered.connect(self._close_widget_direct)
+            
+            menu.addSeparator()
+            
+            tile_action = menu.addAction("Tile Evenly")
+            tile_action.triggered.connect(lambda: self._tile_evenly_safe(current_index))
+        else:
+            menu.addAction("No actions available")
+        
+        menu.exec(dock.mapToGlobal(pos))
+
+    def _transfer_widget_to_tab(self, source_tab_index, dest_tab_index, widget_id):
+        """Transfer a widget from one tab to another"""
+        source_tab = self.tab_data.get(source_tab_index)
+        dest_tab = self.tab_data.get(dest_tab_index)
+        
+        if not source_tab or not dest_tab:
+            return
+        
+        if widget_id not in source_tab['docks']:
+            return
+        
+        # Get widget information
+        dock = source_tab['docks'][widget_id]
+        widget = source_tab['widgets'][widget_id]
+        config = source_tab['configs'][widget_id]
+        
+        # Get dock title for the new tab
+        dock_title = dock.windowTitle()
+        
+        # Remove from source tab
+        source_main_window = source_tab['mainwindow']
+        source_main_window.removeDockWidget(dock)
+        
+        # Remove from source tracking
+        del source_tab['docks'][widget_id]
+        del source_tab['widgets'][widget_id]
+        del source_tab['configs'][widget_id]
+        if 'layout_positions' in source_tab and widget_id in source_tab['layout_positions']:
+            del source_tab['layout_positions'][widget_id]
+        
+        # Create new dock in destination tab
+        dest_main_window = dest_tab['mainwindow']
+        
+        # Create a new dock widget (we can't move the old one directly)
+        new_dock = QDockWidget(dock_title, self)
+        new_dock.setObjectName(f"dock_{widget_id}")
+        new_dock.setWidget(widget)
+        new_dock.setMinimumSize(300, 200)
+        
+        # Add context menu
+        new_dock.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+        new_dock.customContextMenuRequested.connect(
+            lambda pos, d=new_dock: self._add_dock_context_menu_transfer(d, pos)
+        )
+        
+        # Add to destination tab
+        dest_docks = list(dest_tab['docks'].values())
+        if len(dest_docks) == 0:
+            dest_main_window.addDockWidget(Qt.DockWidgetArea.LeftDockWidgetArea, new_dock)
+        else:
+            # Add next to last dock
+            dest_main_window.splitDockWidget(dest_docks[-1], new_dock, Qt.Orientation.Horizontal)
+        
+        # Update destination tracking
+        dest_tab['docks'][widget_id] = new_dock
+        dest_tab['widgets'][widget_id] = widget
+        dest_tab['configs'][widget_id] = config
+        
+        # Update layout positions
+        positions = dest_tab.setdefault('layout_positions', {})
+        positions[widget_id] = self._next_grid_position(positions)
+        
+        # Clean up old dock
+        dock.deleteLater()
+        
+        # Show the widget in new location
+        new_dock.show()
+        new_dock.raise_()
+        
+        # Switch to destination tab to show the result
+        self.tab_widget.setCurrentIndex(dest_tab_index)
+        
+        # Refresh display list
         self.refresh_active_displays_list()
+        
+        QMessageBox.information(
+            self, 
+            "Widget Moved", 
+            f"Widget moved to tab '{self.tab_widget.tabText(dest_tab_index)}'"
+        )
+
+    def _setup_tab_drag_drop(self):
+        """Setup drag and drop handling between tabs"""
+        # Make tab widget accept drops
+        self.tab_widget.setAcceptDrops(True)
+        self.tab_widget.dragEnterEvent = self._tab_drag_enter
+        self.tab_widget.dragMoveEvent = self._tab_drag_move
+        self.tab_widget.dropEvent = self._tab_drop
+
+    def _tab_drag_enter(self, event):
+        """Handle drag enter on tab widget"""
+        # Accept if it's a dock widget being dragged
+        if event.mimeData().hasFormat('application/x-qabstractitemmodeldatalist'):
+            event.accept()
+        else:
+            event.ignore()
+
+    def _tab_drag_move(self, event):
+        """Handle drag move on tab widget"""
+        event.accept()
+
+    def _tab_drop(self, event):
+        """Handle drop on tab widget"""
+        # Get the tab index where drop occurred
+        tab_bar = self.tab_widget.tabBar()
+        drop_pos = event.pos()
+        
+        # Find which tab we're over
+        target_tab_index = -1
+        for i in range(self.tab_widget.count()):
+            tab_rect = tab_bar.tabRect(i)
+            if tab_rect.contains(drop_pos):
+                target_tab_index = i
+                break
+        
+        if target_tab_index >= 0:
+            event.accept()
+        else:
+            event.ignore()
+    
+    def _add_floating_window_menu(self, floating_window, tab_index, tab_name):
+        """Add menu bar to floating window"""
+        menubar = floating_window.menuBar()
+        
+        # Window menu
+        window_menu = menubar.addMenu("Window")
+        
+        dock_action = QAction("Dock Tab", floating_window)
+        dock_action.setShortcut("Ctrl+D")
+        dock_action.triggered.connect(lambda: self._dock_tab(tab_index))
+        window_menu.addAction(dock_action)
+        
+        window_menu.addSeparator()
+        
+        # Add fullscreen for floating window
+        fullscreen_action = QAction("Toggle Fullscreen", floating_window)
+        fullscreen_action.setShortcut("F11")
+        
+        # Store fullscreen state for this window
+        floating_window._is_fullscreen = False
+        floating_window._normal_geometry = None
+        
+        def toggle_floating_fullscreen():
+            if floating_window._is_fullscreen:
+                floating_window.showNormal()
+                if floating_window._normal_geometry:
+                    floating_window.setGeometry(floating_window._normal_geometry)
+                menubar.setVisible(True)
+                floating_window._is_fullscreen = False
+            else:
+                floating_window._normal_geometry = floating_window.geometry()
+                menubar.setVisible(False)
+                floating_window.showFullScreen()
+                floating_window._is_fullscreen = True
+        
+        fullscreen_action.triggered.connect(toggle_floating_fullscreen)
+        window_menu.addAction(fullscreen_action)
+        
+        window_menu.addSeparator()
+        
+        rename_action = QAction("Rename Tab", floating_window)
+        rename_action.triggered.connect(lambda: self._rename_floating_tab(tab_index, floating_window))
+        window_menu.addAction(rename_action)
+        
+        # View menu
+        view_menu = menubar.addMenu("View")
+        
+        add_widget_action = QAction("Add Widget...", floating_window)
+        add_widget_action.setShortcut("Ctrl+W")
+        add_widget_action.triggered.connect(self.open_add_widget_dialog)
+        view_menu.addAction(add_widget_action)
+        
+        # Help menu
+        help_menu = menubar.addMenu("Help")
+        
+        about_action = QAction("About", floating_window)
+        about_action.triggered.connect(self.show_about_dialog)
+        help_menu.addAction(about_action)
+        
+        # Add key event handler for F11 and ESC to floating window
+        original_key_press = floating_window.keyPressEvent
+        def floating_key_press(event):
+            if event.key() == Qt.Key.Key_F11:
+                toggle_floating_fullscreen()
+                event.accept()
+            elif event.key() == Qt.Key.Key_Escape and floating_window._is_fullscreen:
+                toggle_floating_fullscreen()
+                event.accept()
+            else:
+                if original_key_press:
+                    original_key_press(event)
+        
+        floating_window.keyPressEvent = floating_key_press
+
+    def _rename_floating_tab(self, tab_index, floating_window):
+        """Rename a floating tab"""
+        current_name = floating_window.windowTitle().replace(" - Glance", "")
+        new_name, ok = QInputDialog.getText(
+            floating_window, 
+            "Rename Tab", 
+            "Enter new tab name:", 
+            text=current_name
+        )
+        if ok and new_name:
+            floating_window.setWindowTitle(f"{new_name} - Glance")
+
+    def _setup_tab_context_menu(self):
+        """Setup right-click context menu for tabs"""
+        self.tab_widget.tabBar().setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+        self.tab_widget.tabBar().customContextMenuRequested.connect(self._show_tab_context_menu)
+
+    def _show_tab_context_menu(self, pos):
+        """Show context menu for tab"""
+        from PySide6.QtWidgets import QMenu
+        
+        tab_index = self.tab_widget.tabBar().tabAt(pos)
+        if tab_index < 0:
+            return
+        
+        menu = QMenu(self)
+        
+        # Float/Dock action
+        tab_info = self.tab_data.get(tab_index, {})
+        if tab_info.get('is_floating', False):
+            float_action = menu.addAction("Dock Tab")
+            float_action.triggered.connect(lambda: self._dock_tab(tab_index))
+        else:
+            float_action = menu.addAction("Float Tab")
+            float_action.triggered.connect(lambda: self._float_tab(tab_index))
+        
+        menu.addSeparator()
+        
+        # Rename action
+        rename_action = menu.addAction("Rename Tab")
+        rename_action.triggered.connect(lambda: self.rename_tab_by_index(tab_index))
+        
+        # Close action (if closable)
+        if self.tab_widget.tabBar().tabButton(tab_index, QTabBar.ButtonPosition.RightSide):
+            menu.addSeparator()
+            close_action = menu.addAction("Close Tab")
+            close_action.triggered.connect(lambda: self.close_tab(tab_index))
+        
+        menu.exec(self.tab_widget.tabBar().mapToGlobal(pos))
+
+    def rename_tab_by_index(self, index):
+        """Rename tab by index"""
+        if index < 0:
+            return
+        
+        tab_info = self.tab_data.get(index)
+        if not tab_info:
+            return
+        
+        if tab_info['is_floating']:
+            # Rename floating window
+            floating_window = tab_info['floating_window']
+            self._rename_floating_tab(index, floating_window)
+        else:
+            # Rename docked tab
+            current_name = self.tab_widget.tabText(index)
+            new_name, ok = QInputDialog.getText(
+                self, 
+                "Rename Tab", 
+                "Enter new tab name:", 
+                text=current_name
+            )
+            if ok and new_name:
+                self.tab_widget.setTabText(index, new_name)
+
+    def close_tab(self, index):
+        if index < 0: 
+            return
+        
+        # Handle both floating and docked tabs
+        tab_info = None
+        
+        # First, try to find by direct index
+        if index in self.tab_data:
+            tab_info = self.tab_data[index]
+        else:
+            # If not found, might be because of reindexing, search by position
+            for idx, info in list(self.tab_data.items()):
+                if not info.get('is_floating', False):
+                    # Check if this is the tab at position 'index'
+                    tab_count = 0
+                    for i in sorted(self.tab_data.keys()):
+                        if not self.tab_data[i].get('is_floating', False):
+                            if tab_count == index:
+                                tab_info = self.tab_data[i]
+                                index = i
+                                break
+                            tab_count += 1
+                    if tab_info:
+                        break
+        
+        if not tab_info:
+            return
+        
+        # If floating, close the floating window first
+        if tab_info.get('is_floating', False) and tab_info.get('floating_window'):
+            try:
+                tab_info['floating_window'].closeEvent = None  # Prevent recursion
+                tab_info['floating_window'].close()
+                tab_info['floating_window'].deleteLater()
+            except:
+                pass
+        
+        # Clean up docks
+        for dock in tab_info.get('docks', {}).values():
+            try:
+                dock.deleteLater()
+            except:
+                pass
+        
+        # Clean up main window
+        try:
+            tab_info['mainwindow'].deleteLater()
+        except:
+            pass
+        
+        # Remove from data
+        del self.tab_data[index]
+        
+        # Remove from tab widget if not already removed
+        if not tab_info.get('is_floating', False):
+            # Find actual position in tab widget
+            for i in range(self.tab_widget.count()):
+                if self.tab_widget.widget(i) == tab_info['mainwindow']:
+                    self.tab_widget.removeTab(i)
+                    break
+        
+        self.refresh_active_displays_list()
+
     def rename_current_tab(self):
         index = self.tab_widget.currentIndex()
         if index < 0: return
@@ -3957,10 +4540,22 @@ class MainWindow(QMainWindow):
         rename_tab_action = QAction("Rename Current Tab", self)
         rename_tab_action.setShortcut("Ctrl+R")
         rename_tab_action.triggered.connect(self.rename_current_tab)
+
+        # Add this:
+        float_tab_action = QAction("Float/Dock Current Tab", self)
+        float_tab_action.setShortcut("Ctrl+Shift+F")
+        float_tab_action.triggered.connect(lambda: self.toggle_float_tab(self.tab_widget.currentIndex()))
+
         
         raw_tlm_action = QAction("Raw Telemetry Monitor...", self)
         raw_tlm_action.setShortcut("Ctrl+M")
         raw_tlm_action.triggered.connect(self.open_raw_telemetry_monitor)
+
+        # Add fullscreen action
+        fullscreen_action = QAction("Toggle Fullscreen", self)
+        fullscreen_action.setShortcut("F11")
+        fullscreen_action.triggered.connect(self.toggle_fullscreen)
+
         
         # NEW: Pause/Resume shortcut
         pause_action = QAction("Pause/Resume Stream", self)
@@ -3969,7 +4564,9 @@ class MainWindow(QMainWindow):
         
         view_menu.addAction(add_tab_action)
         view_menu.addAction(rename_tab_action)
+        view_menu.addAction(float_tab_action)
         view_menu.addSeparator()
+        view_menu.addAction(fullscreen_action)
         view_menu.addAction(raw_tlm_action)
         view_menu.addSeparator()
         view_menu.addAction(pause_action)
@@ -5644,19 +6241,23 @@ class MainWindow(QMainWindow):
         # start with a default tab only when entering dashboard the first time
 
     def show_phase(self, which):
+        # Exit fullscreen when changing phases (except when staying in dashboard)
+        if self.is_fullscreen and which != "dashboard":
+            self.toggle_fullscreen()
+        
         # Hide dashboard-specific docks outside dashboard phase
         is_dashboard = (which == "dashboard")
         if hasattr(self, 'control_dock') and self.control_dock:
             self.control_dock.setVisible(is_dashboard)
         if hasattr(self, 'header_dock') and self.header_dock:
-            self.header_dock.setVisible(is_dashboard)
+            self.header_dock.setVisible(is_dashboard and not self.is_fullscreen)
         
         # NEW: Customize menu bar based on phase
         is_welcome = (which == "welcome")
         is_splash = (which == "splash")
         
-        # Hide menu bar during splash
-        if is_splash:
+        # Hide menu bar during splash or fullscreen
+        if is_splash or self.is_fullscreen:
             self.menuBar().setVisible(False)
         elif is_welcome:
             # Show minimal menu bar for welcome screen
@@ -5685,6 +6286,28 @@ class MainWindow(QMainWindow):
             self.stack.setCurrentWidget(self.dashboard_page)
             if self.tab_widget.count() == 0:
                 self.add_new_tab(name="Main View", is_closable=False)
+
+    def show_fullscreen_hint(self):
+        """Show a temporary hint that fullscreen is active"""
+        hint = QLabel("Fullscreen Mode - Press F11 or ESC to exit", self)
+        hint.setStyleSheet("""
+            background-color: rgba(0, 0, 0, 180);
+            color: white;
+            padding: 12px 24px;
+            border-radius: 6px;
+            font-size: 13px;
+            font-weight: bold;
+        """)
+        hint.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        
+        # Position at top center
+        hint.adjustSize()
+        x = (self.width() - hint.width()) // 2
+        hint.move(x, 20)
+        hint.show()
+        
+        # Fade out after 3 seconds
+        QTimer.singleShot(3000, hint.deleteLater)
 
     def open_connection_settings(self):
         dialog = ConnectionSettingsDialog(self.connection_settings, self)
