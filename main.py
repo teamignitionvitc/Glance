@@ -2332,7 +2332,7 @@ class ManageParametersDialog(QDialog):
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("Ignition Dashboard (PySide6)")
+        self.setWindowTitle("Glance - Telemetry Dashboard")
         
         # CRITICAL: Initialize fullscreen state before anything else
         self.is_fullscreen = False
