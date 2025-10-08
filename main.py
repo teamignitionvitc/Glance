@@ -4897,95 +4897,139 @@ class MainWindow(QMainWindow):
             self.raw_tlm_monitor.activateWindow()
     
     def show_about_dialog(self):
-        """Display the About dialog with modern bento grid layout"""
-        
+        """Display the About dialog with modern professional layout (Final Version)"""
+        import webbrowser
+
         dialog = QDialog(self)
         dialog.setWindowTitle("About Glance")
-        dialog.setFixedSize(850, 680)
+        dialog.setFixedSize(900, 720) # Adjusted size for compact layout
         
+        # Finalized stylesheet with polished gradients, borders, and typography
         dialog.setStyleSheet("""
             QDialog {
-                background-color: #1a1a1a;
+                background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                    stop:0 #1a1a1a, stop:1 #0d0d0d);
             }
             QLabel {
                 color: #e8e8e8;
             }
-            QFrame#bentoCard {
-                background-color: #252526;
-                border: 1px solid #333333;
-                border-radius: 8px;
-                padding: 16px;
-            }
-            QFrame#bentoCard:hover {
-                background-color: #2a2a2a;
-                border-color: #4a9eff;
-            }
-            QFrame#primaryCard {
+            QFrame#heroCard {
                 background: qlineargradient(x1:0, y1:0, x2:1, y2:1,
-                    stop:0 #1565c0, stop:1 #1976d2);
-                border: 1px solid #2196f3;
-                border-radius: 8px;
+                    stop:0 #0d47a1, stop:1 #1a237e); /* Dark blue to indigo gradient */
+                border: 1px solid rgba(255, 255, 255, 0.1);
+                border-radius: 12px;
+                padding: 28px;
+            }
+            QFrame#bentoCard {
+                background: qlineargradient(x1:0, y1:0, x2:0, y2:1, 
+                    stop:0 #2a2a2a, stop:1 #212121);
+                border: 1px solid #383838;
+                border-radius: 12px;
                 padding: 20px;
+            }
+            QFrame#accentCard {
+                background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
+                    stop:0 rgba(76, 175, 80, 0.15), stop:1 rgba(33, 150, 243, 0.15));
+                border: 1px solid rgba(76, 175, 80, 0.3);
+                border-radius: 12px;
+                padding: 20px;
+            }
+            QLabel#heroTitle {
+                color: #ffffff;
+                font-weight: 700;
+                font-size: 32px;
+                letter-spacing: -0.5px;
+            }
+            QLabel#heroSubtitle {
+                color: rgba(255, 255, 255, 0.9);
+                font-size: 14px;
+                font-weight: 500;
+            }
+            QLabel#heroVersion {
+                color: rgba(255, 255, 255, 0.7);
+                font-size: 12px;
+                background: rgba(0, 0, 0, 0.2);
+                padding: 4px 12px;
+                border-radius: 12px;
             }
             QLabel#cardTitle {
                 color: #ffffff;
                 font-weight: 600;
-                font-size: 13px;
-                margin-bottom: 6px;
+                font-size: 15px;
+                margin-bottom: 12px;
             }
             QLabel#cardContent {
-                color: #d0d0d0;
-                font-size: 11px;
+                color: #e0e0e0;
+                font-size: 13px;
                 line-height: 1.5;
             }
-            QLabel#linkLabel {
-                color: #4a9eff;
+            QPushButton#linkButton {
+                background: rgba(255, 255, 255, 0.05);
+                border: 1px solid #444;
+                color: #e0e0e0;
+                padding: 10px;
+                border-radius: 6px;
+                text-align: left;
+                font-weight: 500;
+                font-size: 13px;
+            }
+            QPushButton#linkButton:hover {
+                background: rgba(94, 179, 255, 0.1);
+                border-color: #5eb3ff;
+            }
+            QLabel#sectionTitle {
+                color: #9cdcfe;
                 font-size: 11px;
-                padding: 4px 0;
+                font-weight: 600;
+                text-transform: uppercase;
+                letter-spacing: 1.5px;
+                margin: 12px 0 6px 0;
             }
-            QLabel#linkLabel:hover {
-                color: #6bb3ff;
+            QLabel#statValue {
+                color: #4fc3f7;
+                font-size: 24px;
+                font-weight: 700;
+                font-family: 'Consolas', monospace;
             }
-            QLabel a {
-                color: #4a9eff;
-                text-decoration: none;
-            }
-            QLabel a:hover {
-                color: #6bb3ff;
-            }
-            QPushButton {
-                background-color: #2a2a2a;
-                border: 1px solid #404040;
-                border-radius: 5px;
-                padding: 9px 20px;
-                color: #e8e8e8;
+            QLabel#statLabel {
+                color: #aaaaaa;
                 font-size: 11px;
                 font-weight: 500;
             }
-            QPushButton:hover {
-                background-color: #333333;
-                border-color: #4a9eff;
+            QPushButton#closeButton {
+                background: #2a2a2a;
+                border: 1px solid #404040;
+                border-radius: 6px;
+                padding: 10px 24px;
+                color: #e8e8e8;
+                font-size: 12px;
+                font-weight: 600;
+            }
+            QPushButton#closeButton:hover {
+                background: #333333;
+                border-color: #5eb3ff;
+            }
+            QPushButton#closeButton:pressed {
+                background: #1a1a1a;
             }
             QScrollArea {
                 border: none;
                 background-color: transparent;
             }
             QScrollBar:vertical {
-                background: #2a2a2a;
-                width: 8px;
-                border-radius: 4px;
+                background: #1e1e1e; width: 10px; border-radius: 5px; margin: 2px;
             }
             QScrollBar::handle:vertical {
-                background: #4a4a4a;
-                border-radius: 4px;
+                background: #4a4a4a; border-radius: 5px; min-height: 30px;
             }
+            QScrollBar::handle:vertical:hover { background: #5a5a5a; }
+            QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical { height: 0px; }
         """)
         
         main_layout = QVBoxLayout(dialog)
         main_layout.setContentsMargins(0, 0, 0, 0)
         main_layout.setSpacing(0)
         
-        # Scrollable content
         from PySide6.QtWidgets import QScrollArea
         scroll = QScrollArea()
         scroll.setWidgetResizable(True)
@@ -4993,228 +5037,125 @@ class MainWindow(QMainWindow):
         
         content = QWidget()
         content_layout = QVBoxLayout(content)
-        content_layout.setContentsMargins(24, 24, 24, 24)
-        content_layout.setSpacing(16)
+        content_layout.setContentsMargins(28, 28, 28, 28)
+        content_layout.setSpacing(18) # Reduced spacing between rows
         
-        # Top row: Both logos + Title
-        header_card = QFrame()
-        header_card.setObjectName("primaryCard")
-        header_card.setMinimumHeight(120)
-        header_layout = QHBoxLayout(header_card)
-        header_layout.setSpacing(20)
-        
-        # Logos container
-        logos_layout = QVBoxLayout()
-        logos_layout.setSpacing(12)
-        
-        # Glance logo placeholder (if you have one)
+        # === HERO SECTION ===
+        hero_card = QFrame(); hero_card.setObjectName("heroCard")
+        hero_layout = QHBoxLayout(hero_card); hero_layout.setSpacing(24)
         glance_logo = QLabel()
+        glance_logo.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
         Glogo_path = os.path.join("docs/public", "Glance_nobg _jl.png")
         if os.path.exists(Glogo_path):
             pixmap = QPixmap(Glogo_path)
-            scaled_pixmap = pixmap.scaled(50, 50, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation)
+            scaled_pixmap = pixmap.scaled(75, 75, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation)
             glance_logo.setPixmap(scaled_pixmap)
-        else:
-            glance_logo.setText("Glance")
-            glance_logo.setStyleSheet("color: #ffffff; font-size: 14px; font-weight: bold;")
         glance_logo.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        text_container = QWidget(); text_container.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
+        text_layout = QVBoxLayout(text_container); text_layout.setSpacing(6)
+        title_label = QLabel("Glance"); title_label.setObjectName("heroTitle")
+        subtitle_label = QLabel("Professional Telemetry Dashboard"); subtitle_label.setObjectName("heroSubtitle")
+        version_badge = QLabel("Version 2.0.0"); version_badge.setObjectName("heroVersion")
+        desc_label = QLabel("Real-time data visualization platform for aerospace applications,\nembedded systems, and industrial monitoring.")
+        desc_label.setStyleSheet("color: rgba(255,255,255,0.85); font-size: 12px; line-height: 1.5;"); desc_label.setWordWrap(True)
+        text_layout.addWidget(title_label); text_layout.addWidget(subtitle_label); text_layout.addWidget(version_badge)
+        text_layout.addSpacing(10); text_layout.addWidget(desc_label); text_layout.addStretch()
+        hero_layout.addWidget(glance_logo); hero_layout.addWidget(text_container, 1)
+        content_layout.addWidget(hero_card)
         
-        # Team Ignition logo
+        # === STATISTICS ROW ===
+        stats_row = QHBoxLayout(); stats_row.setSpacing(18)
+        def create_stat_card(value, label):
+            card = QFrame(); card.setObjectName("bentoCard"); card.setMinimumHeight(80)
+            layout = QVBoxLayout(card); layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            val_label = QLabel(value); val_label.setObjectName("statValue"); val_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            text_label = QLabel(label); text_label.setObjectName("statLabel"); text_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            layout.addWidget(val_label); layout.addWidget(text_label)
+            return card
+        stats_row.addWidget(create_stat_card("8+", "Widget Types")); stats_row.addWidget(create_stat_card("4", "Protocols"))
+        stats_row.addWidget(create_stat_card("∞", "Parameters")); stats_row.addWidget(create_stat_card("GPL", "Open Source"))
+        content_layout.addLayout(stats_row)
+        
+        # === FEATURES SECTION ===
+        features_section = QLabel("Core Features"); features_section.setObjectName("sectionTitle"); content_layout.addWidget(features_section)
+        features_row = QHBoxLayout(); features_row.setSpacing(18)
+        def create_feature_card(icon, title, features_list):
+            card = QFrame(); card.setObjectName("bentoCard")
+            layout = QVBoxLayout(card); layout.setSpacing(8)
+            header = QHBoxLayout(); icon_label = QLabel(icon); icon_label.setStyleSheet("color: #5eb3ff; font-size: 22px;")
+            title_label = QLabel(title); title_label.setObjectName("cardTitle")
+            header.addWidget(icon_label); header.addWidget(title_label); header.addStretch(); layout.addLayout(header)
+            for feature in features_list:
+                item_layout = QHBoxLayout(); bullet = QLabel("▹"); bullet.setStyleSheet("color: #4fc3f7; font-size: 16px; font-weight: bold;")
+                item_label = QLabel(feature); item_label.setObjectName("cardContent"); item_label.setWordWrap(True)
+                item_layout.addWidget(bullet); item_layout.addWidget(item_label, 1); layout.addLayout(item_layout)
+            layout.addStretch()
+            return card
+        features_row.addWidget(create_feature_card("📈", "Visualization", ["Real-time graphs & gauges", "GPS mapping support", "Configurable data tables"]))
+        features_row.addWidget(create_feature_card("⚙️", "Processing", ["Advanced signal filtering", "Kalman, Low-pass & more", "Flexible data logging"]))
+        features_row.addWidget(create_feature_card("🔗", "Connectivity", ["Serial, TCP, and UDP", "JSON, CSV, and raw bytes", "Dummy data for testing"]))
+        content_layout.addLayout(features_row)
+        
+        # === LINKS SECTION ===
+        links_section = QLabel("Resources & Community"); links_section.setObjectName("sectionTitle"); content_layout.addWidget(links_section)
+        links_row = QHBoxLayout(); links_row.setSpacing(18)
+        def create_link_button(icon, text, url):
+            button = QPushButton(f" {icon}  {text}"); button.setObjectName("linkButton"); button.setCursor(Qt.CursorShape.PointingHandCursor)
+            button.clicked.connect(lambda: webbrowser.open(url))
+            return button
+        links_card = QFrame(); links_card.setObjectName("bentoCard")
+        links_layout = QVBoxLayout(links_card); links_layout.setSpacing(8)
+        links_title = QLabel("Documentation & Code"); links_title.setObjectName("cardTitle"); links_layout.addWidget(links_title)
+        links_layout.addWidget(create_link_button("📖", "Read the Docs", "https://glance.teamignition.space/"))
+        links_layout.addWidget(create_link_button("💻", "GitHub Repository", "https://github.com/teamignitionvitc/Glance"))
+        links_layout.addWidget(create_link_button("🌐", "Team Website", "https://teamignition.space"))
+        links_layout.addWidget(create_link_button("🐛", "Report an Issue", "https://github.com/teamignitionvitc/Glance/issues"))
+        links_layout.addStretch()
+        social_card = QFrame(); social_card.setObjectName("bentoCard")
+        social_layout = QVBoxLayout(social_card); social_layout.setSpacing(8)
+        social_title = QLabel("Connect With Us"); social_title.setObjectName("cardTitle"); social_layout.addWidget(social_title)
+        social_layout.addWidget(create_link_button("🐦", "Twitter / X", "https://x.com/ignitiontech23"))
+        social_layout.addWidget(create_link_button("💼", "LinkedIn", "https://www.linkedin.com/in/teamignition/"))
+        social_layout.addWidget(create_link_button("📸", "Instagram", "https://www.instagram.com/ignition_vitc"))
+        social_layout.addStretch()
+        links_row.addWidget(links_card); links_row.addWidget(social_card); content_layout.addLayout(links_row)
+        
+        # === LICENSE & TEAM INFO ===
+        info_row = QHBoxLayout(); info_row.setSpacing(18)
+        license_card = QFrame(); license_card.setObjectName("accentCard"); license_card.setMinimumHeight(130)
+        license_layout = QVBoxLayout(license_card); license_layout.setSpacing(8)
+        license_title = QLabel("📜 License"); license_title.setObjectName("cardTitle"); license_layout.addWidget(license_title)
+        license_content = QLabel("GNU GPL v3.0 with additional restrictions\n\n© 2025 Team Ignition · Software Department\nFree and open source software")
+        license_content.setObjectName("cardContent"); license_layout.addWidget(license_content); license_layout.addStretch()
+        team_card = QFrame(); team_card.setObjectName("accentCard"); team_card.setMinimumHeight(130)
+        team_layout = QVBoxLayout(team_card); team_layout.setSpacing(8)
+        team_header_layout = QHBoxLayout(); team_title = QLabel("About Team Ignition"); team_title.setObjectName("cardTitle")
         team_logo = QLabel()
         logo_path = os.path.join("docs/public", "ign_logo_wht.png")
         if os.path.exists(logo_path):
             pixmap = QPixmap(logo_path)
             scaled_pixmap = pixmap.scaled(50, 50, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation)
             team_logo.setPixmap(scaled_pixmap)
-        else:
-            team_logo.setText("IGN")
-            team_logo.setStyleSheet("color: #ffffff; font-size: 14px; font-weight: bold;")
-        team_logo.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        
-        logos_layout.addWidget(glance_logo)
-        logos_layout.addWidget(team_logo)
-        
-        # Title and description
-        text_layout = QVBoxLayout()
-        text_layout.setSpacing(8)
-        
-        title_label = QLabel("Glance")
-        title_label.setFont(QFont("Arial", 22, QFont.Weight.Bold))
-        title_label.setStyleSheet("color: #ffffff;")
-        
-        subtitle_label = QLabel("A professional telemetry dashboard software by Team Ignition")
-        subtitle_label.setFont(QFont("Arial", 12))
-        subtitle_label.setStyleSheet("color: rgba(255,255,255,0.85);")
-        subtitle_label.setWordWrap(True)
-        
-        version_label = QLabel("Version 2.0.0")
-        version_label.setFont(QFont("Arial", 10))
-        version_label.setStyleSheet("color: rgba(255,255,255,0.6);")
-        
-        desc_label = QLabel("Real-time telemetry visualization platform for aerospace applications, embedded systems, and data acquisition.")
-        desc_label.setFont(QFont("Arial", 10))
-        desc_label.setStyleSheet("color: rgba(255,255,255,0.75);")
-        desc_label.setWordWrap(True)
-        
-        text_layout.addWidget(title_label)
-        text_layout.addWidget(subtitle_label)
-        text_layout.addWidget(version_label)
-        text_layout.addSpacing(6)
-        text_layout.addWidget(desc_label)
-        text_layout.addStretch()
-        
-        header_layout.addLayout(logos_layout)
-        header_layout.addLayout(text_layout, 1)
-        
-        content_layout.addWidget(header_card)
-        
-        # Second row: Links with icons
-        links_row = QHBoxLayout()
-        links_row.setSpacing(16)
-        
-        # Resources card
-        resources_card = QFrame()
-        resources_card.setObjectName("bentoCard")
-        resources_card.setMinimumHeight(150)
-        resources_layout = QVBoxLayout(resources_card)
-        resources_layout.setSpacing(10)
-        
-        resources_title = QLabel("Resources")
-        resources_title.setObjectName("cardTitle")
-        resources_layout.addWidget(resources_title)
-        
-        def create_icon_link(icon, text, url):
-            link_layout = QHBoxLayout()
-            link_layout.setSpacing(8)
-            icon_label = QLabel(icon)
-            icon_label.setStyleSheet("color: #4a9eff; font-size: 14px; min-width: 20px;")
-            link_label = QLabel(f'<a href="{url}">{text}</a>')
-            link_label.setOpenExternalLinks(True)
-            link_label.setObjectName("linkLabel")
-            link_layout.addWidget(icon_label)
-            link_layout.addWidget(link_label)
-            link_layout.addStretch()
-            return link_layout
-        
-        resources_layout.addLayout(create_icon_link("▸", "GitHub Repository", "https://github.com/teamignitionvitc/Glance"))
-        resources_layout.addLayout(create_icon_link("▸", "Documentation", "https://glance.teamignition.space/"))
-        resources_layout.addLayout(create_icon_link("▸", "Team Website", "https://teamignition.space"))
-        resources_layout.addLayout(create_icon_link("▸", "Report Issues", "https://github.com/teamignitionvitc/Glance/issues"))
-        resources_layout.addStretch()
-        
-        # Social card
-        social_card = QFrame()
-        social_card.setObjectName("bentoCard")
-        social_card.setMinimumHeight(150)
-        social_layout = QVBoxLayout(social_card)
-        social_layout.setSpacing(10)
-        
-        social_title = QLabel("Connect")
-        social_title.setObjectName("cardTitle")
-        social_layout.addWidget(social_title)
-        
-        social_layout.addLayout(create_icon_link("◆", "Twitter / X", "https://x.com/ignitiontech23"))
-        social_layout.addLayout(create_icon_link("◆", "LinkedIn", "https://www.linkedin.com/in/teamignition/"))
-        social_layout.addLayout(create_icon_link("◆", "Instagram", "https://www.instagram.com/ignition_vitc"))
-        social_layout.addStretch()
-        
-        links_row.addWidget(resources_card)
-        links_row.addWidget(social_card)
-        
-        content_layout.addLayout(links_row)
-        
-        # Third row: Info cards
-        info_row = QHBoxLayout()
-        info_row.setSpacing(16)
-        
-        # About card
-        about_card = QFrame()
-        about_card.setObjectName("bentoCard")
-        about_card.setMinimumHeight(130)
-        about_layout = QVBoxLayout(about_card)
-        about_layout.setSpacing(8)
-        
-        about_title = QLabel("About Team")
-        about_title.setObjectName("cardTitle")
-        about_layout.addWidget(about_title)
-        
-        about_content = QLabel(
-            "Student rocketry team at VIT Chennai. We design, build, and launch experimental rockets with all subsystems developed in-house."
-        )
-        about_content.setObjectName("cardContent")
-        about_content.setWordWrap(True)
-        about_layout.addWidget(about_content)
-        about_layout.addStretch()
-        
-        # Features card
-        features_card = QFrame()
-        features_card.setObjectName("bentoCard")
-        features_card.setMinimumHeight(130)
-        features_layout = QVBoxLayout(features_card)
-        features_layout.setSpacing(8)
-        
-        features_title = QLabel("Key Features")
-        features_title.setObjectName("cardTitle")
-        features_layout.addWidget(features_title)
-        
-        features_content = QLabel(
-            "▹ Real-time data streaming\n"
-            "▹ Signal filtering (Kalman, Low-pass)\n"
-            "▹ Multi-protocol support\n"
-            "▹ Data logging & export"
-        )
-        features_content.setObjectName("cardContent")
-        features_layout.addWidget(features_content)
-        features_layout.addStretch()
-        
-        # License card
-        license_card = QFrame()
-        license_card.setObjectName("bentoCard")
-        license_card.setMinimumHeight(130)
-        license_layout = QVBoxLayout(license_card)
-        license_layout.setSpacing(8)
-        
-        license_title = QLabel("License")
-        license_title.setObjectName("cardTitle")
-        license_layout.addWidget(license_title)
-        
-        license_content = QLabel(
-            "GNU GPL v3.0 with additional restrictions\n\n"
-            "© 2025 Team Ignition\n"
-            "Software Department"
-        )
-        license_content.setObjectName("cardContent")
-        license_layout.addWidget(license_content)
-        license_layout.addStretch()
-        
-        info_row.addWidget(about_card)
-        info_row.addWidget(features_card)
-        info_row.addWidget(license_card)
-        
-        content_layout.addLayout(info_row)
+        team_header_layout.addWidget(team_title); team_header_layout.addStretch(); team_header_layout.addWidget(team_logo); team_layout.addLayout(team_header_layout)
+        team_content = QLabel("Designing, building, and launching experimental rockets with in-house developed avionics and ground control systems.")
+        team_content.setObjectName("cardContent"); team_content.setWordWrap(True); team_layout.addWidget(team_content); team_layout.addStretch()
+        info_row.addWidget(license_card); info_row.addWidget(team_card); content_layout.addLayout(info_row)
         
         scroll.setWidget(content)
         main_layout.addWidget(scroll)
         
-        # Bottom bar
+        # === BOTTOM BAR ===
         button_container = QWidget()
-        button_container.setStyleSheet("background-color: #1e1e1e; border-top: 1px solid #2a2a2a;")
-        button_layout = QHBoxLayout(button_container)
-        button_layout.setContentsMargins(24, 12, 24, 12)
-        
-        close_btn = QPushButton("Close")
-        close_btn.setMinimumWidth(100)
-        close_btn.setCursor(Qt.CursorShape.PointingHandCursor)
-        close_btn.clicked.connect(dialog.accept)
-        
-        button_layout.addStretch()
-        button_layout.addWidget(close_btn)
-        button_layout.addStretch()
-        
+        button_container.setStyleSheet("background: #141414; border-top: 1px solid #2a2a2a;")
+        button_layout = QHBoxLayout(button_container); button_layout.setContentsMargins(28, 14, 28, 14)
+        credits = QLabel("Developed by the Team Ignition Software Department"); credits.setStyleSheet("color: #888888; font-size: 11px;")
+        close_btn = QPushButton("Close"); close_btn.setObjectName("closeButton"); close_btn.setMinimumWidth(120); close_btn.setCursor(Qt.CursorShape.PointingHandCursor); close_btn.clicked.connect(dialog.accept)
+        button_layout.addWidget(credits); button_layout.addStretch(); button_layout.addWidget(close_btn)
         main_layout.addWidget(button_container)
         
         dialog.exec()
 
+        
     # Convenience wrappers for Source menu
     def set_source_backend(self):
         # Open connection settings dialog to let user choose backend type
