@@ -31,7 +31,7 @@
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display.swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
         /* General Reset & Root Variables */
         :root {
@@ -714,7 +714,7 @@
                 <div class="nav-section">
                     <div class="nav-section-title">Technical Details</div>
                      <a href="#project-file" class="nav-item"><svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path></svg>Project File Structure</a>
-                     <a href="#advanced-features" class="nav-item"><svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>Advanced Tools</a>
+                     <a href="#advanced-tools" class="nav-item"><svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>Advanced Tools</a>
                      <a href="#signal-filtering" class="nav-item"><svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path></svg>Signal Filtering</a>
                     <a href="#keyboard-shortcuts" class="nav-item"><svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"></path></svg>Keyboard Shortcuts</a>
                     <a href="#development" class="nav-item"><svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"></path></svg>Development Guide</a>
@@ -769,8 +769,8 @@
                         <div class="feature-icon">
                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a2 2 0 01-2 2H6a2 2 0 01-2-2V4z"></path></svg>
                         </div>
-                        <h4>Modular Visualization</h4>
-                        <p>Build your ideal dashboard with 7+ widget types, including interactive time-graphs, gauges, and maps. Arrange everything with a flexible drag-and-drop, multi-tab interface.</p>
+                        <h4>Dynamic Workspace</h4>
+                        <p>Build your ideal dashboard with a rich widget library. Arrange everything with a flexible drag-and-drop, multi-tab interface where tabs can be detached into floating windows.</p>
                         <a href="#widget-library" class="card-link">Learn More <span>&rarr;</span></a>
                     </div>
                     <!-- Card 3: Filtering -->
@@ -803,11 +803,11 @@
                     <!-- Card 6: Developer Tools -->
                     <div class="feature-card">
                         <div class="feature-icon">
-                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 9l4-4 4 4m0 6l-4 4-4-4"></path></svg>
+                           <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 9l4-4 4 4m0 6l-4 4-4-4"></path></svg>
                         </div>
-                        <h4>Developer Tools</h4>
-                        <p>Debug your data stream with the Raw Telemetry Monitor, inspect packets in hex or decimal, and leverage a comprehensive set of keyboard shortcuts.</p>
-                        <a href="#advanced-features" class="card-link">Learn More <span>&rarr;</span></a>
+                        <h4>Advanced Tools</h4>
+                        <p>Debug your data stream with the Raw Telemetry Monitor, inspect packets in multiple formats, and leverage a comprehensive set of keyboard shortcuts.</p>
+                        <a href="#advanced-tools" class="card-link">Learn More <span>&rarr;</span></a>
                     </div>
                 </div>
             </section>
@@ -1084,18 +1084,11 @@ cd Glance</code></pre>
                 <h3>Value Card</h3>
                 <p>Displays a single parameter's value in a large, easy-to-read format. Its appearance is highly dynamic based on parameter settings.</p>
                 <ul>
-                    <li><strong>Alarm State:</strong> The background color changes based on where the current value falls within the defined thresholds:
+                    <li><strong>Alarm State:</strong> The color of the value text changes based on where the current value falls within the defined thresholds:
                         <ul>
-                            <li><code>Nominal:</code> Dark gray background.</li>
-                            <li><code>Warning:</code> Yellow background.</li>
-                            <li><code>Critical:</code> Red background.</li>
-                        </ul>
-                    </li>
-                    <li><strong>Priority:</strong> A colored border indicates importance, configured when adding the widget:
-                         <ul>
-                            <li><code>High:</code> Red border.</li>
-                            <li><code>Medium:</code> Blue border.</li>
-                            <li><code>Low:</code> No border.</li>
+                            <li><code>Nominal:</code> White text.</li>
+                            <li><code>Warning:</code> Yellow text.</li>
+                            <li><code>Critical:</code> Red text.</li>
                         </ul>
                     </li>
                 </ul>
@@ -1104,7 +1097,7 @@ cd Glance</code></pre>
                 <p>A powerful multi-parameter line chart for trend analysis. It is highly interactive.</p>
                 <ul>
                     <li><strong>Interactivity:</strong> Features interactive zoom (mouse wheel), pan (click-and-drag), and a crosshair for inspecting values on hover.</li>
-                     <li><strong>Data Point Inspection:</strong> Right-clicking on the graph near a data point will show a dialog with the precise value and timestamp for that point.</li>
+                    <li><strong>Data Point Inspection:</strong> Clicking on the graph near a data point will show a dialog with the precise value and timestamp for that point.</li>
                     <li><strong>Colors:</strong> Line colors are automatically assigned from a predefined palette to ensure contrast.</li>
                 </ul>
 
@@ -1172,41 +1165,24 @@ cd Glance</code></pre>
                     <div class="code-header"><span>json</span><button class="copy-btn" title="Copy code"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg></button></div>
                     <pre><code class="language-json">{
   "version": "1.0",
-  "parameters": [
-    {
-      "id": "temp_sensor",
-      "name": "Temperature",
-      "array_index": 0,
-      "unit": "°C",
-      "threshold": {
-        "low_crit": -10, "low_warn": 0, "high_warn": 80, "high_crit": 100
+  "parameters": [ ... ],
+  "connection_settings": { ... },
+  "filters": {
+    "temp_sensor": [
+      {
+        "type": "low_pass",
+        "filter_id": "...",
+        "alpha": 0.3
       }
-    }
-  ],
-  "connection_settings": {
-    "mode": "serial",
-    "serial_port": "COM4",
-    "baudrate": 115200,
-    "data_format": "json_array",
-    "channel_count": 32
+    ]
   },
   "layout": {
     "Main View": {
-      "configs": {
-        "widget_uuid": {
-          "displayType": "Time Graph",
-          "param_ids": ["temp_sensor"],
-          "priority": "Medium"
-        }
-      },
-      "state": "..."
+      "configs": { ... },
+      "state": "..." 
     }
   },
-  "logging_settings": {
-    "format": "csv",
-    "selected_params": ["temp_sensor"],
-    "buffer_size": 100
-  }
+  "logging_settings": { ... }
 }</code></pre>
                 </div>
                  <div class="readme-link">
@@ -1214,14 +1190,14 @@ cd Glance</code></pre>
                 </div>
             </section>
             
-            <section id="advanced-features">
+            <section id="advanced-tools">
                  <h2>Advanced Tools</h2>
                  <h3>Raw Telemetry Monitor</h3>
                  <p>Accessible from the <strong>View</strong> menu or the status bar, the Raw Telemetry Monitor is a powerful debugging tool. It displays the raw, unparsed data packets exactly as they are received by the application, along with timestamps and statistics. Use this monitor to:</p>
                  <ul>
                      <li>Verify that data is being received from your source.</li>
                      <li>Inspect the structure of your data packets to ensure it matches your configured format.</li>
-                     <li>Switch between Decimal and Hex views to debug binary data.</li>
+                     <li>Switch between Decimal, Hex, ASCII, and Binary views to debug data.</li>
                      <li>Pause, clear, and save the raw log for later analysis.</li>
                  </ul>
                  <div class="telemetry-images">
@@ -1319,8 +1295,10 @@ cd Glance</code></pre>
                             <tr><th colspan="2">View & Navigation</th></tr>
                             <tr><td>Add New Tab</td><td><code>Ctrl + T</code></td></tr>
                             <tr><td>Rename Current Tab</td><td><code>Ctrl + R</code></td></tr>
+                            <tr><td>Float / Dock Current Tab</td><td><code>Ctrl + Shift + F</code></td></tr>
                             <tr><td>Raw Telemetry Monitor</td><td><code>Ctrl + M</code></td></tr>
                             <tr><td>Pause / Resume Stream</td><td><code>Spacebar</code></td></tr>
+                            <tr><td>Toggle Fullscreen</td><td><code>F11</code></td></tr>
                             
                             <tr><th colspan="2">Data & Filters</th></tr>
                             <tr><td>Configure Data Logging</td><td><code>Ctrl + L</code></td></tr>
@@ -1347,7 +1325,7 @@ cd Glance</code></pre>
                 <ul>
                     <li><strong>Model:</strong> The data acquisition layer (<code>app/backend.py</code>) and the application's state (parameters, widget configs, data history) managed by the `MainWindow`.</li>
                     <li><strong>View:</strong> The various widget classes (<code>app/widgets.py</code>) and dialogs (<code>app/dialogs.py</code>) that present data and options to the user.</li>
-                    <li><strong>Controller:</strong> The <code>app/ui/main_window.py</code> module, which connects the data backend to the UI, handles user input, and orchestrates the overall application logic.</li>
+                    <li><strong>Controller:</strong> The `main.py` file containing the `MainWindow` class, which connects the data backend to the UI, handles user input, and orchestrates the overall application logic.</li>
                 </ul>
                 
                 <h3>Project Code Structure</h3>
@@ -1355,15 +1333,10 @@ cd Glance</code></pre>
                 <div class="code-block-wrapper">
                     <div class="code-header"><span>bash</span><button class="copy-btn" title="Copy code"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg></button></div>
                     <pre><code class="language-bash">.
-├── main.py              # Application entry point, launches the main window.
-├── app/
-│   ├── backend.py       # DataReader class for Serial, TCP, UDP sources.
-│   ├── widgets.py       # Contains all custom widget classes (ValueCard, TimeGraph, etc.).
-│   ├── dialogs.py       # UI for all dialog windows (Connection, Parameters, etc.).
-│   └── ui/
-│       └── main_window.py # Core MainWindow class, UI layout, and main application logic.
-├── docs/                  # Documentation files and images for the web guide.
-├── logs/                  # Default directory for saved data logs.
+├── main.py              # Application entry point, MainWindow class, all dialogs and widgets.
+├── backend.py           # DataReader class for Serial, TCP, UDP sources.
+├── docs/                # Documentation files and images for the web guide.
+├── logs/                # Default directory for saved data logs.
 └── requirements.txt     # Python dependencies.
 </code></pre>
                 </div>
@@ -1371,58 +1344,26 @@ cd Glance</code></pre>
                 <h3>Core Data Flow</h3>
                 <p>Understanding the data flow is key to modifying or extending Glance.</p>
                 <ol>
-                    <li>The <code>DataReader</code> or <code>DataSimulator</code> runs in a separate QThread.</li>
+                    <li>The <code>DataSimulator</code> (or `DataReader` via `backend.py`) runs in a separate QThread.</li>
                     <li>Upon receiving/generating a complete data packet, it emits a <code>newData</code> signal with the data (as a list of values).</li>
                     <li>The <code>MainWindow</code> has a slot, <code>update_data(packet)</code>, connected to this signal.</li>
                     <li>Inside <code>update_data</code>, the `MainWindow` iterates through its list of defined parameters. For each parameter, it uses the <code>array_index</code> to get the corresponding value from the packet.</li>
-                    <li>The value and timestamp are appended to the global <code>data_history</code> dictionary.</li>
-                    <li>The `MainWindow` then identifies which active widgets are subscribed to the updated parameter and calls their respective update methods (e.g., <code>widget.update_value(value)</code>).</li>
+                    <li>The value is passed through the <strong>FilterManager</strong>, which applies any configured filters (e.g., Low-pass, Kalman).</li>
+                    <li>The raw value and filtered value are appended to the global <code>data_history</code> dictionary.</li>
+                    <li>The `MainWindow` then identifies which active widgets are subscribed to the updated parameter and calls their respective update methods with the <strong>filtered value</strong>.</li>
                 </ol>
 
                 <h3>Adding a Custom Widget</h3>
                 <p>Follow these steps to create and integrate a new widget type:</p>
                 <ol>
-                    <li><strong>Create the Widget Class in <code>app/widgets.py</code>:</strong>
+                    <li><strong>Create the Widget Class in <code>main.py</code>:</strong>
                         <p>Your class must inherit from a Qt widget (like <code>QWidget</code> or <code>QFrame</code>) and have an update method.</p>
-                        <div class="code-block-wrapper">
-                            <div class="code-header"><span>python</span><button class="copy-btn" title="Copy code"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg></button></div>
-                            <pre><code class="language-python"># In app/widgets.py
-from PySide6.QtWidgets import QWidget, QLabel, QVBoxLayout
-
-class MyCustomWidget(QWidget):
-    def __init__(self, param_config):
-        super().__init__()
-        self.param = param_config[0] # Assuming one parameter for simplicity
-        
-        layout = QVBoxLayout(self)
-        self.title_label = QLabel(f"<b>{self.param['name']}</b>")
-        self.value_label = QLabel("---")
-        layout.addWidget(self.title_label)
-        layout.addWidget(self.value_label)
-
-    def update_data(self, history):
-        # This method will be called by MainWindow
-        param_id = self.param['id']
-        if param_id in history and history[param_id]:
-            latest_value = history[param_id][-1]['value']
-            self.value_label.setText(f"{latest_value:.2f} {self.param['unit']}")
-</code></pre>
-                        </div>
                     </li>
-                    <li><strong>Register in <code>app/dialogs.py</code>:</strong>
+                    <li><strong>Register in <code>AddWidgetDialog</code>:</strong>
                         <p>In the `AddWidgetDialog` class, add the name of your new widget to the `display_types` list to make it selectable by the user.</p>
                     </li>
-                    <li><strong>Add Handler in <code>app/ui/main_window.py</code>:</strong>
-                        <p>In the `MainWindow.add_widget_to_dashboard` method, add a new `elif` block to instantiate your widget class when its display type is chosen.</p>
-                        <div class="code-block-wrapper">
-                            <div class="code-header"><span>python</span><button class="copy-btn" title="Copy code"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg></button></div>
-                            <pre><code class="language-python"># In MainWindow.add_widget_to_dashboard(...)
-# ...
-elif config['displayType'] == 'My Custom Widget' and len(param_configs) == 1:
-    widget = MyCustomWidget(param_configs)
-# ...
-</code></pre>
-                        </div>
+                    <li><strong>Add Handler in <code>MainWindow.add_widget_to_dashboard</code>:</strong>
+                        <p>In this method, add a new `elif` block to instantiate your widget class when its display type is chosen.</p>
                     </li>
                 </ol>
 
@@ -1749,4 +1690,3 @@ main.py
     </script>
 </body>
 </html>
-
