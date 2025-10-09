@@ -5,3 +5,4 @@ __pycache__/
 *.pyd
 .al/
 logs/
+**/__pycache__/
