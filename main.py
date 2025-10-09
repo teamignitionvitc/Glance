@@ -12,7 +12,7 @@
                                       :.::.:                                                    
                          .::::          ::          ::::.                                      
                        .::::::::.       ::       .:::::::::                                    
-                       ::::::::::::....::::.....:::::::::::                                    
+                       ::::::::::::....::::.....:::::::::::                                  
                         .:::::::::::::::::::::::::::::::::.        
 
                     Copyright (c) 2025 Ignition Software Department
@@ -38,8 +38,11 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 # Author:      Neil Baranwal
 # Created On:  <Date>
 #
-# @brief       Brief description of the module purpose
-# @details     Detailed explanation of module functionality and behavior
+# @brief       Main entry point for the Glance Telemetry Dashboard application.
+# @details     This module initializes and runs the Glance dashboard, providing real-time telemetry
+#              data visualization, signal filtering, data logging, and advanced widget management.
+#              It supports multiple data sources (dummy, serial, TCP, UDP), interactive dashboards,
+#              and a professional user interface for aerospace and industrial monitoring.
 ###################################################################################################
 # HISTORY:
 #

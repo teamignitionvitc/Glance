@@ -1,9 +1,56 @@
 """
-Comprehensive Test Suite for Glance Dashboard Application
-Copyright (c) 2025 Ignition Software Department
+                                        ::                                                      
+                                        ::                                                      
+                                        ::                                                      
+                                        ::                                                      
+                                        ::                                                      
+    ..    ..........    :.      ::      ::     .........  ..    ..........    ...      .        
+    ::    ::            : .:.   ::     .::.       ::      ::    ::       :    :: :.    :        
+    ::    ::   ..:::    :   .:. ::    ::::::      ::      ::    ::       :    ::   ::  :        
+    ::    ::......::    :      :::    ::::::      ::      ::    ::.......:    ::     :::        
+                                      ::::::                                                    
+                                      :.::.:                                                    
+                         .::::          ::          ::::.                                      
+                       .::::::::.       ::       .:::::::::                                    
+                       ::::::::::::....::::.....:::::::::::                                  
+                        .:::::::::::::::::::::::::::::::::.        
 
-Tests all major components, functions, and features of the application.
+                    Copyright (c) 2025 Ignition Software Department
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, version 3, with the additional restriction
+that this software may not be used for commercial purposes without
+explicit written permission from the authors.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program. If not, see <https://www.gnu.org/licenses/>.
+
 """
+
+####################################################################################################
+# File:        test.py
+# Author:      Ramzy
+# Created On:  <Date>
+#
+# @brief       Unit and integration tests for the Glance Telemetry Dashboard.
+# @details     Provides automated test coverage for dashboard modules, including data logging,
+#              signal filtering, simulator, widgets, dialogs, and main window logic. Ensures
+#              reliability, correctness, and performance of telemetry visualization and management.
+###################################################################################################
+# HISTORY:
+#
+#       +----- (NEW | MODify | ADD | DELete)
+#       |
+# No#   |       when       who                  what
+######+*********+**********+********************+**************************************************
+# 000  NEW      <Date>      Ramzy               Initial creation
+####################################################################################################
 
 import pytest
 import sys
@@ -808,7 +855,7 @@ class TestIntegration:
         manager.add_filter("param1", ma_filter)
         manager.add_filter("param1", lp_filter)
         
-        # Apply values through chain
+        # Apply values to all parameters
         values = [100.0, 110.0, 90.0, 95.0, 105.0]
         results = []
         
@@ -1186,7 +1233,7 @@ class TestFilterEdgeCases:
         # Final result should be close to 100
         assert 95.0 < result < 105.0
     
-    def test_median_filter_outliers(self):
+    def test_median_filter_removes_outliers(self):
         """Test median filter removes outliers"""
         filter_obj = MedianFilter("test", window_size=5)
         

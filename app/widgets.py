@@ -1,3 +1,59 @@
+"""
+                                        ::                                                      
+                                        ::                                                      
+                                        ::                                                      
+                                        ::                                                      
+                                        ::                                                      
+    ..    ..........    :.      ::      ::     .........  ..    ..........    ...      .        
+    ::    ::            : .:.   ::     .::.       ::      ::    ::       :    :: :.    :        
+    ::    ::   ..:::    :   .:. ::    ::::::      ::      ::    ::       :    ::   ::  :        
+    ::    ::......::    :      :::    ::::::      ::      ::    ::.......:    ::     :::        
+                                      ::::::                                                    
+                                      :.::.:                                                    
+                         .::::          ::          ::::.                                      
+                       .::::::::.       ::       .:::::::::                                    
+                       ::::::::::::....::::.....:::::::::::                                  
+                        .:::::::::::::::::::::::::::::::::.        
+
+                    Copyright (c) 2025 Ignition Software Department
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, version 3, with the additional restriction
+that this software may not be used for commercial purposes without
+explicit written permission from the authors.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program. If not, see <https://www.gnu.org/licenses/>.
+
+"""
+
+####################################################################################################
+# File:        widgets.py
+# Author:      Ramzy
+# Created On:  <Date>
+#
+# @brief       Dashboard display widgets for telemetry visualization.
+# @details     Provides reusable PySide6 widgets for displaying telemetry data, including value cards,
+#              time graphs, log tables, gauges, histograms, LED indicators, and map views. Enables
+#              interactive and real-time visualization of sensor and telemetry parameters.
+###################################################################################################
+# HISTORY:
+#
+#       +----- (NEW | MODify | ADD | DELete)
+#       |
+# No#   |       when       who                  what
+######+*********+**********+********************+**************************************************
+# 000  NEW      <Date>      Ramzy               Initial creation
+####################################################################################################
+
+
+
 from PySide6.QtWidgets import QWidget, QVBoxLayout, QFrame, QLabel, QTableWidget, QHeaderView, QAbstractItemView, QGroupBox, QHBoxLayout, QTableWidgetItem, QComboBox
 from PySide6.QtGui import QFont, QColor, QBrush
 from PySide6.QtCore import Qt
