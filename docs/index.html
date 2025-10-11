@@ -7,7 +7,7 @@
     <!-- SEO & Display Meta Tags -->
     <title>Glance | Dashboard Builder Documentation</title>
     <meta name="description" content="The complete guide to setting up, configuring, and using Glance, a professional real-time telemetry visualization platform for aerospace and embedded systems. Built by Team Ignition.">
-    <meta name="keywords" content="telemetry, dashboard, data visualization, real-time, pyside6, pyqt, python, rocket, drone, embedded systems, Team Ignition, Glance">
+    <meta name="keywords" content="telemetry, dashboard, data visualization, real-time, pyside6, pyqt, python, rocket, drone, embedded systems, Team Ignition, Glance, reporting, pdf">
     <meta name="author" content="Team Ignition Software Department">
     <meta name="theme-color" content="#111111">
     <link rel="icon" href="public/Glance_nobg _jl.svg" type="image/svg">
@@ -261,11 +261,11 @@
             background: transparent;
         }
         pre code { padding: 1.25rem 1.5rem; display: block; overflow-x: auto; font-size: 0.85rem; line-height: 1.6; color: var(--text-primary); }
-        .copy-btn { background: none; border: none; color: var(--text-secondary); padding: 0.5rem; border-radius: 6px; cursor: pointer; transition: all 0.2s ease; }
+        .copy-btn { background: none; border: none; color: var(--text-secondary); padding: 0.5rem; border-radius: 6px; cursor: pointer; transition: all 0.2s ease; display: flex; align-items: center; gap: 0.5rem; }
         .copy-btn:hover { background: var(--border); color: var(--text-primary); }
         .copy-btn svg { width: 16px; height: 16px; vertical-align: middle; transition: transform 0.1s ease; }
         .copy-btn:active svg { transform: scale(0.9);}
-        .copy-btn:active {background-color: var(--primary);}
+        .copy-btn.copied { background-color: var(--accent); color: white; }
 
         /* Responsive Tables */
         .table-wrapper {
@@ -711,7 +711,7 @@
                     <a href="#data-formats" class="nav-item"><svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path></svg>Data Formats</a>
                     <a href="#parameters" class="nav-item"><svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>Parameters</a>
                     <a href="#widget-library" class="nav-item"><svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z"></path></svg>Widget Library</a>
-                    <a href="#data-logging" class="nav-item"><svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 7v8a2 2 0 002 2h4M8 7a2 2 0 012-2h4a2 2 0 012 2v8a2 2 0 01-2 2h-4a2 2 0 01-2-2l-4.5-4.5L8 7z"></path></svg>Data Logging</a>
+                    <a href="#data-logging" class="nav-item"><svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 7v8a2 2 0 002 2h4M8 7a2 2 0 012-2h4a2 2 0 012 2v8a2 2 0 01-2 2h-4a2 2 0 01-2-2l-4.5-4.5L8 7z"></path></svg>Data Logging & Reports</a>
                 </div>
                 <div class="nav-section">
                     <div class="nav-section-title">Technical Details</div>
@@ -812,6 +812,15 @@
                         <p>Debug your data stream with the Raw Telemetry Monitor, inspect packets in multiple formats, and leverage a comprehensive set of keyboard shortcuts.</p>
                         <a href="#advanced-tools" class="card-link">Learn More <span>&rarr;</span></a>
                     </div>
+                    <!-- NEW Card 7: Reporting -->
+                    <div class="feature-card">
+                        <div class="feature-icon">
+                           <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                        </div>
+                        <h4>PDF Summary Reports</h4>
+                        <p>Automatically generate detailed PDF reports from your logged data sessions, including metadata, statistical summaries, and parameter analysis.</p>
+                        <a href="#data-logging" class="card-link">Learn More <span>&rarr;</span></a>
+                    </div>
                 </div>
             </section>
 
@@ -869,7 +878,7 @@
                 <div class="code-block-wrapper">
                     <div class="code-header">
                         <span>bash</span>
-                        <button class="copy-btn" title="Copy code"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg></button>
+                        <button class="copy-btn" title="Copy code"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg><span>Copy</span></button>
                     </div>
                     <pre><code class="language-bash">git clone https://github.com/teamignitionvitc/Glance.git
 cd Glance</code></pre>
@@ -880,7 +889,7 @@ cd Glance</code></pre>
                  <div class="code-block-wrapper">
                     <div class="code-header">
                         <span>bash</span>
-                        <button class="copy-btn" title="Copy code"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg></button>
+                        <button class="copy-btn" title="Copy code"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg><span>Copy</span></button>
                     </div>
                     <pre><code class="language-bash">python -m venv venv
 # On Windows: venv\Scripts\activate
@@ -892,13 +901,13 @@ cd Glance</code></pre>
                  <div class="code-block-wrapper">
                     <div class="code-header">
                         <span>bash</span>
-                        <button class="copy-btn" title="Copy code"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg></button>
+                        <button class="copy-btn" title="Copy code"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg><span>Copy</span></button>
                     </div>
                     <pre><code class="language-bash">pip install -r requirements.txt</code></pre>
                 </div>
                 
                 <div class="info-box">
-                    <p>For the <strong>Map Widget</strong>, an optional dependency is required. Install it with: <code>pip install PySide6-WebEngine</code></p>
+                    <p>For the <strong>Map Widget</strong> and <strong>PDF Reporting</strong>, optional dependencies are required. Install them with: <code>pip install PySide6-WebEngine reportlab</code></p>
                 </div>
                  <div class="info-box accent">
                     <p><strong>Coming Soon:</strong> We are actively working on one-click executables for Windows (.exe) and Linux (.AppImage) to make installation even easier. These will be available in upcoming releases!</p>
@@ -909,7 +918,7 @@ cd Glance</code></pre>
                   <div class="code-block-wrapper">
                     <div class="code-header">
                         <span>bash</span>
-                        <button class="copy-btn" title="Copy code"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg></button>
+                        <button class="copy-btn" title="Copy code"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg><span>Copy</span></button>
                     </div>
                     <pre><code class="language-bash">python main.py</code></pre>
                 </div>
@@ -1047,7 +1056,7 @@ cd Glance</code></pre>
                 <p><strong>Example:</strong> Your device sends 3 channels of data as 16-bit (2-byte) little-endian integers. Your total packet size is 3 channels * 2 bytes/channel = 6 bytes.</p>
                 <p>If the values are `[258, 515, 772]`, their hexadecimal representations are `[0x0102, 0x0203, 0x0304]`. The byte stream Glance expects to receive would be:</p>
                 <div class="code-block-wrapper">
-                    <div class="code-header"><span>hex</span><button class="copy-btn" title="Copy code"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg></button></div>
+                    <div class="code-header"><span>hex</span><button class="copy-btn" title="Copy code"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg><span>Copy</span></button></div>
                     <pre><code>02 01 03 02 04 03</code></pre>
                 </div>
                  <div class="readme-link">
@@ -1133,30 +1142,36 @@ cd Glance</code></pre>
             </section>
 
             <section id="data-logging">
-                <h2>Data Logging</h2>
-                <p>To record a session, go to <strong>Data Logging → Configure Logging...</strong>. You can select CSV or JSON as the output format, choose which parameters to log, and set a buffer size.</p>
+                <h2>Data Logging & Summary Reports</h2>
+                <p>Glance provides powerful tools for recording and analyzing your telemetry sessions. You can access all logging features from the <strong>Data Logging</strong> menu.</p>
+                
+                <h3>Configuring and Recording a Session</h3>
+                <p>To record a session, first go to <strong>Data Logging → Configure Logging...</strong>. Here you can select CSV or JSON as the output format, choose which specific parameters to log, and set a buffer size.</p>
                 <h4>Understanding the Buffer</h4>
                 <p>Data is temporarily stored in memory (the buffer) before being written to the disk. This improves performance by reducing constant disk access.</p>
                 <ul>
                     <li>A <strong>larger buffer</strong> means fewer disk writes, which is better for performance with high-frequency data, but risks more data loss if the application crashes.</li>
                     <li>A <strong>smaller buffer</strong> writes to the disk more often, which is safer but can impact performance at very high data rates.</li>
                 </ul>
-                 <h4>Output Formats</h4>
-                 <p>The logger produces clean, well-structured files perfect for post-analysis.</p>
-                 <p><strong>CSV Output Structure:</strong></p>
-                 <div class="code-block-wrapper">
-                    <div class="code-header"><span>csv</span><button class="copy-btn" title="Copy code"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg></button></div>
-                    <pre><code class="language-csv">timestamp,elapsed_time,temp_sensor_Temperature,humidity_Humidity
-2025-01-15 10:30:00.123,0.000,23.500,65.200
-2025-01-15 10:30:01.223,1.100,23.600,65.100</code></pre>
+                <p>Once configured, you can start and stop logging at any time using the menu actions or the shortcuts <code>Ctrl+Shift+L</code> and <code>Ctrl+Alt+L</code>.</p>
+                 
+                <h3 id="summary-reports">Generating a Summary Report</h3>
+                <p>After you have stopped a logging session, you can instantly generate a professional PDF summary of the collected data. This is an excellent tool for post-mission analysis, sharing results, and archiving session statistics.</p>
+                <ul>
+                    <li><strong>How to Access:</strong> Navigate to <strong>Data Logging → Generate Summary Report...</strong> or use the shortcut <code>Ctrl+Shift+R</code>.</li>
+                    <li><strong>Prerequisites:</strong> You must have a completed log file from the current session, and the <code>reportlab</code> Python library must be installed.</li>
+                </ul>
+                <div class="info-box accent">
+                    <p><strong>Installation:</strong> If you don't have it, install the reporting library with: <code>pip install reportlab</code></p>
                 </div>
-                <p><strong>JSON Output Structure (JSON Lines):</strong></p>
-                 <div class="code-block-wrapper">
-                    <div class="code-header"><span>json</span><button class="copy-btn" title="Copy code"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg></button></div>
-                    <pre><code class="language-json">{ "timestamp": "2025-01-15T10:30:00.123", "elapsed_time": 0.0, "parameters": { "temp_sensor": 23.5, "humidity": 65.2 } }
-{ "timestamp": "2025-01-15T10:30:01.223", "elapsed_time": 1.1, "parameters": { "temp_sensor": 23.6, "humidity": 65.1 } }</code></pre>
-                </div>
-                 <div class="readme-link">
+                <h4>Report Contents</h4>
+                <p>The generated PDF is a multi-page document that includes:</p>
+                <ol>
+                    <li><strong>Report Information:</strong> Metadata about the session, including the source file, duration, total samples, and start/end times.</li>
+                    <li><strong>Parameter Statistics:</strong> A summary table showing the min, max, mean, and sample count for every parameter that was logged.</li>
+                    <li><strong>Detailed Parameter Analysis:</strong> A breakdown for each individual parameter with more detailed statistics like range and standard deviation.</li>
+                </ol>
+                <div class="readme-link">
                     For more details, see the <a href="https://github.com/teamignitionvitc/Glance?tab=readme-ov-file#data-logging" target="_blank">Data Logging section in the README</a>.
                 </div>
             </section>
@@ -1165,7 +1180,10 @@ cd Glance</code></pre>
                 <h2>Project File Structure</h2>
                 <p>Glance projects are saved as <code>.json</code> files, which store the entire state of your dashboard. This makes your configurations portable and easy to share.</p>
                  <div class="code-block-wrapper">
-                    <div class="code-header"><span>json</span><button class="copy-btn" title="Copy code"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg></button></div>
+                    <div class="code-header">
+                        <span>json</span>
+                        <button class="copy-btn" title="Copy code"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg><span>Copy</span></button>
+                    </div>
                     <pre><code class="language-json">{
   "version": "1.0",
   "parameters": [ ... ],
@@ -1307,6 +1325,7 @@ cd Glance</code></pre>
                             <tr><td>Configure Data Logging</td><td><code>Ctrl + L</code></td></tr>
                             <tr><td>Start Data Logging</td><td><code>Ctrl + Shift + L</code></td></tr>
                             <tr><td>Stop Data Logging</td><td><code>Ctrl + Alt + L</code></td></tr>
+                            <tr><td>Generate Summary Report</td><td><code>Ctrl + Shift + R</code></td></tr>
                             <tr><td>Manage Filters</td><td><code>Ctrl + F</code></td></tr>
 
                             <tr><th colspan="2">Help</th></tr>
@@ -1334,7 +1353,10 @@ cd Glance</code></pre>
                 <h3>Project Code Structure</h3>
                 <p>The project is organized into modules with specific responsibilities.</p>
                 <div class="code-block-wrapper">
-                    <div class="code-header"><span>bash</span><button class="copy-btn" title="Copy code"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg></button></div>
+                    <div class="code-header">
+                        <span>bash</span>
+                        <button class="copy-btn" title="Copy code"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg><span>Copy</span></button>
+                    </div>
                     <pre><code class="language-bash">.
 ├── main.py              # Application entry point, MainWindow class, all dialogs and widgets.
 ├── backend.py           # DataReader class for Serial, TCP, UDP sources.
@@ -1373,7 +1395,10 @@ cd Glance</code></pre>
                  <h3>Building an Executable</h3>
                 <p>To create a standalone executable, you can use PyInstaller. This packages your application and its dependencies into a single file.</p>
                 <div class="code-block-wrapper">
-                    <div class="code-header"><span>bash</span><button class="copy-btn" title="Copy code"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg></button></div>
+                    <div class="code-header">
+                        <span>bash</span>
+                        <button class="copy-btn" title="Copy code"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg><span>Copy</span></button>
+                    </div>
                     <pre><code class="language-bash"># Install PyInstaller
 pip install pyinstaller
 
@@ -1419,28 +1444,40 @@ main.py
                 <h4>Run All Tests</h4>
                 <p>This command discovers and runs all tests in the <code>test.py</code> file.</p>
                 <div class="code-block-wrapper">
-                    <div class="code-header"><span>bash</span><button class="copy-btn" title="Copy code"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg></button></div>
+                    <div class="code-header">
+                        <span>bash</span>
+                        <button class="copy-btn" title="Copy code"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg><span>Copy</span></button>
+                    </div>
                     <pre><code class="language-bash">pytest test.py -v</code></pre>
                 </div>
                 
                 <h4>Run a Specific Test Class</h4>
                 <p>To run all tests within a specific class (e.g., <code>TestDataLogger</code>), use the <code>::</code> syntax.</p>
                 <div class="code-block-wrapper">
-                    <div class="code-header"><span>bash</span><button class="copy-btn" title="Copy code"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg></button></div>
+                    <div class="code-header">
+                        <span>bash</span>
+                        <button class="copy-btn" title="Copy code"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg><span>Copy</span></button>
+                    </div>
                     <pre><code class="language-bash">pytest test.py::TestDataLogger -v</code></pre>
                 </div>
 
                 <h4>Run Tests Matching a Keyword</h4>
                 <p>The <code>-k</code> flag allows you to run tests whose names contain a specific keyword (e.g., "filter").</p>
                  <div class="code-block-wrapper">
-                    <div class="code-header"><span>bash</span><button class="copy-btn" title="Copy code"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg></button></div>
+                    <div class="code-header">
+                        <span>bash</span>
+                        <button class="copy-btn" title="Copy code"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg><span>Copy</span></button>
+                    </div>
                     <pre><code class="language-bash">pytest test.py -k "filter" -v</code></pre>
                 </div>
 
                 <h4>Generate a Coverage Report</h4>
                 <p>To measure how much of the application code is covered by tests, use <code>pytest-cov</code>. This command runs tests and generates an HTML report in a new <code>htmlcov/</code> directory.</p>
                  <div class="code-block-wrapper">
-                    <div class="code-header"><span>bash</span><button class="copy-btn" title="Copy code"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg></button></div>
+                    <div class="code-header">
+                        <span>bash</span>
+                        <button class="copy-btn" title="Copy code"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg><span>Copy</span></button>
+                    </div>
                     <pre><code class="language-bash">pytest test.py --cov=main --cov-report=html</code></pre>
                 </div>
             </section>
@@ -1603,20 +1640,29 @@ main.py
                 });
             });
 
-            // Copy-to-clipboard for code blocks
-            document.querySelectorAll('.code-header').forEach(header => {
-                const button = header.querySelector('.copy-btn');
-                const pre = header.nextElementSibling;
-                if (button && pre && pre.tagName === 'PRE') {
-                    button.addEventListener('click', () => {
+            // Copy-to-clipboard for code blocks with improved feedback
+            document.querySelectorAll('.copy-btn').forEach(button => {
+                const originalContent = button.innerHTML;
+                const copiedContent = `<svg fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg><span>Copied!</span>`;
+
+                button.addEventListener('click', () => {
+                    const pre = button.closest('.code-block-wrapper').querySelector('pre');
+                    if (pre) {
                         const code = pre.querySelector('code').innerText;
                         navigator.clipboard.writeText(code).then(() => {
-                            button.title = 'Copied!';
-                            setTimeout(() => { button.title = 'Copy code'; }, 2000);
+                            button.innerHTML = copiedContent;
+                            button.classList.add('copied');
+                            setTimeout(() => {
+                                button.innerHTML = originalContent;
+                                button.classList.remove('copied');
+                            }, 2000);
+                        }).catch(err => {
+                            console.error('Failed to copy text: ', err);
                         });
-                    });
-                }
+                    }
+                });
             });
+
 
             // Active nav item on scroll
             const sections = document.querySelectorAll('main section[id]');
