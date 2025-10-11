@@ -112,6 +112,15 @@
         strong { font-weight: 600; color: var(--text-primary); }
         ul, ol { margin: 1rem 0 1rem 1.25rem; padding-left: 1rem; }
         li { margin-bottom: 0.75rem; }
+        
+        /* Search Highlight Styling */
+        mark {
+            background-color: var(--warning);
+            color: var(--bg-darker);
+            padding: 0.1em 0.2em;
+            border-radius: 3px;
+        }
+
 
         /* Main Layout */
         .container { display: flex; }
@@ -1689,20 +1698,10 @@ main.py
             // Close sidebar when clicking on the dimmed content area or any other body element
             document.body.addEventListener('click', (e) => {
                 if (document.body.classList.contains('sidebar-is-open')) {
-                    // Check if the click is outside the sidebar and not on the toggle button itself
                     if (!sidebar.contains(e.target) && !menuToggle.contains(e.target)) {
                         closeSidebar();
                     }
                 }
-            });
-
-            // Close sidebar when a nav item is clicked on mobile
-            document.querySelectorAll('.nav-item').forEach(item => {
-                item.addEventListener('click', () => {
-                    if (window.innerWidth <= 1024) {
-                        closeSidebar();
-                    }
-                });
             });
 
             // Copy-to-clipboard for code blocks with improved feedback
@@ -1745,7 +1744,7 @@ main.py
 
             sections.forEach(section => observer.observe(section));
             
-            // --- ENHANCED SEARCH FUNCTIONALITY ---
+            // --- ENHANCED SEARCH FUNCTIONALITY WITH HIGHLIGHTING ---
             const searchInput = document.getElementById('search-input');
             const searchClearBtn = document.getElementById('search-clear-btn');
             const navLinks = document.querySelectorAll('.nav-item');
@@ -1753,32 +1752,50 @@ main.py
             const mainContent = document.querySelector('main');
             const mainHeader = document.querySelector('.main-header');
 
-            // Index all searchable content on page load
-            const searchableSectionsData = [];
-            document.querySelectorAll('main > section[id]').forEach(section => {
-                const title = section.querySelector('h2'); // Main section title
-                searchableSectionsData.push({
+            const searchableSectionsData = Array.from(document.querySelectorAll('main > section[id]')).map(section => {
+                const title = section.querySelector('h2');
+                return {
                     id: section.id,
                     element: section,
                     title: title ? title.textContent.toLowerCase() : '',
-                    content: section.textContent.toLowerCase()
-                });
+                    originalHTML: section.innerHTML // Store original HTML to remove highlights
+                };
             });
-
-            // Create a 'no-results' message element once and reuse it
+            
             let noResultsMessage = document.createElement('div');
             noResultsMessage.id = 'no-results';
-            noResultsMessage.style.display = 'none'; // Initially hidden
+            noResultsMessage.style.display = 'none';
             noResultsMessage.style.textAlign = 'center';
             noResultsMessage.style.padding = '4rem 0';
             mainContent.appendChild(noResultsMessage);
 
-            function performSearch(e) {
-                const searchTerm = e.target.value.toLowerCase().trim();
+            function escapeRegex(string) {
+                return string.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
+            }
+
+            function highlightText(searchTerm) {
+                if (!searchTerm) return;
+                const regex = new RegExp(`(${escapeRegex(searchTerm)})`, 'gi');
+                searchableSectionsData.forEach(sec => {
+                    if (sec.element.style.display !== 'none') {
+                         sec.element.innerHTML = sec.originalHTML.replace(regex, `<mark>$1</mark>`);
+                    }
+                });
+            }
+
+            function removeHighlights() {
+                searchableSectionsData.forEach(sec => {
+                    sec.element.innerHTML = sec.originalHTML;
+                });
+            }
+
+            function performSearch() {
+                const searchTerm = searchInput.value.toLowerCase().trim();
                 searchClearBtn.style.display = searchTerm ? 'block' : 'none';
+                
+                removeHighlights(); // Always remove old highlights first
 
                 if (searchTerm === '') {
-                    // Show all content and links
                     mainHeader.style.display = 'block';
                     searchableSectionsData.forEach(sec => sec.element.style.display = 'block');
                     navLinks.forEach(link => link.style.display = 'flex');
@@ -1789,45 +1806,69 @@ main.py
 
                 const matchedIds = new Set();
                 
-                // Filter main content sections
                 searchableSectionsData.forEach(sec => {
-                    const isMatch = sec.title.includes(searchTerm) || sec.content.includes(searchTerm);
+                    const content = sec.title + ' ' + sec.element.textContent.toLowerCase();
+                    const isMatch = content.includes(searchTerm);
                     sec.element.style.display = isMatch ? 'block' : 'none';
                     if (isMatch) {
                         matchedIds.add(sec.id);
                     }
                 });
 
-                // Filter sidebar links based on matched sections
+                highlightText(searchTerm);
+
                 navLinks.forEach(link => {
                     const linkId = link.getAttribute('href')?.substring(1);
                     link.style.display = (linkId && matchedIds.has(linkId)) ? 'flex' : 'none';
                 });
 
-                // Update visibility of sidebar section titles
                 navSections.forEach(section => {
                     const visibleLinks = section.querySelectorAll('.nav-item[style*="display: flex"]');
                     section.style.display = visibleLinks.length > 0 ? 'block' : 'none';
                 });
 
-                // Handle no results
                 if (matchedIds.size === 0) {
                     mainHeader.style.display = 'none';
-                    noResultsMessage.innerHTML = `<h3>No results found for "${e.target.value}"</h3><p>Try searching for a different term or check your spelling.</p>`;
+                    noResultsMessage.innerHTML = `<h3>No results found for "${searchInput.value}"</h3><p>Try searching for a different term or check your spelling.</p>`;
                     noResultsMessage.style.display = 'block';
                 } else {
                     mainHeader.style.display = 'block';
                     noResultsMessage.style.display = 'none';
                 }
             }
+            
+            // Smart scroll for sidebar links when search is active
+            navLinks.forEach(link => {
+                link.addEventListener('click', (e) => {
+                    const searchTerm = searchInput.value.trim();
+                    if (searchTerm) {
+                        e.preventDefault();
+                        const targetId = link.getAttribute('href').substring(1);
+                        const targetSection = document.getElementById(targetId);
+                        
+                        if (targetSection) {
+                            const firstHighlight = targetSection.querySelector('mark');
+                            if (firstHighlight) {
+                                firstHighlight.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                            } else {
+                                targetSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                            }
+                        }
+                    }
+                     // Close sidebar on mobile after click
+                    if (window.innerWidth <= 1024) {
+                        closeSidebar();
+                    }
+                });
+            });
+
 
             searchInput.addEventListener('input', performSearch);
 
             searchClearBtn.addEventListener('click', () => {
                 searchInput.value = '';
                 searchInput.focus();
-                // Manually trigger input event to reset search
-                searchInput.dispatchEvent(new Event('input', { bubbles: true }));
+                performSearch();
             });
 
 
@@ -1840,13 +1881,12 @@ main.py
                 const maxVisible = 4; // Show max 4 avatars
                 const topContributors = contributors.filter(c => c.type !== 'Bot');
 
-                // Display visible contributors
                 const visibleContributors = topContributors.slice(0, maxVisible);
                 
                 visibleContributors.forEach(contributor => {
                     const listItem = document.createElement('li');
                     listItem.className = 'contributor-item';
-                    listItem.title = contributor.login; // Add tooltip for name
+                    listItem.title = contributor.login;
 
                     listItem.innerHTML = `
                         <a href="${contributor.html_url}" target="_blank" rel="noopener noreferrer">
@@ -1856,7 +1896,6 @@ main.py
                     listElement.appendChild(listItem);
                 });
 
-                // Display overflow count if there are more contributors
                 if (topContributors.length > maxVisible) {
                     const remainingCount = topContributors.length - maxVisible;
                     const overflowItem = document.createElement('li');
@@ -1876,7 +1915,6 @@ main.py
 
                 const cachedData = localStorage.getItem(cacheKey);
 
-                // Check for fresh cache first
                 if (cachedData) {
                     const { timestamp, data } = JSON.parse(cachedData);
                     if (Date.now() - timestamp < cacheDuration) {
@@ -1885,7 +1923,6 @@ main.py
                     }
                 }
 
-                // If cache is stale or missing, fetch from API
                 try {
                     const response = await fetch(apiUrl);
                     if (!response.ok) {
@@ -1901,13 +1938,11 @@ main.py
                     displayContributors(contributors);
 
                 } catch (error) {
-                    // Fallback to stale cache if API fails
                     if (cachedData) {
                         console.log('GitHub API request failed, serving stale data from cache.', error.message);
                         const { data } = JSON.parse(cachedData);
                         displayContributors(data);
                     } else {
-                        // Only show error if there's no cache at all
                         console.error('Failed to fetch contributors and no cache is available:', error);
                         listElement.innerHTML = '<li class="contributor-list-loading">Could not load contributors.</li>';
                     }
