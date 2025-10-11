@@ -37,11 +37,11 @@
         :root {
             --primary: #0a84ff;
             --primary-dark: #0077ee;
-            --bg-dark: #111111;
-            --bg-darker: #1c1c1e;
+            --bg-dark: #0f0f10;
+            --bg-darker: #1a1a1c;
             --bg-light: #2c2c2e;
             --text-primary: #f5f5f7;
-            --text-secondary: #b0b0b5; /* Improved contrast */
+            --text-secondary: #a0a0a5; /* Slightly lighter for better readability */
             --border: #3a3a3c;
             --accent: #30d158;
             --warning: #ff9f0a;
@@ -62,7 +62,7 @@
         body {
             font-family: var(--font-sans);
             background-color: var(--bg-dark);
-            background-image: radial-gradient(ellipse at top, #212124, var(--bg-dark) 60%);
+            background-image: radial-gradient(ellipse at top, #212124, var(--bg-dark) 70%);
             color: var(--text-primary);
             line-height: 1.7;
             font-size: 16px;
@@ -121,7 +121,8 @@
             border-right: 1px solid var(--border);
             position: fixed;
             height: 100%;
-            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
             transition: transform 0.3s ease;
             z-index: 1000;
         }
@@ -140,19 +141,75 @@
             align-items: center;
             gap: 12px;
             border-bottom: 1px solid var(--border);
+            flex-shrink: 0;
         }
         .sidebar-header img { width: 40px; height: 40px; }
         .sidebar-header .title h1 { font-size: 1.2rem; margin: 0; color: var(--text-primary); }
         .sidebar-header .title p { font-size: 0.8rem; margin: 0; color: var(--text-secondary); }
+        
+        /* IMPROVED: Search bar with clear button */
+        .search-container {
+            padding: 1rem 1.5rem;
+            border-bottom: 1px solid var(--border);
+            position: relative;
+            flex-shrink: 0;
+        }
+        #search-input {
+            width: 100%;
+            background-color: var(--bg-light);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 0.75rem 2.5rem; /* space for icon and clear button */
+            color: var(--text-primary);
+            font-size: 0.9rem;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+        #search-input:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(10, 132, 255, 0.3);
+        }
+        .search-icon {
+            position: absolute;
+            left: 2.25rem;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-secondary);
+            width: 20px;
+            height: 20px;
+            pointer-events: none;
+        }
+        .search-clear-btn {
+            position: absolute;
+            right: 2.25rem;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            padding: 0.25rem;
+            cursor: pointer;
+            color: var(--text-secondary);
+            display: none; /* Hidden by default */
+        }
+        .search-clear-btn:hover {
+            color: var(--text-primary);
+        }
+        .search-clear-btn svg {
+            width: 18px;
+            height: 18px;
+            display: block;
+        }
+
+        .nav-container { flex-grow: 1; overflow-y: auto; }
         .nav-section-title { padding: 1.5rem 1.5rem 0.5rem; font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: var(--text-secondary); }
         .nav-item { display: flex; align-items: center; gap: 10px; padding: 0.75rem 1.5rem; color: var(--text-secondary); font-size: 0.9rem; border-left: 3px solid transparent; transition: all 0.2s ease; font-weight: 500;}
         .nav-item:hover { background: var(--bg-light); color: var(--text-primary); }
         .nav-item.active { background: rgba(10, 132, 255, 0.1); color: var(--primary); border-left-color: var(--primary); font-weight: 600; }
         .nav-item .icon { width: 16px; height: 16px; stroke-width: 2px; }
-        .sidebar::-webkit-scrollbar { width: 8px; }
-        .sidebar::-webkit-scrollbar-track { background: transparent; }
-        .sidebar::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
-        .sidebar::-webkit-scrollbar-thumb:hover { background: var(--primary); }
+        .nav-container::-webkit-scrollbar { width: 8px; }
+        .nav-container::-webkit-scrollbar-track { background: transparent; }
+        .nav-container::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+        .nav-container::-webkit-scrollbar-thumb:hover { background: var(--primary); }
 
         /* Content Styling */
         .main-header { text-align: center; margin-bottom: 3rem; padding-bottom: 2rem; border-bottom: 1px solid var(--border); }
@@ -692,7 +749,15 @@
                 </div>
             </header>
             
-            <nav class="nav">
+            <div class="search-container">
+                <svg class="search-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                <input type="text" id="search-input" placeholder="Search documentation...">
+                <button id="search-clear-btn" class="search-clear-btn" aria-label="Clear search">
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
+            </div>
+
+            <nav class="nav-container">
                 <div class="nav-section">
                     <div class="nav-section-title">Introduction</div>
                     <a href="#overview" class="nav-item active"><svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>Overview</a>
@@ -734,7 +799,7 @@
             </a>
 
             <header class="main-header">
-                <img src="public/Glance_nobg.svg" alt="Glance Main Logo" class="main-logo">
+                <img src="public/Glance_nobg.svg" alt="Glance Main Logo" class="main-logo" loading="lazy">
                 <h1>Glance Dashboard Documentation</h1>
                 <p>Your complete guide to setting up, configuring, and using the Glance real-time telemetry visualization platform. Built by <a href="https://teamignition.space" target="_blank">Team Ignition</a>.</p>
             </header>
@@ -749,7 +814,7 @@
                         </div>
                     </div>
                     <div class="gif-content">
-                         <img src="public/user_interface.gif" alt="Dashboard Interface GIF">
+                         <img src="public/user_interface.gif" alt="Dashboard Interface GIF" loading="lazy">
                     </div>
                 </div>
             </section>
@@ -829,19 +894,19 @@
                 <p>A glimpse into the Glance user interface, from initial setup to a fully configured, live dashboard.</p>
                 <div class="screenshot-gallery">
                     <figure>
-                        <img src="public/Doc Images/HomeScreen.png" alt="Glance welcome screen">
+                        <img src="public/Doc Images/HomeScreen.png" alt="Glance welcome screen" loading="lazy">
                         <figcaption>The Welcome Screen: Start a new project or load an existing one.</figcaption>
                     </figure>
                     <figure>
-                        <img src="public/Doc Images/Connection.png" alt="Connection settings dialog">
+                        <img src="public/Doc Images/Connection.png" alt="Connection settings dialog" loading="lazy">
                         <figcaption>Connection Settings: Configure data sources like Serial, TCP, and UDP.</figcaption>
                     </figure>
                     <figure>
-                        <img src="public/Doc Images/parameters.png" alt="Parameter management window">
+                        <img src="public/Doc Images/parameters.png" alt="Parameter management window" loading="lazy">
                         <figcaption>Parameter Management: Define your data channels and alarm thresholds.</figcaption>
                     </figure>
                     <figure>
-                        <img src="public/Doc Images/dashboard.png" alt="A fully configured dashboard with multiple widgets">
+                        <img src="public/Doc Images/dashboard.png" alt="A fully configured dashboard with multiple widgets" loading="lazy">
                         <figcaption>The Live Dashboard: Monitor multiple data streams in real-time.</figcaption>
                     </figure>
                 </div>
@@ -1222,8 +1287,8 @@ cd Glance</code></pre>
                      <li>Pause, clear, and save the raw log for later analysis.</li>
                  </ul>
                  <div class="telemetry-images">
-                    <img src="public/Doc Images/RTV.png" alt="Raw Telemetry Monitor showing data stream">
-                    <img src="public/Doc Images/Standalone_RTV.png" alt="Controls for the Raw Telemetry Monitor">
+                    <img src="public/Doc Images/RTV.png" alt="Raw Telemetry Monitor showing data stream" loading="lazy">
+                    <img src="public/Doc Images/Standalone_RTV.png" alt="Controls for the Raw Telemetry Monitor" loading="lazy">
                 </div>
                  <div class="readme-link">
                     For more details, see the <a href="https://github.com/teamignitionvitc/Glance?tab=readme-ov-file#monitoring--debugging" target="_blank">Monitoring & Debugging section in the README</a>.
@@ -1375,7 +1440,7 @@ cd Glance</code></pre>
                     <li>Inside <code>update_data</code>, the `MainWindow` iterates through its list of defined parameters. For each parameter, it uses the <code>array_index</code> to get the corresponding value from the packet.</li>
                     <li>The value is passed through the <strong>FilterManager</strong>, which applies any configured filters (e.g., Low-pass, Kalman).</li>
                     <li>The raw value and filtered value are appended to the global <code>data_history</code> dictionary.</li>
-                    <li>The `MainWindow` then identifies which active widgets are subscribed to the updated parameter and calls their respective update methods with the <strong>filtered value</strong>.</li>
+                    <li>The <code>MainWindow</code> then identifies which active widgets are subscribed to the updated parameter and calls their respective update methods with the <strong>filtered value</strong>.</li>
                 </ol>
 
                 <h3>Adding a Custom Widget</h3>
@@ -1570,7 +1635,7 @@ main.py
             <footer>
                 <div class="footer-content">
                     <div class="footer-main">
-                        <img src="public/ign_logo_wht.svg" alt="Team Ignition Logo" class="footer-logo">
+                        <img src="public/ign_logo_wht.svg" alt="Team Ignition Logo" class="footer-logo" loading="lazy">
                         <h3>Team Ignition</h3>
                         <p class="footer-text">The official student rocketry team of Vellore Institute of Technology, Chennai. We are dedicated to advancing aerospace innovation through hands-on learning and experimentation.</p>
                         <ul class="social-links">
@@ -1679,9 +1744,94 @@ main.py
             }, { rootMargin: '-30% 0px -70% 0px' });
 
             sections.forEach(section => observer.observe(section));
-
-            // --- UPDATED: Fetch GitHub Contributors with Caching and Stacked Avatars ---
             
+            // --- ENHANCED SEARCH FUNCTIONALITY ---
+            const searchInput = document.getElementById('search-input');
+            const searchClearBtn = document.getElementById('search-clear-btn');
+            const navLinks = document.querySelectorAll('.nav-item');
+            const navSections = document.querySelectorAll('.nav-section');
+            const mainContent = document.querySelector('main');
+            const mainHeader = document.querySelector('.main-header');
+
+            // Index all searchable content on page load
+            const searchableSectionsData = [];
+            document.querySelectorAll('main > section[id]').forEach(section => {
+                const title = section.querySelector('h2'); // Main section title
+                searchableSectionsData.push({
+                    id: section.id,
+                    element: section,
+                    title: title ? title.textContent.toLowerCase() : '',
+                    content: section.textContent.toLowerCase()
+                });
+            });
+
+            // Create a 'no-results' message element once and reuse it
+            let noResultsMessage = document.createElement('div');
+            noResultsMessage.id = 'no-results';
+            noResultsMessage.style.display = 'none'; // Initially hidden
+            noResultsMessage.style.textAlign = 'center';
+            noResultsMessage.style.padding = '4rem 0';
+            mainContent.appendChild(noResultsMessage);
+
+            function performSearch(e) {
+                const searchTerm = e.target.value.toLowerCase().trim();
+                searchClearBtn.style.display = searchTerm ? 'block' : 'none';
+
+                if (searchTerm === '') {
+                    // Show all content and links
+                    mainHeader.style.display = 'block';
+                    searchableSectionsData.forEach(sec => sec.element.style.display = 'block');
+                    navLinks.forEach(link => link.style.display = 'flex');
+                    navSections.forEach(section => section.style.display = 'block');
+                    noResultsMessage.style.display = 'none';
+                    return;
+                }
+
+                const matchedIds = new Set();
+                
+                // Filter main content sections
+                searchableSectionsData.forEach(sec => {
+                    const isMatch = sec.title.includes(searchTerm) || sec.content.includes(searchTerm);
+                    sec.element.style.display = isMatch ? 'block' : 'none';
+                    if (isMatch) {
+                        matchedIds.add(sec.id);
+                    }
+                });
+
+                // Filter sidebar links based on matched sections
+                navLinks.forEach(link => {
+                    const linkId = link.getAttribute('href')?.substring(1);
+                    link.style.display = (linkId && matchedIds.has(linkId)) ? 'flex' : 'none';
+                });
+
+                // Update visibility of sidebar section titles
+                navSections.forEach(section => {
+                    const visibleLinks = section.querySelectorAll('.nav-item[style*="display: flex"]');
+                    section.style.display = visibleLinks.length > 0 ? 'block' : 'none';
+                });
+
+                // Handle no results
+                if (matchedIds.size === 0) {
+                    mainHeader.style.display = 'none';
+                    noResultsMessage.innerHTML = `<h3>No results found for "${e.target.value}"</h3><p>Try searching for a different term or check your spelling.</p>`;
+                    noResultsMessage.style.display = 'block';
+                } else {
+                    mainHeader.style.display = 'block';
+                    noResultsMessage.style.display = 'none';
+                }
+            }
+
+            searchInput.addEventListener('input', performSearch);
+
+            searchClearBtn.addEventListener('click', () => {
+                searchInput.value = '';
+                searchInput.focus();
+                // Manually trigger input event to reset search
+                searchInput.dispatchEvent(new Event('input', { bubbles: true }));
+            });
+
+
+            // --- Fetch GitHub Contributors ---
             const listElement = document.getElementById('contributor-list');
 
             function displayContributors(contributors) {
@@ -1782,3 +1932,4 @@ main.py
     </script>
 </body>
 </html>
+
