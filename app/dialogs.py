@@ -62,6 +62,8 @@ from PySide6.QtWidgets import (
     QMessageBox, QGroupBox, QFileDialog, QListWidgetItem
 )
 from PySide6.QtCore import Qt
+import os
+from datetime import datetime
 
 
 class ConnectionSettingsDialog(QDialog):
