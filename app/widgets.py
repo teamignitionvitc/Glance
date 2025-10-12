@@ -68,173 +68,102 @@ try:
 except Exception:
     QWebEngineView = None
 
-
 class ValueCard(QFrame):
     def __init__(self, param_name, unit, priority):
-        super().__init__(); self.setFrameShape(QFrame.Shape.StyledPanel); layout = QVBoxLayout(self)
-        self.name_label = QLabel(f"{param_name} ({unit})"); self.name_label.setFont(QFont("Arial", 12, QFont.Weight.Bold))
-        self.value_label = QLabel("---"); self.value_label.setFont(QFont("Monospace", 24, QFont.Weight.Bold))
+        super().__init__()
+        self.param_name = param_name
+        self.unit = unit
+        self.priority = priority
+        
+        # Clean, frameless container
+        self.setFrameShape(QFrame.Shape.NoFrame)
+        
+        # Main layout
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(24, 24, 24, 24)
+        layout.setSpacing(4)
+        
+        # Parameter name - top
+        self.name_label = QLabel(param_name)
+        self.name_label.setFont(QFont("Arial", 11))
+        self.name_label.setStyleSheet("color: #999999;")
+        self.name_label.setAlignment(Qt.AlignmentFlag.AlignLeft)
+        
+        # Main value - huge and centered
+        self.value_label = QLabel("---")
+        value_font = QFont("Arial", 70, QFont.Weight.Bold)
+        self.value_label.setFont(value_font)
         self.value_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        layout.addWidget(self.name_label); layout.addWidget(self.value_label)
-        self.priority = priority; self.set_alarm_state('Nominal')
-    def update_value(self, value, alarm_state): self.value_label.setText(f"{value:.2f}" if value is not None else "NO DATA"); self.set_alarm_state(alarm_state)
-    def set_alarm_state(self, state):
-        alarm_colors = {'Critical': '#FF3131', 'Warning': '#FFBF00', 'Nominal': '#2a2a2a'}
-        priority_colors = {'High': '#FF3131', 'Medium': '#0078FF', 'Low': 'transparent'}
-        bg_color = alarm_colors.get(state, '#2a2a2a'); border_color = priority_colors.get(self.priority, 'transparent')
-        self.setStyleSheet(f"background-color: {bg_color}; border-radius: 8px; border: 3px solid {border_color};")
+        self.value_label.setStyleSheet("color: #ffffff; padding: 20px 0px;")
+        
+        # Unit - small, right below value
+        self.unit_label = QLabel(unit)
+        self.unit_label.setFont(QFont("Arial", 14))
+        self.unit_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.unit_label.setStyleSheet("color: #666666;")
+        
+        # Add to layout
+        layout.addWidget(self.name_label)
+        layout.addStretch()
+        layout.addWidget(self.value_label)
+        layout.addWidget(self.unit_label)
+        layout.addStretch()
+        
+        # Set base style
+        self.setStyleSheet("""
+            QFrame {
+                background-color: #1e1e1e;
+                border-radius: 8px;
+            }
+        """)
+        
+        # Minimum size
+        self.setMinimumSize(240, 200)
+        self.setMaximumHeight(280)
+    
+    def update_value(self, value, alarm_state):
+        if value is not None:
+            # Smart formatting
+            if abs(value) >= 1000:
+                display_value = f"{value:,.1f}"
+            elif abs(value) >= 100:
+                display_value = f"{value:.1f}"
+            elif abs(value) >= 10:
+                display_value = f"{value:.2f}"
+            elif abs(value) >= 1:
+                display_value = f"{value:.2f}"
+            else:
+                display_value = f"{value:.3f}"
+            
+            self.value_label.setText(display_value)
+            
+            # Color based on state
+            if alarm_state == 'Critical':
+                value_color = '#ff4757'
+                bg_color = '#1e1e1e'
+            elif alarm_state == 'Warning':
+                value_color = '#ffa502'
+                bg_color = '#1e1e1e'
+            else:
+                value_color = '#ffffff'
+                bg_color = '#1e1e1e'
 
-
-class TimeGraph(QWidget):
-    def __init__(self, param_configs):
-        super().__init__()
-        self.param_configs = param_configs; self.curves = {}; self.last_known_values = {}
-        self.plot_widget = pg.PlotWidget(); self.plot_widget.setBackground(QColor(10, 10, 10))
-        self.plot_widget.showGrid(x=True, y=True, alpha=0.3)
-        self.plot_widget.setLabel('bottom', 'Time (s)', color='#FFFFFF')
-        self.plot_widget.addLegend()
-        title = ", ".join([p['name'] for p in self.param_configs])
-        units = list(set([p['unit'] for p in self.param_configs]))
-        unit_label = units[0] if len(units) == 1 else "Multiple Units"
-        self.plot_widget.setTitle(title, color='w', size='12pt'); self.plot_widget.setLabel('left', unit_label, color='#FFFFFF')
-        axis_pen = pg.mkPen(color='#FFFFFF', width=1)
-        self.plot_widget.getAxis('left').setPen(axis_pen); self.plot_widget.getAxis('bottom').setPen(axis_pen)
-        for p_config in self.param_configs:
-            pen = pg.mkPen(p_config['color'], width=2)
-            curve = self.plot_widget.plot(pen=pen, name=p_config['name']); self.curves[p_config['id']] = curve
-        layout = QVBoxLayout(self); layout.addWidget(self.plot_widget); self.setLayout(layout)
-        self.start_time = time.time()
-        self.vLine = pg.InfiniteLine(angle=90, movable=False, pen=pg.mkPen('yellow', style=Qt.DashLine))
-        self.hLine = pg.InfiniteLine(angle=0, movable=False, pen=pg.mkPen('yellow', style=Qt.DashLine))
-        self.label = pg.TextItem(color='white', anchor=(0, 1))
-        self.plot_widget.addItem(self.vLine, ignoreBounds=True)
-        self.plot_widget.addItem(self.hLine, ignoreBounds=True)
-        self.plot_widget.addItem(self.label)
-        self.proxy = pg.SignalProxy(self.plot_widget.scene().sigMouseMoved, rateLimit=60, slot=self.mouse_moved)
-        self.plot_widget.scene().sigMouseClicked.connect(self.mouse_clicked)
-
-    def update_data(self, history):
-        for param_id, curve in self.curves.items():
-            if param_id in history and history[param_id]:
-                param_history = history[param_id]
-                self.last_known_values[param_id] = param_history[-1]
-                timestamps = [dp['timestamp'] - self.start_time for dp in param_history]
-                values = [dp['value'] for dp in param_history]
-                curve.setData(x=timestamps, y=values)
-
-    def mouse_moved(self, evt):
-        pos = evt[0]
-        if self.plot_widget.sceneBoundingRect().contains(pos):
-            mousePoint = self.plot_widget.getPlotItem().vb.mapSceneToView(pos)
-            self.vLine.setPos(mousePoint.x()); self.hLine.setPos(mousePoint.y())
-            text = f"Time: {mousePoint.x():.2f}s\n"
-            for pid, curve in self.curves.items():
-                x_data, y_data = curve.getData()
-                if x_data is not None and len(x_data) > 0:
-                    idx = np.searchsorted(x_data, mousePoint.x())
-                    if 0 < idx < len(x_data):
-                        y_val = y_data[idx]
-                        p_name = next(p['name'] for p in self.param_configs if p['id'] == pid)
-                        text += f"{p_name}: {y_val:.2f}\n"
-            self.label.setText(text.strip()); self.label.setPos(mousePoint)
-    def mouse_clicked(self, evt):
-        if evt.double(): return
-        pos = self.plot_widget.getPlotItem().vb.mapSceneToView(evt.scenePos())
-        min_dist = float('inf'); nearest_point = None
-        for pid, curve in self.curves.items():
-            x_data, y_data = curve.getData()
-            if x_data is None or len(x_data) == 0: continue
-            for i, (x, y) in enumerate(zip(x_data, y_data)):
-                dist = (x - pos.x())**2 + (y - pos.y())**2
-                if dist < min_dist:
-                    min_dist = dist
-                    p_name = next(p['name'] for p in self.param_configs if p['id'] == pid)
-                    nearest_point = (p_name, self.start_time + x, y)
-        if nearest_point:
-            name, ts, val = nearest_point
-            time_str = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(ts))
-            from PySide6.QtWidgets import QMessageBox
-            QMessageBox.information(self, "Data Point Selected", f"Parameter: {name}\nValue: {val:.3f}\nTimestamp: {time_str}")
-
-
-class LogTable(QWidget):
-    def __init__(self, param_configs):
-        super().__init__()
-        self.param_configs = param_configs
-        self.param_map = {p['id']: {'name': p['name'], 'col': i + 1} for i, p in enumerate(self.param_configs)}
-        self.last_known_values = {}
-        self.highlight_brush = QBrush(QColor("#0078FF").lighter(150))
-        layout = QVBoxLayout(self); layout.setContentsMargins(0, 0, 0, 0)
-        self.table = QTableWidget()
-        headers = ["Timestamp"] + [f"{p['name']} ({p['unit']})" for p in self.param_configs]
-        self.table.setColumnCount(len(headers)); self.table.setHorizontalHeaderLabels(headers)
-        self.table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
-        self.table.verticalHeader().setVisible(False); self.table.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
-        search_group = QGroupBox("Search and Highlight")
-        search_layout = QHBoxLayout(search_group)
-        self.search_param_combo = QComboBox(); self.search_param_combo.addItems([p['name'] for p in self.param_configs])
-        self.search_cond_combo = QComboBox(); self.search_cond_combo.addItems(["=", ">", "<", ">=", "<="])
-        from PySide6.QtWidgets import QDoubleSpinBox
-        self.search_value_spinbox = QDoubleSpinBox(); self.search_value_spinbox.setRange(-1e9, 1e9); self.search_value_spinbox.setDecimals(4)
-        from PySide6.QtWidgets import QPushButton
-        search_btn = QPushButton("Search Last"); clear_btn = QPushButton("Clear")
-        search_layout.addWidget(QLabel("Find in:")); search_layout.addWidget(self.search_param_combo)
-        search_layout.addWidget(self.search_cond_combo); search_layout.addWidget(self.search_value_spinbox)
-        search_layout.addWidget(search_btn); search_layout.addWidget(clear_btn)
-        layout.addWidget(self.table); layout.addWidget(search_group)
-        search_btn.clicked.connect(self.search_and_highlight)
-        clear_btn.clicked.connect(self.clear_highlights)
-    def update_data(self, updated_param_id, history):
-        if self.table.rowCount() > 500: self.table.removeRow(500)
-        self.table.insertRow(0)
-        for pid in self.param_map.keys():
-            if pid in history and history[pid]: self.last_known_values[pid] = history[pid][-1]
-        ts_str = time.strftime('%H:%M:%S', time.localtime(self.last_known_values[updated_param_id]['timestamp']))
-        self.table.setItem(0, 0, QTableWidgetItem(ts_str))
-        for pid, pdata in self.param_map.items():
-            value_str = "---"
-            if pid in self.last_known_values: value_str = f"{self.last_known_values[pid]['value']:.3f}"
-            self.table.setItem(0, pdata['col'], QTableWidgetItem(value_str))
-    def clear_highlights(self):
-        for r in range(self.table.rowCount()):
-            for c in range(self.table.columnCount()):
-                item = self.table.item(r, c)
-                if item: item.setBackground(QBrush(QColor("transparent")))
-    def search_and_highlight(self):
-        self.clear_highlights()
-        try:
-            target_p_name = self.search_param_combo.currentText()
-            target_col = self.search_param_combo.currentIndex() + 1
-            target_val = self.search_value_spinbox.value()
-            condition = self.search_cond_combo.currentText()
-        except Exception as e:
-            from PySide6.QtWidgets import QMessageBox
-            QMessageBox.warning(self, "Search Error", f"Invalid search criteria: {e}")
-            return
-        found_item = None
-        for r in range(self.table.rowCount()):
-            item = self.table.item(r, target_col)
-            if not item or not item.text(): continue
-            try:
-                cell_val = float(item.text())
-                match = False
-                if condition == "=" and math.isclose(cell_val, target_val): match = True
-                elif condition == ">" and cell_val > target_val: match = True
-                elif condition == "<" and cell_val < target_val: match = True
-                elif condition == ">=" and cell_val >= target_val: match = True
-                elif condition == "<=" and cell_val <= target_val: match = True
-                if match:
-                    item.setBackground(self.highlight_brush)
-                    found_item = item
-                    break
-            except ValueError:
-                continue
-        if found_item:
-            self.table.scrollToItem(found_item, QAbstractItemView.ScrollHint.PositionAtCenter)
+            self.value_label.setStyleSheet(f"color: {value_color}; padding: 20px 0px;")
+            self.setStyleSheet(f"""
+                QFrame {{
+                    background-color: {bg_color};
+                    border-radius: 8px;
+                }}
+            """)
         else:
-            from PySide6.QtWidgets import QMessageBox
-            QMessageBox.information(self, "Search", f"No value matching '{condition} {target_val}' found for '{target_p_name}'.")
-
+            self.value_label.setText("--")
+            self.value_label.setStyleSheet("color: #555555; padding: 20px 0px;")
+        
+        self.set_alarm_state(alarm_state)
+    
+    def set_alarm_state(self, state):
+        # Just update the internal state, visual already handled in update_value
+        pass
 
 class GaugeWidget(QFrame):
     def __init__(self, param_config):
@@ -324,6 +253,127 @@ class GaugeWidget(QFrame):
         span = max(1e-6, hi - lo)
         x = max(0.0, min(1.0, (val - lo) / span)) * 100.0
         self.indicator.setPos(x)
+        
+class TimeGraph(QWidget):
+    def __init__(self, param_configs):
+        super().__init__()
+        self.param_configs = param_configs
+        self.curves = {}
+        self.last_known_values = {}
+
+        # Toolbar
+        container = QVBoxLayout(self)
+        container.setContentsMargins(0, 0, 0, 0)
+        toolbar = QHBoxLayout()
+        toolbar.setContentsMargins(0, 0, 0, 0)
+        reset_btn = QPushButton("Reset View")
+        reset_btn.setObjectName("SecondaryCTA")
+        toolbar.addStretch()
+        toolbar.addWidget(reset_btn)
+
+        # Plot
+        self.plot_widget = pg.PlotWidget()
+        self.plot_widget.setBackground(QColor(12, 12, 12))
+        self.plot_widget.showGrid(x=True, y=True, alpha=0.25)
+        self.plot_widget.setAntialiasing(True)
+        self.plot_widget.setLabel('bottom', 'Time (s)', color='#FFFFFF')
+        self.plot_widget.addLegend(offset=(10, 10))
+
+        title = ", ".join([p['name'] for p in self.param_configs])
+        units = list(set([p['unit'] for p in self.param_configs]))
+        unit_label = units[0] if len(units) == 1 else "Multiple Units"
+        self.plot_widget.setTitle(title, color='w', size='12pt')
+        self.plot_widget.setLabel('left', unit_label, color='#FFFFFF')
+
+        axis_pen = pg.mkPen(color='#FFFFFF', width=1)
+        self.plot_widget.getAxis('left').setPen(axis_pen)
+        self.plot_widget.getAxis('bottom').setPen(axis_pen)
+
+        for p_config in self.param_configs:
+            pen = pg.mkPen(p_config['color'], width=2.5)
+            curve = self.plot_widget.plot(pen=pen, name=p_config['name'])
+            self.curves[p_config['id']] = curve
+
+        container.addLayout(toolbar)
+        container.addWidget(self.plot_widget)
+        self.setLayout(container)
+
+        def _reset():
+            try:
+                self.plot_widget.enableAutoRange(axis=pg.ViewBox.XYAxes, enable=True)
+            except Exception:
+                pass
+
+        reset_btn.clicked.connect(_reset)
+
+        self.start_time = time.time()
+        self.vLine = pg.InfiniteLine(angle=90, movable=False, pen=pg.mkPen('yellow', style=Qt.DashLine))
+        self.hLine = pg.InfiniteLine(angle=0, movable=False, pen=pg.mkPen('yellow', style=Qt.DashLine))
+        self.label = pg.TextItem(color='white', anchor=(0, 1))
+        self.plot_widget.addItem(self.vLine, ignoreBounds=True)
+        self.plot_widget.addItem(self.hLine, ignoreBounds=True)
+        self.plot_widget.addItem(self.label)
+
+        self.proxy = pg.SignalProxy(self.plot_widget.scene().sigMouseMoved, rateLimit=60, slot=self.mouse_moved)
+        self.plot_widget.scene().sigMouseClicked.connect(self.mouse_clicked)
+
+    def update_data(self, history):
+        for param_id, curve in self.curves.items():
+            if param_id in history and history[param_id]:
+                param_history = history[param_id]
+                self.last_known_values[param_id] = param_history[-1]
+                timestamps = [dp['timestamp'] - self.start_time for dp in param_history]
+                values = [dp['value'] for dp in param_history]
+                curve.setData(x=timestamps, y=values)
+
+    def mouse_moved(self, evt):
+        # --- NEW: Ignore hover interaction if Ctrl is pressed ---
+        if QApplication.keyboardModifiers() & Qt.ControlModifier:
+            return
+
+        pos = evt[0]
+        if self.plot_widget.sceneBoundingRect().contains(pos):
+            mousePoint = self.plot_widget.getPlotItem().vb.mapSceneToView(pos)
+            self.vLine.setPos(mousePoint.x())
+            self.hLine.setPos(mousePoint.y())
+            text = f"Time: {mousePoint.x():.2f}s\n"
+            for pid, curve in self.curves.items():
+                x_data, y_data = curve.getData()
+                if x_data is not None and len(x_data) > 0:
+                    idx = np.searchsorted(x_data, mousePoint.x())
+                    if 0 < idx < len(x_data):
+                        y_val = y_data[idx]
+                        p_name = next(p['name'] for p in self.param_configs if p['id'] == pid)
+                        text += f"{p_name}: {y_val:.2f}\n"
+            self.label.setText(text.strip())
+            self.label.setPos(mousePoint)
+
+    def mouse_clicked(self, evt):
+        if evt.double():
+            return
+        pos = self.plot_widget.getPlotItem().vb.mapSceneToView(evt.scenePos())
+        min_dist = float('inf')
+        nearest_point = None
+        for pid, curve in self.curves.items():
+            x_data, y_data = curve.getData()
+            if x_data is None or len(x_data) == 0:
+                continue
+            for i, (x, y) in enumerate(zip(x_data, y_data)):
+                dist = (x - pos.x())**2 + (y - pos.y())**2
+                if dist < min_dist:
+                    min_dist = dist
+                    p_name = next(p['name'] for p in self.param_configs if p['id'] == pid)
+                    nearest_point = (p_name, self.start_time + x, y)
+        if nearest_point:
+            name, ts, val = nearest_point
+            time_str = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(ts))
+            QMessageBox.information(
+                self,
+                "Data Point Selected",
+                f"Parameter: {name}\nValue: {val:.3f}\nTimestamp: {time_str}"
+            )
+
+
 
 
 class HistogramWidget(QWidget):
@@ -337,9 +387,13 @@ class HistogramWidget(QWidget):
         layout.addWidget(self.plot)
     def update_histogram(self, values):
         if not values: return
-        bins = np.histogram(values, bins=20)
-        self.bar_item.setOpts(x=bins[1][:-1], height=bins[0])
-
+        try:
+            arr = np.array(values, dtype=float)
+            counts, edges = np.histogram(arr, bins=20)
+            centers = (edges[:-1] + edges[1:]) / 2.0
+            self.bar_item.setOpts(x=centers, height=counts, width=(edges[1]-edges[0])*0.9)
+        except Exception:
+            pass
 
 class LEDWidget(QFrame):
     def __init__(self, param_config):
@@ -397,6 +451,7 @@ class LEDWidget(QFrame):
             border-radius: 12px;
             border: 2px solid #333;
         """)
+
     
     def update_value(self, value):
         try:
@@ -415,7 +470,6 @@ class LEDWidget(QFrame):
                     border-radius: 20px; 
                     background: #ff3131; 
                     border: 3px solid #ff6666;
-                    box-shadow: 0 0 10px #ff3131;
                 """)
             elif v >= t.get('high_warn', 75):
                 # Warning - yellow
@@ -423,7 +477,6 @@ class LEDWidget(QFrame):
                     border-radius: 20px; 
                     background: #ffbf00; 
                     border: 3px solid #ffcc33;
-                    box-shadow: 0 0 10px #ffbf00;
                 """)
             elif v >= t.get('low_warn', 25):
                 # Normal - green
@@ -431,7 +484,6 @@ class LEDWidget(QFrame):
                     border-radius: 20px; 
                     background: #21b35a; 
                     border: 3px solid #4ade80;
-                    box-shadow: 0 0 10px #21b35a;
                 """)
             else:
                 # Low - blue
@@ -439,7 +491,6 @@ class LEDWidget(QFrame):
                     border-radius: 20px; 
                     background: #0078ff; 
                     border: 3px solid #3b82f6;
-                    box-shadow: 0 0 10px #0078ff;
                 """)
         else:
             # No data - gray
@@ -448,7 +499,11 @@ class LEDWidget(QFrame):
                 background: #555; 
                 border: 3px solid #333;
             """)
-
+# Optional: Map widget using QWebEngineView if available
+try:
+    from PySide6.QtWebEngineWidgets import QWebEngineView  # type: ignore
+except Exception:
+    QWebEngineView = None
 
 class MapWidget(QWidget):
     def __init__(self, param_configs):
@@ -456,53 +511,172 @@ class MapWidget(QWidget):
         self.param_configs = param_configs
         if len(param_configs) != 2:
             lbl = QLabel("Map requires [Lat, Lon] parameters")
-            lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
-            layout = QVBoxLayout(self)
-            layout.addWidget(lbl)
+            lay = QVBoxLayout(self)
+            lay.addWidget(lbl)
             return
         
+        self.lat_id = param_configs[0]['id']
+        self.lon_id = param_configs[1]['id']
         layout = QVBoxLayout(self)
         layout.setContentsMargins(16, 16, 16, 16)
         layout.setSpacing(8)
         
-        # Title
+        # Clean parameter names
         lat_name = param_configs[0]['name'].replace('GPS(', '').replace(')', '') if param_configs[0]['name'].startswith('GPS(') else param_configs[0]['name']
         lon_name = param_configs[1]['name'].replace('GPS(', '').replace(')', '') if param_configs[1]['name'].startswith('GPS(') else param_configs[1]['name']
         
-        # Title with icon
-        title_layout = QHBoxLayout()
-        icon_label = QLabel("Map")
-        icon_label.setFont(QFont("Arial", 14))
-        self.title = QLabel(f"{lat_name} + {lon_name}")
-        self.title.setFont(QFont("Arial", 12, QFont.Weight.Bold))
-        self.title.setStyleSheet("color: #ffffff;")
-        title_layout.addWidget(icon_label)
-        title_layout.addWidget(self.title)
-        title_layout.addStretch()
-        
-        # Coordinates display
-        self.coords_label = QLabel("Lat: -- | Lon: --")
+        # Coordinates display (top label hidden when web map is available)
+        self.coords_label = QLabel("No GPS data")
         self.coords_label.setFont(QFont("Monospace", 10))
-        self.coords_label.setStyleSheet("color: #aaaaaa;")
+        self.coords_label.setStyleSheet("color: #aaaaaa; padding: 4px;")
         self.coords_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         
-        layout.addLayout(title_layout)
-        layout.addWidget(self.coords_label)
-        
-        # Map view
-        if QWebEngineView is not None:
-            self.web_view = QWebEngineView()
-            self.web_view.setFixedHeight(300)
-            layout.addWidget(self.web_view)
-            
-            # Initial map
-            self.update_map(0.0, 0.0)
+        # Map widget
+        if QWebEngineView:
+            self.web = QWebEngineView()
+            self.web.setMinimumHeight(200)
+            layout.addWidget(self.web)
+            # Embed a lightweight Leaflet map using OSM tiles, with a rocket emoji marker
+            html = """
+                <!DOCTYPE html>
+                <html>
+                <head>
+                <meta charset="utf-8" />
+                <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+                  integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+                <style>
+                  html, body, #map { height: 100%; margin: 0; padding: 0; background: #1e1e1e; }
+                  .leaflet-container { background: #1e1e1e; }
+                  .rocket-icon { font-size: 28px; line-height: 28px; }
+                  .rocket-icon span { filter: drop-shadow(0 0 2px #000); }
+                    /* Make attribution minimally obtrusive while still visible */
+                    .leaflet-control-attribution {
+                      font-size: 10px;
+                      opacity: 0.35;
+                      background: rgba(0,0,0,0.25);
+                      color: #ddd;
+                    }
+                    .leaflet-control-attribution:hover { opacity: 0.85; }
+                    /* Style for custom magnifier control */
+                    .leaflet-bar a.magnifier-btn {
+                      font-size: 16px;
+                      line-height: 26px;
+                      text-align: center;
+                      width: 26px;
+                      height: 26px;
+                      display: block;
+                      text-decoration: none;
+                      background: #fff;
+                      color: #000;
+                    }
+                    .leaflet-bar a.magnifier-btn:hover { background: #f4f4f4; }
+  /* Bottom-left overlay for coordinates */
+  #coordsOverlay {
+    position: absolute;
+    bottom: 8px;
+    left: 8px;
+    z-index: 1000;
+    background: rgba(0, 0, 0, 0.55);
+    color: #eee;
+    padding: 4px 8px;
+    border-radius: 6px;
+    font-family: monospace;
+    font-size: 12px;
+    pointer-events: none;
+  }
+                                  </style>
+                                  <title>Map</title>
+                                  <meta name="referrer" content="no-referrer">
+                                  </head>
+                                  <body>
+                <div id="map"></div>
+                <div id="coordsOverlay">Lat: ---, Lon: ---</div>
+                                  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+                                    integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+                                  <script>
+                                    const initialLat = 0, initialLon = 0, initialZoom = 2;
+                                    const map = L.map('map', { zoomControl: true }).setView([initialLat, initialLon], initialZoom);
+                                    // Esri World Imagery (satellite) tiles - no API key required
+                                    const tiles = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+                                      maxZoom: 19,
+                                      maxNativeZoom: 19,
+                                      attribution: 'Tiles &copy; Esri — Source: Esri, Maxar, Earthstar Geographics, and the GIS User Community'
+                                    });
+                                    tiles.addTo(map);
+                                    // Prevent over-zooming beyond available data
+                  const maxAvailableZoom = tiles.options.maxNativeZoom || tiles.options.maxZoom || 19;
+                  const MAX_SAFE_ZOOM = Math.min(maxAvailableZoom, 17); // conservative cap to avoid empty tiles
+                                    map.setMaxZoom(MAX_SAFE_ZOOM);
+                                  
+                                    const rocketIcon = L.divIcon({ className: 'rocket-icon', html: '<span>🚀</span>', iconSize: [28,28], iconAnchor: [14,14] });
+                                    const marker = L.marker([initialLat, initialLon], { icon: rocketIcon }).addTo(map);
+                                    // Red path line to track rocket trajectory
+                                    const pathLine = L.polyline([], { color: 'red', weight: 3, opacity: 0.9 }).addTo(map);
+
+                  function setOverlay(lat, lon) {
+                    const el = document.getElementById('coordsOverlay');
+                    if (el) {
+                      el.textContent = `Lat: ${lat.toFixed(6)}, Lon: ${lon.toFixed(6)}`;
+                    }
+                  }
+                    
+                    // Custom magnifier control: zoom to current rocket position in one click
+                    const focusControl = L.control({ position: 'topleft' });
+                    focusControl.onAdd = function(map) {
+                      const container = L.DomUtil.create('div', 'leaflet-bar');
+                      const btn = L.DomUtil.create('a', 'magnifier-btn', container);
+                      btn.href = '#';
+                      btn.title = 'Zoom to rocket';
+                      btn.innerHTML = '🔍';
+                      L.DomEvent.on(btn, 'click', L.DomEvent.stopPropagation)
+                                .on(btn, 'click', L.DomEvent.preventDefault)
+                                .on(btn, 'click', function() {
+                const ll = marker.getLatLng();
+                const desiredZoom = Math.max(map.getZoom(), 18);
+                const targetZoom = Math.min(desiredZoom, MAX_SAFE_ZOOM);
+                map.setView(ll, targetZoom, { animate: true });
+                                });
+                      return container;
+                    };
+                    focusControl.addTo(map);
+                
+                  window.updatePosition = function(lat, lon) {
+                    const ll = [lat, lon];
+                    marker.setLatLng(ll);
+                    // append to path
+                    pathLine.addLatLng(ll);
+                    setOverlay(lat, lon);
+                    // zoom conservatively to avoid over-zooming beyond imagery
+                    const desiredZoom = Math.max(map.getZoom(), 16);
+                    const targetZoom = Math.min(desiredZoom, MAX_SAFE_ZOOM);
+                    map.setView(ll, targetZoom, { animate: true });
+                  };
+                </script>
+                </body>
+                </html>
+                """
+            from PySide6.QtCore import QUrl
+            self.web.setHtml(html, baseUrl=QUrl("https://local/"))
+            # Hide the top coords label when web map is available
+            self.coords_label.setVisible(False)
+            # Prepare throttled updates every 10 seconds
+            from PySide6.QtCore import QTimer
+            self._last_sent_lat = None
+            self._last_sent_lon = None
+            self._update_timer = QTimer(self)
+            self._update_timer.setInterval(20000)  # 10 seconds
+            self._update_timer.timeout.connect(self._push_position)
+            self._update_timer.start()
         else:
-            # Fallback: simple text display
-            self.fallback = QLabel("WebEngine not available\nMap display disabled")
+            self.web = None
+            self.fallback = QLabel("WebEngine not available.\nShowing coordinates only.")
             self.fallback.setAlignment(Qt.AlignmentFlag.AlignCenter)
-            self.fallback.setStyleSheet("color: #ff6666; font-size: 14px;")
+            self.fallback.setStyleSheet("color: #ffaa00; padding: 20px;")
             layout.addWidget(self.fallback)
+        
+        self._last_lat = None
+        self._last_lon = None
         
         # Set frame style
         self.setStyleSheet("""
@@ -512,58 +686,107 @@ class MapWidget(QWidget):
         """)
     
     def update_position(self, history):
-        lat_param = self.param_configs[0]['id']
-        lon_param = self.param_configs[1]['id']
-        
-        if lat_param in history and lon_param in history:
-            lat_hist = history[lat_param]
-            lon_hist = history[lon_param]
-            
-            if lat_hist and lon_hist:
-                lat = lat_hist[-1]['value']
-                lon = lon_hist[-1]['value']
-                self.coords_label.setText(f"Lat: {lat:.6f}° | Lon: {lon:.6f}°")
-                
-                if hasattr(self, 'web_view'):
-                    self.update_map(lat, lon)
-                elif hasattr(self, 'fallback'):
-                    self.fallback.setText(f"Lat: {lat:.6f}°\nLon: {lon:.6f}°")
-    
-    def update_map(self, lat, lon):
-        if not hasattr(self, 'web_view'):
+        lat_hist = history.get(self.lat_id, [])
+        lon_hist = history.get(self.lon_id, [])
+        if not lat_hist or not lon_hist:
             return
         
-        # Simple OpenStreetMap embed
-        html = f"""
-        <!DOCTYPE html>
-        <html>
-        <head>
-            <meta charset="utf-8">
-            <style>
-                body {{ margin: 0; padding: 0; }}
-                #map {{ width: 100%; height: 100%; }}
-            </style>
-        </head>
-        <body>
-            <div id="map"></div>
-            <script>
-                // Simple map display using OpenStreetMap
-                var mapDiv = document.getElementById('map');
-                mapDiv.innerHTML = `
-                    <iframe 
-                        width="100%" 
-                        height="100%" 
-                        frameborder="0" 
-                        scrolling="no" 
-                        marginheight="0" 
-                        marginwidth="0" 
-                        src="https://www.openstreetmap.org/export/embed.html?bbox=${lon-0.01},{lat-0.01},{lon+0.01},{lat+0.01}&layer=mapnik&marker={lat},{lon}"
-                    ></iframe>
-                `;
-            </script>
-        </body>
-        </html>
-        """
-        self.web_view.setHtml(html)
+        lat = lat_hist[-1]['value']
+        lon = lon_hist[-1]['value']
+        self._last_lat, self._last_lon = lat, lon
+        
+        # Update text for fallback only; web overlay is updated in JS push
+        if not self.web:
+            self.coords_label.setText(f"Lat: {lat:.6f}° | Lon: {lon:.6f}°")
+        else:
+            if hasattr(self, 'fallback'):
+                self.fallback.setText(f"Lat: {lat:.6f}°\nLon: {lon:.6f}°")
 
+    def _push_position(self):
+        # Called by timer every 10 seconds to push latest coords to the map
+        if not self.web: return
+        if self._last_lat is None or self._last_lon is None: return
+        if self._last_sent_lat == self._last_lat and self._last_sent_lon == self._last_lon:
+            return
+        try:
+            self.web.page().runJavaScript(f"updatePosition({self._last_lat}, {self._last_lon});")
+            self._last_sent_lat = self._last_lat
+            self._last_sent_lon = self._last_lon
+        except Exception:
+            pass
+
+class LogTable(QWidget):
+    # (Unchanged)
+    def __init__(self, param_configs):
+        super().__init__()
+        self.param_configs = param_configs
+        self.param_map = {p['id']: {'name': p['name'], 'col': i + 1} for i, p in enumerate(self.param_configs)}
+        self.last_known_values = {}
+        self.highlight_brush = QBrush(QColor("#0078FF").lighter(150))
+        layout = QVBoxLayout(self); layout.setContentsMargins(0, 0, 0, 0)
+        self.table = QTableWidget()
+        headers = ["Timestamp"] + [f"{p['name']} ({p['unit']})" for p in self.param_configs]
+        self.table.setColumnCount(len(headers)); self.table.setHorizontalHeaderLabels(headers)
+        self.table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
+        self.table.verticalHeader().setVisible(False); self.table.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
+        search_group = QGroupBox("Search and Highlight")
+        search_layout = QHBoxLayout(search_group)
+        self.search_param_combo = QComboBox(); self.search_param_combo.addItems([p['name'] for p in self.param_configs])
+        self.search_cond_combo = QComboBox(); self.search_cond_combo.addItems(["=", ">", "<", ">=", "<="])
+        self.search_value_spinbox = QDoubleSpinBox(); self.search_value_spinbox.setRange(-1e9, 1e9); self.search_value_spinbox.setDecimals(4)
+        search_btn = QPushButton("Search Last"); clear_btn = QPushButton("Clear")
+        search_layout.addWidget(QLabel("Find in:")); search_layout.addWidget(self.search_param_combo)
+        search_layout.addWidget(self.search_cond_combo); search_layout.addWidget(self.search_value_spinbox)
+        search_layout.addWidget(search_btn); search_layout.addWidget(clear_btn)
+        layout.addWidget(self.table); layout.addWidget(search_group)
+        search_btn.clicked.connect(self.search_and_highlight)
+        clear_btn.clicked.connect(self.clear_highlights)
+    def update_data(self, updated_param_id, history):
+        if self.table.rowCount() > 500: self.table.removeRow(500)
+        self.table.insertRow(0)
+        for pid in self.param_map.keys():
+            if pid in history and history[pid]: self.last_known_values[pid] = history[pid][-1]
+        ts_str = time.strftime('%H:%M:%S', time.localtime(self.last_known_values[updated_param_id]['timestamp']))
+        self.table.setItem(0, 0, QTableWidgetItem(ts_str))
+        for pid, pdata in self.param_map.items():
+            value_str = "---"
+            if pid in self.last_known_values: value_str = f"{self.last_known_values[pid]['value']:.3f}"
+            self.table.setItem(0, pdata['col'], QTableWidgetItem(value_str))
+    def clear_highlights(self):
+        for r in range(self.table.rowCount()):
+            for c in range(self.table.columnCount()):
+                item = self.table.item(r, c)
+                if item: item.setBackground(QBrush(QColor("transparent")))
+    def search_and_highlight(self):
+        self.clear_highlights()
+        try:
+            target_p_name = self.search_param_combo.currentText()
+            target_col = self.search_param_combo.currentIndex() + 1
+            target_val = self.search_value_spinbox.value()
+            condition = self.search_cond_combo.currentText()
+        except Exception as e:
+            QMessageBox.warning(self, "Search Error", f"Invalid search criteria: {e}")
+            return
+        found_item = None
+        for r in range(self.table.rowCount()):
+            item = self.table.item(r, target_col)
+            if not item or not item.text(): continue
+            try:
+                cell_val = float(item.text())
+                match = False
+                if condition == "=" and math.isclose(cell_val, target_val): match = True
+                elif condition == ">" and cell_val > target_val: match = True
+                elif condition == "<" and cell_val < target_val: match = True
+                elif condition == ">=" and cell_val >= target_val: match = True
+                elif condition == "<=" and cell_val <= target_val: match = True
+                if match:
+                    item.setBackground(self.highlight_brush)
+                    found_item = item
+                    break
+            except ValueError:
+                continue
+        if found_item:
+            self.table.scrollToItem(found_item, QAbstractItemView.ScrollHint.PositionAtCenter)
+        else:
+            QMessageBox.information(self, "Search", f"No value matching '{condition} {target_val}' found for '{target_p_name}'.")
 
