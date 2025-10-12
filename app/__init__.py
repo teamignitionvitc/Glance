@@ -1,3 +1,0 @@
-# Ignition Dashboard app package
-
-
