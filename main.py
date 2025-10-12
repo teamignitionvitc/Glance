@@ -82,6 +82,7 @@ import numpy as np
 from backend import DataReader
 from app.widgets import ValueCard, TimeGraph, LogTable, GaugeWidget, HistogramWidget, LEDWidget, MapWidget
 from app.dialogs import ConnectionSettingsDialog, AddWidgetDialog, ParameterEntryDialog, ManageParametersDialog, DataLoggingDialog
+from app.simulator import DataSimulator
 try:
     from serial.tools import list_ports as _serial_list_ports  # type: ignore
 except Exception:
@@ -89,6 +90,26 @@ except Exception:
 import webbrowser
 from abc import ABC, abstractmethod
 from collections import deque
+
+# Add PDF generation library
+try:
+    from reportlab.lib.pagesizes import letter, A4
+    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+    from reportlab.lib.units import inch
+    from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, PageBreak, Image
+    from reportlab.lib import colors
+    from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_RIGHT
+    from reportlab.graphics.shapes import Drawing
+    from reportlab.graphics.charts.lineplots import LinePlot
+    from reportlab.graphics.charts.barcharts import VerticalBarChart
+    REPORTLAB_AVAILABLE = True
+except ImportError:
+    REPORTLAB_AVAILABLE = False
+# Try to import QWebEngineView; if unavailable, set to None. Some modules (widgets) check this symbol.
+try:
+    from PySide6.QtWebEngineWidgets import QWebEngineView  # type: ignore
+except Exception:
+    QWebEngineView = None
 ####################################################################################################
 
 
@@ -3899,10 +3920,17 @@ class MainWindow(QMainWindow):
         stop_logging_action = QAction("Stop Logging", self)
         stop_logging_action.setShortcut("Ctrl+Alt+L")
         stop_logging_action.triggered.connect(self.stop_logging)
-        
+
+        logging_menu.addSeparator()
+
+        generate_summary_action = QAction("Generate Summary Report...", self)
+        generate_summary_action.setShortcut("Ctrl+Shift+R")
+        generate_summary_action.triggered.connect(self.generate_summary_report)
+
         logging_menu.addAction(config_logging_action)
         logging_menu.addAction(start_logging_action)
         logging_menu.addAction(stop_logging_action)
+        logging_menu.addAction(generate_summary_action)
 
         # View menu with shortcuts
         add_tab_action = QAction("Add Tab", self)
@@ -5523,6 +5551,411 @@ class MainWindow(QMainWindow):
             self.data_logger.stop_logging()
             self.update_logging_button()
             QMessageBox.information(self, "Logging Stopped", "Data logging has been stopped.")
+
+    def generate_summary_report(self):
+        """Generate a PDF summary report from logged data"""
+        
+        # Check if ReportLab is available
+        if not REPORTLAB_AVAILABLE:
+            reply = QMessageBox.question(
+                self, 
+                "Library Required", 
+                "PDF generation requires the 'reportlab' library.\n\n"
+                "Would you like to install it now?\n\n"
+                "You can install it manually with: pip install reportlab",
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
+            )
+            if reply == QMessageBox.StandardButton.Yes:
+                QMessageBox.information(self, "Install Instructions", 
+                                    "Please run the following command in your terminal:\n\n"
+                                    "pip install reportlab\n\n"
+                                    "Then restart Glance.")
+            return
+        
+        # Check if there's any logged data
+        if not self.data_logger.log_file_path or not os.path.exists(self.data_logger.log_file_path):
+            QMessageBox.warning(self, "No Data Logged", 
+                            "No logged data found. Please start logging first, then stop it to generate a report.")
+            return
+        
+        # Ask user for output location
+        default_name = f"summary_report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf"
+        pdf_path, _ = QFileDialog.getSaveFileName(
+            self, 
+            "Save Summary Report", 
+            default_name,
+            "PDF Files (*.pdf);;All Files (*)"
+        )
+        
+        if not pdf_path:
+            return
+        
+        # Create a progress dialog that allows the UI to remain responsive
+        from PySide6.QtWidgets import QProgressDialog
+        from PySide6.QtCore import Qt
+        
+        progress = QProgressDialog("Analyzing logged data and generating PDF report...", None, 0, 0, self)
+        progress.setWindowTitle("Generating Report")
+        progress.setWindowModality(Qt.WindowModality.WindowModal)
+        progress.setMinimumDuration(0)
+        progress.setCancelButton(None)  # No cancel button
+        progress.setAutoClose(True)
+        progress.setAutoReset(True)
+        progress.show()
+        
+        # Force the progress dialog to appear
+        QApplication.processEvents()
+        
+        try:
+            # Parse the logged data
+            progress.setLabelText("Step 1/2: Parsing logged data...")
+            QApplication.processEvents()
+            
+            data_summary = self._parse_logged_data()
+            
+            # Generate the PDF
+            progress.setLabelText("Step 2/2: Creating PDF document...")
+            QApplication.processEvents()
+            
+            self._create_pdf_report(pdf_path, data_summary)
+            
+            # Close progress dialog
+            progress.close()
+            QApplication.processEvents()
+            
+            # Ask if user wants to open the PDF
+            reply = QMessageBox.question(
+                self, 
+                "Report Generated", 
+                f"Summary report generated successfully!\n\n{pdf_path}\n\nWould you like to open it now?",
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
+            )
+            
+            if reply == QMessageBox.StandardButton.Yes:
+                import webbrowser
+                webbrowser.open(pdf_path)
+                
+        except Exception as e:
+            progress.close()
+            QMessageBox.critical(self, "Error", f"Failed to generate report:\n{str(e)}")
+            import traceback
+            traceback.print_exc()
+
+    def _parse_logged_data(self):
+        """Parse logged data file and compute statistics"""
+        
+        log_file = self.data_logger.log_file_path
+        file_format = self.data_logger.log_format
+        
+        data_summary = {
+            'file_path': log_file,
+            'file_size': os.path.getsize(log_file),
+            'format': file_format,
+            'parameters': {},
+            'start_time': None,
+            'end_time': None,
+            'duration': 0,
+            'total_samples': 0
+        }
+        
+        try:
+            if file_format == 'csv':
+                # Parse CSV file
+                with open(log_file, 'r', encoding='utf-8') as f:
+                    reader = csv.DictReader(f)
+                    rows = list(reader)
+                    
+                    if not rows:
+                        return data_summary
+                    
+                    data_summary['total_samples'] = len(rows)
+                    
+                    # Get time range
+                    if 'timestamp' in rows[0]:
+                        data_summary['start_time'] = rows[0]['timestamp']
+                        data_summary['end_time'] = rows[-1]['timestamp']
+                    
+                    if 'elapsed_time' in rows[0] and rows[-1]['elapsed_time']:
+                        try:
+                            data_summary['duration'] = float(rows[-1]['elapsed_time'])
+                        except:
+                            pass
+                    
+                    # Compute statistics for each parameter
+                    for param in self.data_logger.parameters:
+                        param_id = param['id']
+                        param_name = param['name']
+                        
+                        # Find the column
+                        col_name = None
+                        for key in rows[0].keys():
+                            if param_id in key:
+                                col_name = key
+                                break
+                        
+                        if col_name:
+                            values = []
+                            for row in rows:
+                                try:
+                                    val = float(row[col_name])
+                                    values.append(val)
+                                except:
+                                    pass
+                            
+                            if values:
+                                data_summary['parameters'][param_name] = {
+                                    'unit': param['unit'],
+                                    'count': len(values),
+                                    'min': min(values),
+                                    'max': max(values),
+                                    'mean': sum(values) / len(values),
+                                    'values': values  # Store for plotting
+                                }
+            
+            elif file_format == 'json':
+                # Parse JSON Lines file
+                with open(log_file, 'r', encoding='utf-8') as f:
+                    lines = f.readlines()
+                    
+                    # Skip comment lines
+                    json_lines = [line for line in lines if not line.strip().startswith('#')]
+                    
+                    if not json_lines:
+                        return data_summary
+                    
+                    data_summary['total_samples'] = len(json_lines)
+                    
+                    # Parse first and last entries
+                    first_entry = json.loads(json_lines[0])
+                    last_entry = json.loads(json_lines[-1])
+                    
+                    data_summary['start_time'] = first_entry.get('timestamp', '')
+                    data_summary['end_time'] = last_entry.get('timestamp', '')
+                    data_summary['duration'] = last_entry.get('elapsed_time', 0)
+                    
+                    # Collect all values
+                    param_values = {}
+                    for line in json_lines:
+                        entry = json.loads(line)
+                        params = entry.get('parameters', {})
+                        
+                        for param_id, value in params.items():
+                            if value is not None:
+                                if param_id not in param_values:
+                                    param_values[param_id] = []
+                                param_values[param_id].append(value)
+                    
+                    # Compute statistics
+                    for param in self.data_logger.parameters:
+                        param_id = param['id']
+                        param_name = param['name']
+                        
+                        if param_id in param_values:
+                            values = param_values[param_id]
+                            data_summary['parameters'][param_name] = {
+                                'unit': param['unit'],
+                                'count': len(values),
+                                'min': min(values),
+                                'max': max(values),
+                                'mean': sum(values) / len(values),
+                                'values': values
+                            }
+        
+        except Exception as e:
+            print(f"Error parsing log file: {e}")
+            import traceback
+            traceback.print_exc()
+        
+        return data_summary
+    
+    def _create_pdf_report(self, pdf_path, data_summary):
+        """Create a formatted PDF report"""
+        
+        from reportlab.lib.pagesizes import letter
+        from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+        from reportlab.lib.units import inch
+        from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, PageBreak
+        from reportlab.lib import colors
+        from reportlab.lib.enums import TA_CENTER, TA_LEFT
+        
+        # Create PDF document
+        doc = SimpleDocTemplate(pdf_path, pagesize=letter)
+        story = []
+        styles = getSampleStyleSheet()
+        
+        # Custom styles
+        title_style = ParagraphStyle(
+            'CustomTitle',
+            parent=styles['Heading1'],
+            fontSize=24,
+            textColor=colors.HexColor('#0a84ff'),
+            spaceAfter=30,
+            alignment=TA_CENTER
+        )
+        
+        heading_style = ParagraphStyle(
+            'CustomHeading',
+            parent=styles['Heading2'],
+            fontSize=16,
+            textColor=colors.HexColor('#1c9c4f'),
+            spaceAfter=12,
+            spaceBefore=12
+        )
+        
+        # Title
+        story.append(Paragraph("Glance Telemetry Data Summary Report", title_style))
+        story.append(Spacer(1, 0.2*inch))
+        
+        # Report metadata
+        story.append(Paragraph("Report Information", heading_style))
+        
+        meta_data = [
+            ['Report Generated:', datetime.now().strftime('%Y-%m-%d %H:%M:%S')],
+            ['Data Source:', os.path.basename(data_summary['file_path'])],
+            ['File Size:', f"{data_summary['file_size'] / 1024:.2f} KB"],
+            ['Data Format:', data_summary['format'].upper()],
+            ['Total Samples:', str(data_summary['total_samples'])],
+        ]
+        
+        if data_summary['start_time']:
+            meta_data.append(['Start Time:', data_summary['start_time']])
+        if data_summary['end_time']:
+            meta_data.append(['End Time:', data_summary['end_time']])
+        if data_summary['duration']:
+            hours = int(data_summary['duration'] // 3600)
+            minutes = int((data_summary['duration'] % 3600) // 60)
+            seconds = int(data_summary['duration'] % 60)
+            meta_data.append(['Duration:', f"{hours:02d}:{minutes:02d}:{seconds:02d}"])
+        
+        meta_table = Table(meta_data, colWidths=[2*inch, 4*inch])
+        meta_table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (0, -1), colors.HexColor('#f0f0f0')),
+            ('TEXTCOLOR', (0, 0), (-1, -1), colors.black),
+            ('ALIGN', (0, 0), (0, -1), 'RIGHT'),
+            ('ALIGN', (1, 0), (1, -1), 'LEFT'),
+            ('FONTNAME', (0, 0), (0, -1), 'Helvetica-Bold'),
+            ('FONTNAME', (1, 0), (1, -1), 'Helvetica'),
+            ('FONTSIZE', (0, 0), (-1, -1), 10),
+            ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+            ('TOPPADDING', (0, 0), (-1, -1), 8),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 8),
+        ]))
+        
+        story.append(meta_table)
+        story.append(Spacer(1, 0.3*inch))
+        
+        # Parameter statistics
+        if data_summary['parameters']:
+            story.append(Paragraph("Parameter Statistics", heading_style))
+            story.append(Spacer(1, 0.1*inch))
+            
+            # Create statistics table
+            stats_data = [['Parameter', 'Unit', 'Samples', 'Min', 'Max', 'Mean']]
+            
+            for param_name, stats in data_summary['parameters'].items():
+                stats_data.append([
+                    param_name,
+                    stats['unit'],
+                    str(stats['count']),
+                    f"{stats['min']:.3f}",
+                    f"{stats['max']:.3f}",
+                    f"{stats['mean']:.3f}"
+                ])
+            
+            stats_table = Table(stats_data, colWidths=[1.5*inch, 0.8*inch, 0.8*inch, 0.9*inch, 0.9*inch, 0.9*inch])
+            stats_table.setStyle(TableStyle([
+                ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#0a84ff')),
+                ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+                ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+                ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+                ('FONTSIZE', (0, 0), (-1, 0), 11),
+                ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
+                ('FONTSIZE', (0, 1), (-1, -1), 9),
+                ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+                ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor('#f9f9f9')]),
+                ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+                ('TOPPADDING', (0, 0), (-1, -1), 6),
+                ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
+            ]))
+            
+            story.append(stats_table)
+            story.append(Spacer(1, 0.3*inch))
+            
+            # Add detailed breakdown for each parameter
+            story.append(PageBreak())
+            story.append(Paragraph("Detailed Parameter Analysis", heading_style))
+            story.append(Spacer(1, 0.2*inch))
+            
+            for param_name, stats in data_summary['parameters'].items():
+                # Parameter name
+                param_title = ParagraphStyle(
+                    'ParamTitle',
+                    parent=styles['Heading3'],
+                    fontSize=13,
+                    textColor=colors.HexColor('#333333'),
+                    spaceAfter=8
+                )
+                story.append(Paragraph(f"{param_name} ({stats['unit']})", param_title))
+                
+                # Detailed stats
+                detail_data = [
+                    ['Metric', 'Value'],
+                    ['Sample Count', str(stats['count'])],
+                    ['Minimum Value', f"{stats['min']:.6f}"],
+                    ['Maximum Value', f"{stats['max']:.6f}"],
+                    ['Mean (Average)', f"{stats['mean']:.6f}"],
+                    ['Range', f"{stats['max'] - stats['min']:.6f}"],
+                ]
+                
+                # Calculate additional statistics if enough data
+                if len(stats['values']) > 1:
+                    # Standard deviation
+                    mean = stats['mean']
+                    variance = sum((x - mean) ** 2 for x in stats['values']) / len(stats['values'])
+                    std_dev = variance ** 0.5
+                    detail_data.append(['Standard Deviation', f"{std_dev:.6f}"])
+                
+                detail_table = Table(detail_data, colWidths=[2*inch, 2*inch])
+                detail_table.setStyle(TableStyle([
+                    ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#1c9c4f')),
+                    ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+                    ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+                    ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+                    ('FONTNAME', (0, 1), (0, -1), 'Helvetica-Bold'),
+                    ('FONTNAME', (1, 1), (1, -1), 'Helvetica'),
+                    ('FONTSIZE', (0, 0), (-1, -1), 10),
+                    ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+                    ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor('#f0f0f0')]),
+                    ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+                    ('TOPPADDING', (0, 0), (-1, -1), 6),
+                    ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
+                ]))
+                
+                story.append(detail_table)
+                story.append(Spacer(1, 0.2*inch))
+        
+        else:
+            story.append(Paragraph("No parameter data found in log file.", styles['Normal']))
+        
+        # Footer with logo/branding
+        story.append(PageBreak())
+        story.append(Spacer(1, 2*inch))
+        
+        footer_style = ParagraphStyle(
+            'Footer',
+            parent=styles['Normal'],
+            fontSize=10,
+            textColor=colors.grey,
+            alignment=TA_CENTER
+        )
+        
+        story.append(Paragraph("Report generated by Glance Telemetry Dashboard", footer_style))
+        story.append(Paragraph("© 2025 Team Ignition · Software Department", footer_style))
+        
+        # Build PDF
+        doc.build(story)
+
             
     def update_connection_status(self):
         """Update connection status display"""

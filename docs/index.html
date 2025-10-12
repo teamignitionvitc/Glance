@@ -7,7 +7,7 @@
     <!-- SEO & Display Meta Tags -->
     <title>Glance | Dashboard Builder Documentation</title>
     <meta name="description" content="The complete guide to setting up, configuring, and using Glance, a professional real-time telemetry visualization platform for aerospace and embedded systems. Built by Team Ignition.">
-    <meta name="keywords" content="telemetry, dashboard, data visualization, real-time, pyside6, pyqt, python, rocket, drone, embedded systems, Team Ignition, Glance">
+    <meta name="keywords" content="telemetry, dashboard, data visualization, real-time, pyside6, pyqt, python, rocket, drone, embedded systems, Team Ignition, Glance, reporting, pdf">
     <meta name="author" content="Team Ignition Software Department">
     <meta name="theme-color" content="#111111">
     <link rel="icon" href="public/Glance_nobg _jl.svg" type="image/svg">
@@ -17,7 +17,7 @@
     <meta property="og:url" content="https://glance.teamignition.space/">
     <meta property="og:title" content="Glance | Dashboard Builder Documentation">
     <meta property="og:description" content="A professional real-time telemetry visualization platform for aerospace, drones, and embedded systems.">
-    <meta property="og:image" content="https://glance.teamignition.space/public/Doc%20Images/dashboard.png">
+    <meta property="og:image" content="https://glance.teamignition.space/public/Glance.svg">
     <meta property="og:site_name" content="Glance Documentation">
 
     <!-- Twitter -->
@@ -25,7 +25,7 @@
     <meta name="twitter:url" content="https://glance.teamignition.space/">
     <meta name="twitter:title" content="Glance | Dashboard Builder Documentation">
     <meta name="twitter:description" content="A professional real-time telemetry visualization platform for aerospace, drones, and embedded systems.">
-    <meta name="twitter:image" content="https://glance.teamignition.space/public/Doc%20Images/dashboard.png">
+    <meta name="twitter:image" content="https://glance.teamignition.space/public/Glance.svg">
     <meta name="twitter:creator" content="@ignitiontech23">
     <meta name="twitter:site" content="@ignitiontech23">
 
@@ -37,11 +37,11 @@
         :root {
             --primary: #0a84ff;
             --primary-dark: #0077ee;
-            --bg-dark: #111111;
-            --bg-darker: #1c1c1e;
+            --bg-dark: #0f0f10;
+            --bg-darker: #1a1a1c;
             --bg-light: #2c2c2e;
             --text-primary: #f5f5f7;
-            --text-secondary: #b0b0b5; /* Improved contrast */
+            --text-secondary: #a0a0a5; /* Slightly lighter for better readability */
             --border: #3a3a3c;
             --accent: #30d158;
             --warning: #ff9f0a;
@@ -62,7 +62,7 @@
         body {
             font-family: var(--font-sans);
             background-color: var(--bg-dark);
-            background-image: radial-gradient(ellipse at top, #212124, var(--bg-dark) 60%);
+            background-image: radial-gradient(ellipse at top, #212124, var(--bg-dark) 70%);
             color: var(--text-primary);
             line-height: 1.7;
             font-size: 16px;
@@ -112,6 +112,15 @@
         strong { font-weight: 600; color: var(--text-primary); }
         ul, ol { margin: 1rem 0 1rem 1.25rem; padding-left: 1rem; }
         li { margin-bottom: 0.75rem; }
+        
+        /* Search Highlight Styling */
+        mark {
+            background-color: var(--warning);
+            color: var(--bg-darker);
+            padding: 0.1em 0.2em;
+            border-radius: 3px;
+        }
+
 
         /* Main Layout */
         .container { display: flex; }
@@ -121,7 +130,8 @@
             border-right: 1px solid var(--border);
             position: fixed;
             height: 100%;
-            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
             transition: transform 0.3s ease;
             z-index: 1000;
         }
@@ -140,19 +150,75 @@
             align-items: center;
             gap: 12px;
             border-bottom: 1px solid var(--border);
+            flex-shrink: 0;
         }
         .sidebar-header img { width: 40px; height: 40px; }
         .sidebar-header .title h1 { font-size: 1.2rem; margin: 0; color: var(--text-primary); }
         .sidebar-header .title p { font-size: 0.8rem; margin: 0; color: var(--text-secondary); }
+        
+        /* IMPROVED: Search bar with clear button */
+        .search-container {
+            padding: 1rem 1.5rem;
+            border-bottom: 1px solid var(--border);
+            position: relative;
+            flex-shrink: 0;
+        }
+        #search-input {
+            width: 100%;
+            background-color: var(--bg-light);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 0.75rem 2.5rem; /* space for icon and clear button */
+            color: var(--text-primary);
+            font-size: 0.9rem;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+        #search-input:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(10, 132, 255, 0.3);
+        }
+        .search-icon {
+            position: absolute;
+            left: 2.25rem;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-secondary);
+            width: 20px;
+            height: 20px;
+            pointer-events: none;
+        }
+        .search-clear-btn {
+            position: absolute;
+            right: 2.25rem;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            padding: 0.25rem;
+            cursor: pointer;
+            color: var(--text-secondary);
+            display: none; /* Hidden by default */
+        }
+        .search-clear-btn:hover {
+            color: var(--text-primary);
+        }
+        .search-clear-btn svg {
+            width: 18px;
+            height: 18px;
+            display: block;
+        }
+
+        .nav-container { flex-grow: 1; overflow-y: auto; }
         .nav-section-title { padding: 1.5rem 1.5rem 0.5rem; font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: var(--text-secondary); }
         .nav-item { display: flex; align-items: center; gap: 10px; padding: 0.75rem 1.5rem; color: var(--text-secondary); font-size: 0.9rem; border-left: 3px solid transparent; transition: all 0.2s ease; font-weight: 500;}
         .nav-item:hover { background: var(--bg-light); color: var(--text-primary); }
         .nav-item.active { background: rgba(10, 132, 255, 0.1); color: var(--primary); border-left-color: var(--primary); font-weight: 600; }
         .nav-item .icon { width: 16px; height: 16px; stroke-width: 2px; }
-        .sidebar::-webkit-scrollbar { width: 8px; }
-        .sidebar::-webkit-scrollbar-track { background: transparent; }
-        .sidebar::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
-        .sidebar::-webkit-scrollbar-thumb:hover { background: var(--primary); }
+        .nav-container::-webkit-scrollbar { width: 8px; }
+        .nav-container::-webkit-scrollbar-track { background: transparent; }
+        .nav-container::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+        .nav-container::-webkit-scrollbar-thumb:hover { background: var(--primary); }
 
         /* Content Styling */
         .main-header { text-align: center; margin-bottom: 3rem; padding-bottom: 2rem; border-bottom: 1px solid var(--border); }
@@ -261,11 +327,11 @@
             background: transparent;
         }
         pre code { padding: 1.25rem 1.5rem; display: block; overflow-x: auto; font-size: 0.85rem; line-height: 1.6; color: var(--text-primary); }
-        .copy-btn { background: none; border: none; color: var(--text-secondary); padding: 0.5rem; border-radius: 6px; cursor: pointer; transition: all 0.2s ease; }
+        .copy-btn { background: none; border: none; color: var(--text-secondary); padding: 0.5rem; border-radius: 6px; cursor: pointer; transition: all 0.2s ease; display: flex; align-items: center; gap: 0.5rem; }
         .copy-btn:hover { background: var(--border); color: var(--text-primary); }
         .copy-btn svg { width: 16px; height: 16px; vertical-align: middle; transition: transform 0.1s ease; }
         .copy-btn:active svg { transform: scale(0.9);}
-        .copy-btn:active {background-color: var(--primary);}
+        .copy-btn.copied { background-color: var(--accent); color: white; }
 
         /* Responsive Tables */
         .table-wrapper {
@@ -692,7 +758,15 @@
                 </div>
             </header>
             
-            <nav class="nav">
+            <div class="search-container">
+                <svg class="search-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                <input type="text" id="search-input" placeholder="Search documentation...">
+                <button id="search-clear-btn" class="search-clear-btn" aria-label="Clear search">
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
+            </div>
+
+            <nav class="nav-container">
                 <div class="nav-section">
                     <div class="nav-section-title">Introduction</div>
                     <a href="#overview" class="nav-item active"><svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>Overview</a>
@@ -711,7 +785,7 @@
                     <a href="#data-formats" class="nav-item"><svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path></svg>Data Formats</a>
                     <a href="#parameters" class="nav-item"><svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>Parameters</a>
                     <a href="#widget-library" class="nav-item"><svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z"></path></svg>Widget Library</a>
-                    <a href="#data-logging" class="nav-item"><svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 7v8a2 2 0 002 2h4M8 7a2 2 0 012-2h4a2 2 0 012 2v8a2 2 0 01-2 2h-4a2 2 0 01-2-2l-4.5-4.5L8 7z"></path></svg>Data Logging</a>
+                    <a href="#data-logging" class="nav-item"><svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 7v8a2 2 0 002 2h4M8 7a2 2 0 012-2h4a2 2 0 012 2v8a2 2 0 01-2 2h-4a2 2 0 01-2-2l-4.5-4.5L8 7z"></path></svg>Data Logging & Reports</a>
                 </div>
                 <div class="nav-section">
                     <div class="nav-section-title">Technical Details</div>
@@ -734,7 +808,7 @@
             </a>
 
             <header class="main-header">
-                <img src="public/Glance_nobg.svg" alt="Glance Main Logo" class="main-logo">
+                <img src="public/Glance_nobg.svg" alt="Glance Main Logo" class="main-logo" loading="lazy">
                 <h1>Glance Dashboard Documentation</h1>
                 <p>Your complete guide to setting up, configuring, and using the Glance real-time telemetry visualization platform. Built by <a href="https://teamignition.space" target="_blank">Team Ignition</a>.</p>
             </header>
@@ -749,7 +823,7 @@
                         </div>
                     </div>
                     <div class="gif-content">
-                         <img src="public/user_interface.gif" alt="Dashboard Interface GIF">
+                         <img src="public/user_interface.gif" alt="Dashboard Interface GIF" loading="lazy">
                     </div>
                 </div>
             </section>
@@ -812,6 +886,15 @@
                         <p>Debug your data stream with the Raw Telemetry Monitor, inspect packets in multiple formats, and leverage a comprehensive set of keyboard shortcuts.</p>
                         <a href="#advanced-tools" class="card-link">Learn More <span>&rarr;</span></a>
                     </div>
+                    <!-- NEW Card 7: Reporting -->
+                    <div class="feature-card">
+                        <div class="feature-icon">
+                           <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                        </div>
+                        <h4>PDF Summary Reports</h4>
+                        <p>Automatically generate detailed PDF reports from your logged data sessions, including metadata, statistical summaries, and parameter analysis.</p>
+                        <a href="#data-logging" class="card-link">Learn More <span>&rarr;</span></a>
+                    </div>
                 </div>
             </section>
 
@@ -820,19 +903,19 @@
                 <p>A glimpse into the Glance user interface, from initial setup to a fully configured, live dashboard.</p>
                 <div class="screenshot-gallery">
                     <figure>
-                        <img src="public/Doc Images/HomeScreen.png" alt="Glance welcome screen">
+                        <img src="public/Doc Images/HomeScreen.png" alt="Glance welcome screen" loading="lazy">
                         <figcaption>The Welcome Screen: Start a new project or load an existing one.</figcaption>
                     </figure>
                     <figure>
-                        <img src="public/Doc Images/Connection.png" alt="Connection settings dialog">
+                        <img src="public/Doc Images/Connection.png" alt="Connection settings dialog" loading="lazy">
                         <figcaption>Connection Settings: Configure data sources like Serial, TCP, and UDP.</figcaption>
                     </figure>
                     <figure>
-                        <img src="public/Doc Images/parameters.png" alt="Parameter management window">
+                        <img src="public/Doc Images/parameters.png" alt="Parameter management window" loading="lazy">
                         <figcaption>Parameter Management: Define your data channels and alarm thresholds.</figcaption>
                     </figure>
                     <figure>
-                        <img src="public/Doc Images/dashboard.png" alt="A fully configured dashboard with multiple widgets">
+                        <img src="public/Doc Images/dashboard.png" alt="A fully configured dashboard with multiple widgets" loading="lazy">
                         <figcaption>The Live Dashboard: Monitor multiple data streams in real-time.</figcaption>
                     </figure>
                 </div>
@@ -869,7 +952,7 @@
                 <div class="code-block-wrapper">
                     <div class="code-header">
                         <span>bash</span>
-                        <button class="copy-btn" title="Copy code"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg></button>
+                        <button class="copy-btn" title="Copy code"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg><span>Copy</span></button>
                     </div>
                     <pre><code class="language-bash">git clone https://github.com/teamignitionvitc/Glance.git
 cd Glance</code></pre>
@@ -880,7 +963,7 @@ cd Glance</code></pre>
                  <div class="code-block-wrapper">
                     <div class="code-header">
                         <span>bash</span>
-                        <button class="copy-btn" title="Copy code"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg></button>
+                        <button class="copy-btn" title="Copy code"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg><span>Copy</span></button>
                     </div>
                     <pre><code class="language-bash">python -m venv venv
 # On Windows: venv\Scripts\activate
@@ -892,13 +975,13 @@ cd Glance</code></pre>
                  <div class="code-block-wrapper">
                     <div class="code-header">
                         <span>bash</span>
-                        <button class="copy-btn" title="Copy code"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg></button>
+                        <button class="copy-btn" title="Copy code"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg><span>Copy</span></button>
                     </div>
                     <pre><code class="language-bash">pip install -r requirements.txt</code></pre>
                 </div>
                 
                 <div class="info-box">
-                    <p>For the <strong>Map Widget</strong>, an optional dependency is required. Install it with: <code>pip install PySide6-WebEngine</code></p>
+                    <p>For the <strong>Map Widget</strong> and <strong>PDF Reporting</strong>, optional dependencies are required. Install them with: <code>pip install PySide6-WebEngine reportlab</code></p>
                 </div>
                  <div class="info-box accent">
                     <p><strong>Coming Soon:</strong> We are actively working on one-click executables for Windows (.exe) and Linux (.AppImage) to make installation even easier. These will be available in upcoming releases!</p>
@@ -909,7 +992,7 @@ cd Glance</code></pre>
                   <div class="code-block-wrapper">
                     <div class="code-header">
                         <span>bash</span>
-                        <button class="copy-btn" title="Copy code"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg></button>
+                        <button class="copy-btn" title="Copy code"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg><span>Copy</span></button>
                     </div>
                     <pre><code class="language-bash">python main.py</code></pre>
                 </div>
@@ -1047,7 +1130,7 @@ cd Glance</code></pre>
                 <p><strong>Example:</strong> Your device sends 3 channels of data as 16-bit (2-byte) little-endian integers. Your total packet size is 3 channels * 2 bytes/channel = 6 bytes.</p>
                 <p>If the values are `[258, 515, 772]`, their hexadecimal representations are `[0x0102, 0x0203, 0x0304]`. The byte stream Glance expects to receive would be:</p>
                 <div class="code-block-wrapper">
-                    <div class="code-header"><span>hex</span><button class="copy-btn" title="Copy code"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg></button></div>
+                    <div class="code-header"><span>hex</span><button class="copy-btn" title="Copy code"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg><span>Copy</span></button></div>
                     <pre><code>02 01 03 02 04 03</code></pre>
                 </div>
                  <div class="readme-link">
@@ -1133,30 +1216,36 @@ cd Glance</code></pre>
             </section>
 
             <section id="data-logging">
-                <h2>Data Logging</h2>
-                <p>To record a session, go to <strong>Data Logging → Configure Logging...</strong>. You can select CSV or JSON as the output format, choose which parameters to log, and set a buffer size.</p>
+                <h2>Data Logging & Summary Reports</h2>
+                <p>Glance provides powerful tools for recording and analyzing your telemetry sessions. You can access all logging features from the <strong>Data Logging</strong> menu.</p>
+                
+                <h3>Configuring and Recording a Session</h3>
+                <p>To record a session, first go to <strong>Data Logging → Configure Logging...</strong>. Here you can select CSV or JSON as the output format, choose which specific parameters to log, and set a buffer size.</p>
                 <h4>Understanding the Buffer</h4>
                 <p>Data is temporarily stored in memory (the buffer) before being written to the disk. This improves performance by reducing constant disk access.</p>
                 <ul>
                     <li>A <strong>larger buffer</strong> means fewer disk writes, which is better for performance with high-frequency data, but risks more data loss if the application crashes.</li>
                     <li>A <strong>smaller buffer</strong> writes to the disk more often, which is safer but can impact performance at very high data rates.</li>
                 </ul>
-                 <h4>Output Formats</h4>
-                 <p>The logger produces clean, well-structured files perfect for post-analysis.</p>
-                 <p><strong>CSV Output Structure:</strong></p>
-                 <div class="code-block-wrapper">
-                    <div class="code-header"><span>csv</span><button class="copy-btn" title="Copy code"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg></button></div>
-                    <pre><code class="language-csv">timestamp,elapsed_time,temp_sensor_Temperature,humidity_Humidity
-2025-01-15 10:30:00.123,0.000,23.500,65.200
-2025-01-15 10:30:01.223,1.100,23.600,65.100</code></pre>
+                <p>Once configured, you can start and stop logging at any time using the menu actions or the shortcuts <code>Ctrl+Shift+L</code> and <code>Ctrl+Alt+L</code>.</p>
+                 
+                <h3 id="summary-reports">Generating a Summary Report</h3>
+                <p>After you have stopped a logging session, you can instantly generate a professional PDF summary of the collected data. This is an excellent tool for post-mission analysis, sharing results, and archiving session statistics.</p>
+                <ul>
+                    <li><strong>How to Access:</strong> Navigate to <strong>Data Logging → Generate Summary Report...</strong> or use the shortcut <code>Ctrl+Shift+R</code>.</li>
+                    <li><strong>Prerequisites:</strong> You must have a completed log file from the current session, and the <code>reportlab</code> Python library must be installed.</li>
+                </ul>
+                <div class="info-box accent">
+                    <p><strong>Installation:</strong> If you don't have it, install the reporting library with: <code>pip install reportlab</code></p>
                 </div>
-                <p><strong>JSON Output Structure (JSON Lines):</strong></p>
-                 <div class="code-block-wrapper">
-                    <div class="code-header"><span>json</span><button class="copy-btn" title="Copy code"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg></button></div>
-                    <pre><code class="language-json">{ "timestamp": "2025-01-15T10:30:00.123", "elapsed_time": 0.0, "parameters": { "temp_sensor": 23.5, "humidity": 65.2 } }
-{ "timestamp": "2025-01-15T10:30:01.223", "elapsed_time": 1.1, "parameters": { "temp_sensor": 23.6, "humidity": 65.1 } }</code></pre>
-                </div>
-                 <div class="readme-link">
+                <h4>Report Contents</h4>
+                <p>The generated PDF is a multi-page document that includes:</p>
+                <ol>
+                    <li><strong>Report Information:</strong> Metadata about the session, including the source file, duration, total samples, and start/end times.</li>
+                    <li><strong>Parameter Statistics:</strong> A summary table showing the min, max, mean, and sample count for every parameter that was logged.</li>
+                    <li><strong>Detailed Parameter Analysis:</strong> A breakdown for each individual parameter with more detailed statistics like range and standard deviation.</li>
+                </ol>
+                <div class="readme-link">
                     For more details, see the <a href="https://github.com/teamignitionvitc/Glance?tab=readme-ov-file#data-logging" target="_blank">Data Logging section in the README</a>.
                 </div>
             </section>
@@ -1165,7 +1254,10 @@ cd Glance</code></pre>
                 <h2>Project File Structure</h2>
                 <p>Glance projects are saved as <code>.json</code> files, which store the entire state of your dashboard. This makes your configurations portable and easy to share.</p>
                  <div class="code-block-wrapper">
-                    <div class="code-header"><span>json</span><button class="copy-btn" title="Copy code"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg></button></div>
+                    <div class="code-header">
+                        <span>json</span>
+                        <button class="copy-btn" title="Copy code"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg><span>Copy</span></button>
+                    </div>
                     <pre><code class="language-json">{
   "version": "1.0",
   "parameters": [ ... ],
@@ -1204,8 +1296,8 @@ cd Glance</code></pre>
                      <li>Pause, clear, and save the raw log for later analysis.</li>
                  </ul>
                  <div class="telemetry-images">
-                    <img src="public/Doc Images/RTV.png" alt="Raw Telemetry Monitor showing data stream">
-                    <img src="public/Doc Images/Standalone_RTV.png" alt="Controls for the Raw Telemetry Monitor">
+                    <img src="public/Doc Images/RTV.png" alt="Raw Telemetry Monitor showing data stream" loading="lazy">
+                    <img src="public/Doc Images/Standalone_RTV.png" alt="Controls for the Raw Telemetry Monitor" loading="lazy">
                 </div>
                  <div class="readme-link">
                     For more details, see the <a href="https://github.com/teamignitionvitc/Glance?tab=readme-ov-file#monitoring--debugging" target="_blank">Monitoring & Debugging section in the README</a>.
@@ -1307,6 +1399,7 @@ cd Glance</code></pre>
                             <tr><td>Configure Data Logging</td><td><code>Ctrl + L</code></td></tr>
                             <tr><td>Start Data Logging</td><td><code>Ctrl + Shift + L</code></td></tr>
                             <tr><td>Stop Data Logging</td><td><code>Ctrl + Alt + L</code></td></tr>
+                            <tr><td>Generate Summary Report</td><td><code>Ctrl + Shift + R</code></td></tr>
                             <tr><td>Manage Filters</td><td><code>Ctrl + F</code></td></tr>
 
                             <tr><th colspan="2">Help</th></tr>
@@ -1334,7 +1427,10 @@ cd Glance</code></pre>
                 <h3>Project Code Structure</h3>
                 <p>The project is organized into modules with specific responsibilities.</p>
                 <div class="code-block-wrapper">
-                    <div class="code-header"><span>bash</span><button class="copy-btn" title="Copy code"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg></button></div>
+                    <div class="code-header">
+                        <span>bash</span>
+                        <button class="copy-btn" title="Copy code"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg><span>Copy</span></button>
+                    </div>
                     <pre><code class="language-bash">.
 ├── main.py              # Application entry point, MainWindow class, all dialogs and widgets.
 ├── backend.py           # DataReader class for Serial, TCP, UDP sources.
@@ -1353,7 +1449,7 @@ cd Glance</code></pre>
                     <li>Inside <code>update_data</code>, the `MainWindow` iterates through its list of defined parameters. For each parameter, it uses the <code>array_index</code> to get the corresponding value from the packet.</li>
                     <li>The value is passed through the <strong>FilterManager</strong>, which applies any configured filters (e.g., Low-pass, Kalman).</li>
                     <li>The raw value and filtered value are appended to the global <code>data_history</code> dictionary.</li>
-                    <li>The `MainWindow` then identifies which active widgets are subscribed to the updated parameter and calls their respective update methods with the <strong>filtered value</strong>.</li>
+                    <li>The <code>MainWindow</code> then identifies which active widgets are subscribed to the updated parameter and calls their respective update methods with the <strong>filtered value</strong>.</li>
                 </ol>
 
                 <h3>Adding a Custom Widget</h3>
@@ -1373,7 +1469,10 @@ cd Glance</code></pre>
                  <h3>Building an Executable</h3>
                 <p>To create a standalone executable, you can use PyInstaller. This packages your application and its dependencies into a single file.</p>
                 <div class="code-block-wrapper">
-                    <div class="code-header"><span>bash</span><button class="copy-btn" title="Copy code"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg></button></div>
+                    <div class="code-header">
+                        <span>bash</span>
+                        <button class="copy-btn" title="Copy code"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg><span>Copy</span></button>
+                    </div>
                     <pre><code class="language-bash"># Install PyInstaller
 pip install pyinstaller
 
@@ -1419,28 +1518,40 @@ main.py
                 <h4>Run All Tests</h4>
                 <p>This command discovers and runs all tests in the <code>test.py</code> file.</p>
                 <div class="code-block-wrapper">
-                    <div class="code-header"><span>bash</span><button class="copy-btn" title="Copy code"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg></button></div>
+                    <div class="code-header">
+                        <span>bash</span>
+                        <button class="copy-btn" title="Copy code"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg><span>Copy</span></button>
+                    </div>
                     <pre><code class="language-bash">pytest test.py -v</code></pre>
                 </div>
                 
                 <h4>Run a Specific Test Class</h4>
                 <p>To run all tests within a specific class (e.g., <code>TestDataLogger</code>), use the <code>::</code> syntax.</p>
                 <div class="code-block-wrapper">
-                    <div class="code-header"><span>bash</span><button class="copy-btn" title="Copy code"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg></button></div>
+                    <div class="code-header">
+                        <span>bash</span>
+                        <button class="copy-btn" title="Copy code"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg><span>Copy</span></button>
+                    </div>
                     <pre><code class="language-bash">pytest test.py::TestDataLogger -v</code></pre>
                 </div>
 
                 <h4>Run Tests Matching a Keyword</h4>
                 <p>The <code>-k</code> flag allows you to run tests whose names contain a specific keyword (e.g., "filter").</p>
                  <div class="code-block-wrapper">
-                    <div class="code-header"><span>bash</span><button class="copy-btn" title="Copy code"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg></button></div>
+                    <div class="code-header">
+                        <span>bash</span>
+                        <button class="copy-btn" title="Copy code"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg><span>Copy</span></button>
+                    </div>
                     <pre><code class="language-bash">pytest test.py -k "filter" -v</code></pre>
                 </div>
 
                 <h4>Generate a Coverage Report</h4>
                 <p>To measure how much of the application code is covered by tests, use <code>pytest-cov</code>. This command runs tests and generates an HTML report in a new <code>htmlcov/</code> directory.</p>
                  <div class="code-block-wrapper">
-                    <div class="code-header"><span>bash</span><button class="copy-btn" title="Copy code"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg></button></div>
+                    <div class="code-header">
+                        <span>bash</span>
+                        <button class="copy-btn" title="Copy code"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg><span>Copy</span></button>
+                    </div>
                     <pre><code class="language-bash">pytest test.py --cov=main --cov-report=html</code></pre>
                 </div>
             </section>
@@ -1533,7 +1644,7 @@ main.py
             <footer>
                 <div class="footer-content">
                     <div class="footer-main">
-                        <img src="public/ign_logo_wht.svg" alt="Team Ignition Logo" class="footer-logo">
+                        <img src="public/ign_logo_wht.svg" alt="Team Ignition Logo" class="footer-logo" loading="lazy">
                         <h3>Team Ignition</h3>
                         <p class="footer-text">The official student rocketry team of Vellore Institute of Technology, Chennai. We are dedicated to advancing aerospace innovation through hands-on learning and experimentation.</p>
                         <ul class="social-links">
@@ -1587,36 +1698,35 @@ main.py
             // Close sidebar when clicking on the dimmed content area or any other body element
             document.body.addEventListener('click', (e) => {
                 if (document.body.classList.contains('sidebar-is-open')) {
-                    // Check if the click is outside the sidebar and not on the toggle button itself
                     if (!sidebar.contains(e.target) && !menuToggle.contains(e.target)) {
                         closeSidebar();
                     }
                 }
             });
 
-            // Close sidebar when a nav item is clicked on mobile
-            document.querySelectorAll('.nav-item').forEach(item => {
-                item.addEventListener('click', () => {
-                    if (window.innerWidth <= 1024) {
-                        closeSidebar();
+            // Copy-to-clipboard for code blocks with improved feedback
+            document.querySelectorAll('.copy-btn').forEach(button => {
+                const originalContent = button.innerHTML;
+                const copiedContent = `<svg fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg><span>Copied!</span>`;
+
+                button.addEventListener('click', () => {
+                    const pre = button.closest('.code-block-wrapper').querySelector('pre');
+                    if (pre) {
+                        const code = pre.querySelector('code').innerText;
+                        navigator.clipboard.writeText(code).then(() => {
+                            button.innerHTML = copiedContent;
+                            button.classList.add('copied');
+                            setTimeout(() => {
+                                button.innerHTML = originalContent;
+                                button.classList.remove('copied');
+                            }, 2000);
+                        }).catch(err => {
+                            console.error('Failed to copy text: ', err);
+                        });
                     }
                 });
             });
 
-            // Copy-to-clipboard for code blocks
-            document.querySelectorAll('.code-header').forEach(header => {
-                const button = header.querySelector('.copy-btn');
-                const pre = header.nextElementSibling;
-                if (button && pre && pre.tagName === 'PRE') {
-                    button.addEventListener('click', () => {
-                        const code = pre.querySelector('code').innerText;
-                        navigator.clipboard.writeText(code).then(() => {
-                            button.title = 'Copied!';
-                            setTimeout(() => { button.title = 'Copy code'; }, 2000);
-                        });
-                    });
-                }
-            });
 
             // Active nav item on scroll
             const sections = document.querySelectorAll('main section[id]');
@@ -1633,9 +1743,136 @@ main.py
             }, { rootMargin: '-30% 0px -70% 0px' });
 
             sections.forEach(section => observer.observe(section));
-
-            // --- UPDATED: Fetch GitHub Contributors with Caching and Stacked Avatars ---
             
+            // --- ENHANCED SEARCH FUNCTIONALITY WITH HIGHLIGHTING ---
+            const searchInput = document.getElementById('search-input');
+            const searchClearBtn = document.getElementById('search-clear-btn');
+            const navLinks = document.querySelectorAll('.nav-item');
+            const navSections = document.querySelectorAll('.nav-section');
+            const mainContent = document.querySelector('main');
+            const mainHeader = document.querySelector('.main-header');
+
+            const searchableSectionsData = Array.from(document.querySelectorAll('main > section[id]')).map(section => {
+                const title = section.querySelector('h2');
+                return {
+                    id: section.id,
+                    element: section,
+                    title: title ? title.textContent.toLowerCase() : '',
+                    originalHTML: section.innerHTML // Store original HTML to remove highlights
+                };
+            });
+            
+            let noResultsMessage = document.createElement('div');
+            noResultsMessage.id = 'no-results';
+            noResultsMessage.style.display = 'none';
+            noResultsMessage.style.textAlign = 'center';
+            noResultsMessage.style.padding = '4rem 0';
+            mainContent.appendChild(noResultsMessage);
+
+            function escapeRegex(string) {
+                return string.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
+            }
+
+            function highlightText(searchTerm) {
+                if (!searchTerm) return;
+                const regex = new RegExp(`(${escapeRegex(searchTerm)})`, 'gi');
+                searchableSectionsData.forEach(sec => {
+                    if (sec.element.style.display !== 'none') {
+                         sec.element.innerHTML = sec.originalHTML.replace(regex, `<mark>$1</mark>`);
+                    }
+                });
+            }
+
+            function removeHighlights() {
+                searchableSectionsData.forEach(sec => {
+                    sec.element.innerHTML = sec.originalHTML;
+                });
+            }
+
+            function performSearch() {
+                const searchTerm = searchInput.value.toLowerCase().trim();
+                searchClearBtn.style.display = searchTerm ? 'block' : 'none';
+                
+                removeHighlights(); // Always remove old highlights first
+
+                if (searchTerm === '') {
+                    mainHeader.style.display = 'block';
+                    searchableSectionsData.forEach(sec => sec.element.style.display = 'block');
+                    navLinks.forEach(link => link.style.display = 'flex');
+                    navSections.forEach(section => section.style.display = 'block');
+                    noResultsMessage.style.display = 'none';
+                    return;
+                }
+
+                const matchedIds = new Set();
+                
+                searchableSectionsData.forEach(sec => {
+                    const content = sec.title + ' ' + sec.element.textContent.toLowerCase();
+                    const isMatch = content.includes(searchTerm);
+                    sec.element.style.display = isMatch ? 'block' : 'none';
+                    if (isMatch) {
+                        matchedIds.add(sec.id);
+                    }
+                });
+
+                highlightText(searchTerm);
+
+                navLinks.forEach(link => {
+                    const linkId = link.getAttribute('href')?.substring(1);
+                    link.style.display = (linkId && matchedIds.has(linkId)) ? 'flex' : 'none';
+                });
+
+                navSections.forEach(section => {
+                    const visibleLinks = section.querySelectorAll('.nav-item[style*="display: flex"]');
+                    section.style.display = visibleLinks.length > 0 ? 'block' : 'none';
+                });
+
+                if (matchedIds.size === 0) {
+                    mainHeader.style.display = 'none';
+                    noResultsMessage.innerHTML = `<h3>No results found for "${searchInput.value}"</h3><p>Try searching for a different term or check your spelling.</p>`;
+                    noResultsMessage.style.display = 'block';
+                } else {
+                    mainHeader.style.display = 'block';
+                    noResultsMessage.style.display = 'none';
+                }
+            }
+            
+            // Smart scroll for sidebar links when search is active
+            navLinks.forEach(link => {
+                link.addEventListener('click', (e) => {
+                    const searchTerm = searchInput.value.trim();
+                    if (searchTerm) {
+                        e.preventDefault();
+                        const targetId = link.getAttribute('href').substring(1);
+                        const targetSection = document.getElementById(targetId);
+                        
+                        if (targetSection) {
+                            const firstHighlight = targetSection.querySelector('mark');
+                            if (firstHighlight) {
+                                firstHighlight.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                            } else {
+                                targetSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                            }
+                        }
+                    }
+                     // Close sidebar on mobile after click
+                    if (window.innerWidth <= 1024) {
+                        closeSidebar();
+                    }
+                });
+            });
+
+
+            searchInput.addEventListener('input', performSearch);
+
+            searchClearBtn.addEventListener('click', () => {
+                searchInput.value = '';
+                searchInput.focus();
+                performSearch();
+            });
+
+
+            // --- Fetch GitHub Contributors ---
             const listElement = document.getElementById('contributor-list');
 
             function displayContributors(contributors) {
@@ -1644,13 +1881,12 @@ main.py
                 const maxVisible = 4; // Show max 4 avatars
                 const topContributors = contributors.filter(c => c.type !== 'Bot');
 
-                // Display visible contributors
                 const visibleContributors = topContributors.slice(0, maxVisible);
                 
                 visibleContributors.forEach(contributor => {
                     const listItem = document.createElement('li');
                     listItem.className = 'contributor-item';
-                    listItem.title = contributor.login; // Add tooltip for name
+                    listItem.title = contributor.login;
 
                     listItem.innerHTML = `
                         <a href="${contributor.html_url}" target="_blank" rel="noopener noreferrer">
@@ -1660,7 +1896,6 @@ main.py
                     listElement.appendChild(listItem);
                 });
 
-                // Display overflow count if there are more contributors
                 if (topContributors.length > maxVisible) {
                     const remainingCount = topContributors.length - maxVisible;
                     const overflowItem = document.createElement('li');
@@ -1680,7 +1915,6 @@ main.py
 
                 const cachedData = localStorage.getItem(cacheKey);
 
-                // Check for fresh cache first
                 if (cachedData) {
                     const { timestamp, data } = JSON.parse(cachedData);
                     if (Date.now() - timestamp < cacheDuration) {
@@ -1689,7 +1923,6 @@ main.py
                     }
                 }
 
-                // If cache is stale or missing, fetch from API
                 try {
                     const response = await fetch(apiUrl);
                     if (!response.ok) {
@@ -1705,13 +1938,11 @@ main.py
                     displayContributors(contributors);
 
                 } catch (error) {
-                    // Fallback to stale cache if API fails
                     if (cachedData) {
                         console.log('GitHub API request failed, serving stale data from cache.', error.message);
                         const { data } = JSON.parse(cachedData);
                         displayContributors(data);
                     } else {
-                        // Only show error if there's no cache at all
                         console.error('Failed to fetch contributors and no cache is available:', error);
                         listElement.innerHTML = '<li class="contributor-list-loading">Could not load contributors.</li>';
                     }
@@ -1736,3 +1967,4 @@ main.py
     </script>
 </body>
 </html>
+
