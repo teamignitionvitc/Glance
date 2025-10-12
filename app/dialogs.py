@@ -64,58 +64,172 @@ from PySide6.QtWidgets import (
 from PySide6.QtCore import Qt
 import os
 from datetime import datetime
+from PySide6.QtCore import Qt
+from PySide6.QtGui import QIntValidator
+import sys, os
+from datetime import datetime
 
+_serial_list_ports = None
+try:
+    import serial.tools.list_ports as _serial_list_ports
+except ImportError:
+    _serial_list_ports = None
 
 class ConnectionSettingsDialog(QDialog):
     def __init__(self, settings, parent=None):
         super().__init__(parent); self.setWindowTitle("Connection Settings"); self._settings = dict(settings)
         form = QFormLayout(self)
-        self.mode_combo = QComboBox(); self.mode_combo.addItems(["serial","tcp","udp"])
-        self.mode_combo.setCurrentText(self._settings.get('mode','serial'))
-        self.serial_port_edit = QLineEdit(self._settings.get('serial_port','COM4'))
+        self.mode_combo = QComboBox(); self.mode_combo.addItems(["dummy","serial","tcp","udp"])
+        self.mode_combo.setCurrentText(self._settings.get('mode','dummy'))
+        # Serial fields
+        self.serial_port_edit = QComboBox(); self.serial_port_edit.setEditable(True)
+        try:
+            ports = []
+            if _serial_list_ports: ports = [p.device for p in _serial_list_ports.comports()]
+            if ports: self.serial_port_edit.addItems(ports)
+        except Exception: pass
+        self.serial_port_edit.setCurrentText(self._settings.get('serial_port','COM4'))
+
+        # Refresh button for serial ports
+        self.refresh_ports_btn = QPushButton("🔄 Refresh")
+        self.refresh_ports_btn.setMaximumWidth(80)
+        self.refresh_ports_btn.clicked.connect(self.refresh_serial_ports)
+
         self.baud_spin = QSpinBox(); self.baud_spin.setRange(300, 10000000); self.baud_spin.setValue(int(self._settings.get('baudrate',115200)))
+        # TCP fields
         self.tcp_host_edit = QLineEdit(self._settings.get('tcp_host','127.0.0.1'))
         self.tcp_port_spin = QSpinBox(); self.tcp_port_spin.setRange(1, 65535); self.tcp_port_spin.setValue(int(self._settings.get('tcp_port',9000)))
+        # UDP fields
         self.udp_host_edit = QLineEdit(self._settings.get('udp_host','0.0.0.0'))
         self.udp_port_spin = QSpinBox(); self.udp_port_spin.setRange(1, 65535); self.udp_port_spin.setValue(int(self._settings.get('udp_port',9000)))
-        self.format_combo = QComboBox(); self.format_combo.addItems(["json_array","csv","raw_bytes","bits"])
+        # Format options with dropdowns and Custom...
+        self.format_combo = QComboBox(); self.format_combo.addItems(["json_array","csv","raw_bytes","bits","Custom..."])
         self.format_combo.setCurrentText(self._settings.get('data_format','json_array'))
+        self.custom_format_edit = QLineEdit(self._settings.get('data_format',''))
+        self.custom_format_edit.setPlaceholderText("Enter custom format key")
         self.channels_spin = QSpinBox(); self.channels_spin.setRange(1, 1024); self.channels_spin.setValue(int(self._settings.get('channel_count',32)))
         self.width_spin = QSpinBox(); self.width_spin.setRange(1, 8); self.width_spin.setValue(int(self._settings.get('sample_width_bytes',2)))
         self.endian_combo = QComboBox(); self.endian_combo.addItems(["little","big"])
         self.endian_combo.setCurrentText('little' if self._settings.get('little_endian',True) else 'big')
+        self.csv_sep_combo = QComboBox(); self.csv_sep_combo.setEditable(True); self.csv_sep_combo.addItems([",",";","|","\t","Custom..."])
+        self.csv_sep_combo.setCurrentText(self._settings.get('csv_separator',','))
         self.csv_sep_edit = QLineEdit(self._settings.get('csv_separator',','))
+        # Build layout with placeholders for dynamic visibility
         form.addRow("Mode:", self.mode_combo)
-        form.addRow("Serial Port:", self.serial_port_edit)
+        # Serial - Create horizontal layout for port + refresh button
+        serial_port_layout = QHBoxLayout()
+        serial_port_layout.addWidget(self.serial_port_edit)
+        serial_port_layout.addWidget(self.refresh_ports_btn)
+        self._row_serial_port = form.rowCount()
+        form.addRow("Serial Port:", serial_port_layout)
+        self._row_baud = form.rowCount()
         form.addRow("Baudrate:", self.baud_spin)
-        form.addRow("TCP Host:", self.tcp_host_edit)
-        form.addRow("TCP Port:", self.tcp_port_spin)
-        form.addRow("UDP Host:", self.udp_host_edit)
-        form.addRow("UDP Port:", self.udp_port_spin)
+        # TCP
+        self._row_tcp_host = form.rowCount(); form.addRow("TCP Host:", self.tcp_host_edit)
+        self._row_tcp_port = form.rowCount(); form.addRow("TCP Port:", self.tcp_port_spin)
+        # UDP
+        self._row_udp_host = form.rowCount(); form.addRow("UDP Host:", self.udp_host_edit)
+        self._row_udp_port = form.rowCount(); form.addRow("UDP Port:", self.udp_port_spin)
         form.addRow("Format:", self.format_combo)
+        form.addRow("Custom Format:", self.custom_format_edit)
         form.addRow("Channels:", self.channels_spin)
         form.addRow("Sample Width (bytes):", self.width_spin)
         form.addRow("Endianness:", self.endian_combo)
-        form.addRow("CSV Separator:", self.csv_sep_edit)
+        form.addRow("CSV Separator:", self.csv_sep_combo)
+        form.addRow("Custom Separator:", self.csv_sep_edit)
         buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel)
         buttons.accepted.connect(self.accept); buttons.rejected.connect(self.reject)
         form.addWidget(buttons)
+        # Dynamic visibility by mode
+        def _apply_mode(mode):
+            is_dummy = (mode == 'dummy')
+            is_serial = (mode == 'serial')
+            is_tcp = (mode == 'tcp')
+            is_udp = (mode == 'udp')
+            # Serial
+            lbl = form.labelForField(self.serial_port_edit)
+            if lbl: lbl.setVisible(is_serial)
+            self.serial_port_edit.setVisible(is_serial)
+            self.refresh_ports_btn.setVisible(is_serial) 
+            lbl = form.labelForField(self.baud_spin)
+            if lbl: lbl.setVisible(is_serial)
+            self.baud_spin.setVisible(is_serial)
+            # TCP
+            lbl = form.labelForField(self.tcp_host_edit)
+            if lbl: lbl.setVisible(is_tcp)
+            self.tcp_host_edit.setVisible(is_tcp)
+            lbl = form.labelForField(self.tcp_port_spin)
+            if lbl: lbl.setVisible(is_tcp)
+            self.tcp_port_spin.setVisible(is_tcp)
+            # UDP
+            lbl = form.labelForField(self.udp_host_edit)
+            if lbl: lbl.setVisible(is_udp)
+            self.udp_host_edit.setVisible(is_udp)
+            lbl = form.labelForField(self.udp_port_spin)
+            if lbl: lbl.setVisible(is_udp)
+            self.udp_port_spin.setVisible(is_udp)
+        def _apply_format(fmt):
+            is_custom = (fmt == 'Custom...')
+            lbl = form.labelForField(self.custom_format_edit)
+            if lbl: lbl.setVisible(is_custom)
+            self.custom_format_edit.setVisible(is_custom)
+        def _apply_csv_sep(val):
+            is_custom = (val == 'Custom...')
+            lbl = form.labelForField(self.csv_sep_edit)
+            if lbl: lbl.setVisible(is_custom)
+            self.csv_sep_edit.setVisible(is_custom)
+        self.mode_combo.currentTextChanged.connect(_apply_mode)
+        _apply_mode(self.mode_combo.currentText())
+        self.format_combo.currentTextChanged.connect(_apply_format)
+        _apply_format(self.format_combo.currentText())
+        self.csv_sep_combo.currentTextChanged.connect(_apply_csv_sep)
+        _apply_csv_sep(self.csv_sep_combo.currentText())
+
+    def refresh_serial_ports(self):
+        """Refresh the list of available serial ports"""
+        current_text = self.serial_port_edit.currentText()
+        self.serial_port_edit.clear()
+        
+        try:
+            ports = []
+            if _serial_list_ports:
+                ports = [p.device for p in _serial_list_ports.comports()]
+            if ports:
+                self.serial_port_edit.addItems(ports)
+            else:
+                # Add common defaults if none found
+                if sys.platform.startswith('linux'):
+                    ports = ['/dev/ttyUSB0', '/dev/ttyACM0']
+                elif sys.platform.startswith('win'):
+                    ports = ['COM3','COM4','COM5']
+                else:
+                    ports = ['/dev/tty.usbserial', '/dev/tty.usbmodem']
+                self.serial_port_edit.addItems(ports)
+        except Exception as e:
+            QMessageBox.warning(self, "Error", f"Failed to refresh ports: {e}")
+        
+        # Try to restore previous selection
+        index = self.serial_port_edit.findText(current_text)
+        if index >= 0:
+            self.serial_port_edit.setCurrentIndex(index)
+        else:
+            self.serial_port_edit.setCurrentText(current_text)
 
     def get_settings(self):
         return {
             'mode': self.mode_combo.currentText(),
-            'serial_port': self.serial_port_edit.text().strip(),
+            'serial_port': (self.serial_port_edit.currentText().strip() if hasattr(self.serial_port_edit,'currentText') else self.serial_port_edit.text().strip()),
             'baudrate': int(self.baud_spin.value()),
             'tcp_host': self.tcp_host_edit.text().strip(),
             'tcp_port': int(self.tcp_port_spin.value()),
             'udp_host': self.udp_host_edit.text().strip(),
             'udp_port': int(self.udp_port_spin.value()),
             'timeout': 1.0,
-            'data_format': self.format_combo.currentText(),
+            'data_format': (self.custom_format_edit.text().strip() if self.format_combo.currentText() == 'Custom...' else self.format_combo.currentText()),
             'channel_count': int(self.channels_spin.value()),
             'sample_width_bytes': int(self.width_spin.value()),
             'little_endian': (self.endian_combo.currentText() == 'little'),
-            'csv_separator': self.csv_sep_edit.text() or ',',
+            'csv_separator': (self.csv_sep_edit.text() if self.csv_sep_combo.currentText() == 'Custom...' else self.csv_sep_combo.currentText() or ','),
         }
 
 
@@ -505,121 +619,30 @@ class DataLoggingDialog(QDialog):
 
 class ParameterEntryDialog(QDialog):
     def __init__(self, param=None, existing_ids=None, parent=None):
-        super().__init__(parent)
-        self.existing_ids = existing_ids or []
-        self.is_edit_mode = param is not None
-        self.setWindowTitle("Edit Parameter" if self.is_edit_mode else "Add New Parameter")
-        self.setMinimumSize(500, 600)
-        
-        # Main layout
-        main_layout = QVBoxLayout(self)
-        main_layout.setSpacing(16)
-        
-        # Title
-        title = QLabel(f"<h2 style='color: #ffffff; margin: 0 0 16px 0;'>{'Edit Parameter' if self.is_edit_mode else 'Add New Parameter'}</h2>")
-        main_layout.addWidget(title)
-        
-        # Form layout
-        layout = QFormLayout()
-        layout.setSpacing(12)
-        
-        # Basic information
-        basic_group = QGroupBox("Basic Information")
-        basic_layout = QFormLayout(basic_group)
-        
-        self.id_edit = QLineEdit(param['id'] if param else "")
-        if self.is_edit_mode: 
-            self.id_edit.setReadOnly(True)
-            self.id_edit.setStyleSheet("background-color: #3a3a3a; color: #888888;")
+        super().__init__(parent); self.existing_ids = existing_ids or []; self.is_edit_mode = param is not None
+        self.setWindowTitle("Edit Parameter" if self.is_edit_mode else "Add New Parameter"); layout = QFormLayout(self)
+        self.id_edit = QLineEdit(param['id'] if param else "");
+        if self.is_edit_mode: self.id_edit.setReadOnly(True)
         self.name_edit = QLineEdit(param['name'] if param else "")
-        self.desc_edit = QLineEdit(param.get('description', '') if param else "")
-        
-        basic_layout.addRow("Parameter ID:", self.id_edit)
-        basic_layout.addRow("Display Name:", self.name_edit)
-        basic_layout.addRow("Description:", self.desc_edit)
-        
-        # Data mapping
-        mapping_group = QGroupBox("Data Mapping")
-        mapping_layout = QFormLayout(mapping_group)
-        
+        # --- NEW: Array Index Mapping ---
         self.index_spin = QSpinBox()
-        self.index_spin.setRange(0, 255)
+        self.index_spin.setRange(0, 255) # Assuming max 256 channels
         self.index_spin.setValue(param.get('array_index', 0) if param else 0)
-        self.index_spin.setToolTip("Array index where this parameter's data is located in the incoming data packet")
-        
+        # ---
         self.group_edit = QLineEdit(param.get('sensor_group', '') if param else "")
-        self.group_edit.setPlaceholderText("e.g., MPU6050, GPS, Temperature")
-        
-        self.unit_edit = QLineEdit(param['unit'] if param else "")
-        self.unit_edit.setPlaceholderText("e.g., °C, m/s², V, %")
-        
-        mapping_layout.addRow("Array Index:", self.index_spin)
-        mapping_layout.addRow("Sensor Group:", self.group_edit)
-        mapping_layout.addRow("Unit:", self.unit_edit)
-        
-        # Display preferences
-        display_group = QGroupBox("Display Preferences")
-        display_layout = QFormLayout(display_group)
-        
-        self.color_combo = QComboBox()
-        colors = ["Auto", "Blue (#00BFFF)", "Red (#FF3131)", "Green (#21b35a)", "Yellow (#FFBF00)", "Purple (#F012BE)", "Cyan (#39CCCC)", "Orange (#FF851B)"]
-        self.color_combo.addItems(colors)
-        if param and 'color' in param:
-            color_name = param['color']
-            for i, color in enumerate(colors):
-                if color_name in color:
-                    self.color_combo.setCurrentIndex(i)
-                    break
-        
-        self.decimals_spin = QSpinBox()
-        self.decimals_spin.setRange(0, 6)
-        self.decimals_spin.setValue(param.get('decimals', 2) if param else 2)
-        self.decimals_spin.setToolTip("Number of decimal places to display")
-        
-        display_layout.addRow("Preferred Color:", self.color_combo)
-        display_layout.addRow("Decimal Places:", self.decimals_spin)
-        
-        # Alarm thresholds
-        alarm_group = QGroupBox("Alarm Thresholds")
-        alarm_layout = QFormLayout(alarm_group)
-        
-        self.low_crit = QDoubleSpinBox()
-        self.low_warn = QDoubleSpinBox()
-        self.high_warn = QDoubleSpinBox()
-        self.high_crit = QDoubleSpinBox()
-        
-        for spin in [self.low_crit, self.low_warn, self.high_warn, self.high_crit]:
-            spin.setRange(-100000, 100000)
-            spin.setDecimals(3)
-            spin.setSuffix(" " + (param['unit'] if param else ''))
-        
+        self.unit_edit = QLineEdit(param['unit'] if param else ""); self.desc_edit = QLineEdit(param.get('description', '') if param else "")
+        self.low_crit, self.low_warn, self.high_warn, self.high_crit = QDoubleSpinBox(), QDoubleSpinBox(), QDoubleSpinBox(), QDoubleSpinBox()
+        for spin in [self.low_crit, self.low_warn, self.high_warn, self.high_crit]: spin.setRange(-100000, 100000); spin.setDecimals(3)
         if param:
-            t = param.get('threshold', {})
-            self.low_crit.setValue(t.get('low_crit', 0))
-            self.low_warn.setValue(t.get('low_warn', 10))
-            self.high_warn.setValue(t.get('high_warn', 80))
-            self.high_crit.setValue(t.get('high_crit', 100))
-        
-        alarm_layout.addRow("Low Critical:", self.low_crit)
-        alarm_layout.addRow("Low Warning:", self.low_warn)
-        alarm_layout.addRow("High Warning:", self.high_warn)
-        alarm_layout.addRow("High Critical:", self.high_crit)
-        
-        # Add groups to main layout
-        main_layout.addWidget(basic_group)
-        main_layout.addWidget(mapping_group)
-        main_layout.addWidget(display_group)
-        main_layout.addWidget(alarm_group)
-        
-        # Buttons
+            t = param.get('threshold', {}); self.low_crit.setValue(t.get('low_crit', 0)); self.low_warn.setValue(t.get('low_warn', 10))
+            self.high_warn.setValue(t.get('high_warn', 80)); self.high_crit.setValue(t.get('high_crit', 100))
+        layout.addRow("ID (unique, no spaces):", self.id_edit); layout.addRow("Display Name:", self.name_edit)
+        layout.addRow("Array Index:", self.index_spin) # --- NEW ---
+        layout.addRow("Sensor Group (e.g. MPU6050):", self.group_edit)
+        layout.addRow("Unit:", self.unit_edit); layout.addRow("Description:", self.desc_edit); layout.addRow(QLabel("<b>Alarm Thresholds</b>"))
+        layout.addRow("Low Critical:", self.low_crit); layout.addRow("Low Warning:", self.low_warn); layout.addRow("High Warning:", self.high_warn); layout.addRow("High Critical:", self.high_crit)
         buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel)
-        buttons.button(QDialogButtonBox.StandardButton.Ok).setText("Save Parameter")
-        buttons.button(QDialogButtonBox.StandardButton.Cancel).setText("Cancel")
-        main_layout.addWidget(buttons)
-        
-        # Connect signals
-        buttons.accepted.connect(self.validate_and_accept)
-        buttons.rejected.connect(self.reject)
+        buttons.accepted.connect(self.validate_and_accept); buttons.rejected.connect(self.reject); layout.addWidget(buttons)
 
     def validate_and_accept(self):
         new_id = self.id_edit.text().strip()
@@ -631,33 +654,60 @@ class ParameterEntryDialog(QDialog):
         self.accept()
 
     def get_data(self):
-        # Extract color from combo box selection
-        color_text = self.color_combo.currentText()
-        color = None
-        if color_text != "Auto":
-            # Extract hex color from text like "Blue (#00BFFF)"
-            import re
-            match = re.search(r'#([A-Fa-f0-9]{6})', color_text)
-            if match:
-                color = '#' + match.group(1)
-        
-        return {
-            'id': self.id_edit.text().strip(),
-            'name': self.name_edit.text().strip(),
-            'array_index': self.index_spin.value(),
-            'sensor_group': self.group_edit.text().strip(),
-            'unit': self.unit_edit.text().strip(),
-            'description': self.desc_edit.text().strip(),
-            'color': color,
-            'decimals': self.decimals_spin.value(),
-            'threshold': {
-                'low_crit': self.low_crit.value(),
-                'low_warn': self.low_warn.value(),
-                'high_warn': self.high_warn.value(),
-                'high_crit': self.high_crit.value()
-            }
-        }
+        return {'id': self.id_edit.text().strip(), 'name': self.name_edit.text().strip(),
+                'array_index': self.index_spin.value(), # --- NEW ---
+                'sensor_group': self.group_edit.text().strip(), 'unit': self.unit_edit.text().strip(),
+                'description': self.desc_edit.text().strip(), 'threshold': {'low_crit': self.low_crit.value(), 'low_warn': self.low_warn.value(),
+                'high_warn': self.high_warn.value(), 'high_crit': self.high_crit.value()}}
 
+# --- MODIFIED: Added Array Index column ---
+class ManageParametersDialog(QDialog):
+    def __init__(self, parameters, parent=None):
+        super().__init__(parent); self.setWindowTitle("Manage Telemetry Parameters"); self.parameters = parameters; self.setMinimumSize(800, 400)
+        layout = QVBoxLayout(self)
+        self.table = QTableWidget()
+        self.table.setColumnCount(6); self.table.setHorizontalHeaderLabels(['ID', 'Name', 'Array Index', 'Sensor Group', 'Unit', 'Description'])
+        self.table.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
+        self.table.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers); self.refresh_table()
+        btn_layout = QHBoxLayout(); add_btn, edit_btn, remove_btn = QPushButton("Add..."), QPushButton("Edit..."), QPushButton("Remove")
+        add_btn.clicked.connect(self.add_parameter); edit_btn.clicked.connect(self.edit_parameter); remove_btn.clicked.connect(self.remove_parameter)
+        btn_layout.addWidget(add_btn); btn_layout.addWidget(edit_btn); btn_layout.addWidget(remove_btn)
+        buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Close); buttons.clicked.connect(self.accept)
+        layout.addWidget(self.table); layout.addLayout(btn_layout); layout.addWidget(buttons)
+
+    def refresh_table(self):
+        self.table.setRowCount(0)
+        for p in self.parameters:
+            row = self.table.rowCount(); self.table.insertRow(row)
+            self.table.setItem(row, 0, QTableWidgetItem(p['id']))
+            self.table.setItem(row, 1, QTableWidgetItem(p['name']))
+            self.table.setItem(row, 2, QTableWidgetItem(str(p.get('array_index', 'N/A')))) # --- NEW ---
+            self.table.setItem(row, 3, QTableWidgetItem(p.get('sensor_group', '')))
+            self.table.setItem(row, 4, QTableWidgetItem(p['unit']))
+            self.table.setItem(row, 5, QTableWidgetItem(p.get('description', '')))
+        self.table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
+
+    def add_parameter(self):
+        dialog = ParameterEntryDialog(existing_ids=[p['id'] for p in self.parameters], parent=self)
+        if dialog.exec() == QDialog.DialogCode.Accepted: self.parameters.append(dialog.get_data()); self.refresh_table()
+    def edit_parameter(self):
+        selected_rows = self.table.selectionModel().selectedRows()
+        if not selected_rows: return
+        param_id = self.table.item(selected_rows[0].row(), 0).text()
+        param_to_edit = next((p for p in self.parameters if p['id'] == param_id), None)
+        if param_to_edit:
+            dialog = ParameterEntryDialog(param=param_to_edit, parent=self)
+            if dialog.exec() == QDialog.DialogCode.Accepted:
+                updated_data = dialog.get_data()
+                for i, p in enumerate(self.parameters):
+                    if p['id'] == param_id: self.parameters[i] = updated_data; break
+                self.refresh_table()
+    def remove_parameter(self):
+        selected_rows = self.table.selectionModel().selectedRows()
+        if not selected_rows: return
+        param_id = self.table.item(selected_rows[0].row(), 0).text()
+        self.parameters[:] = [p for p in self.parameters if p['id'] != param_id]
+        self.refresh_table()
 
 class ManageParametersDialog(QDialog):
     def __init__(self, parameters, parent=None):

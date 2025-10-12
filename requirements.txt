@@ -3,3 +3,4 @@ pyqtgraph
 numpy
 pyserial
 reportlab
+PyQt6-WebEngine
