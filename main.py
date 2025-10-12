@@ -82,7 +82,7 @@ import numpy as np
 from backend import DataReader
 from app.widgets import ValueCard, TimeGraph, LogTable, GaugeWidget, HistogramWidget, LEDWidget, MapWidget
 from app.dialogs import ConnectionSettingsDialog, AddWidgetDialog, ParameterEntryDialog, ManageParametersDialog, DataLoggingDialog
-from app.simulator import DataSimulator
+
 try:
     from serial.tools import list_ports as _serial_list_ports  # type: ignore
 except Exception:
