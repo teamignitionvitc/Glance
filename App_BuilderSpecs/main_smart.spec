@@ -9,7 +9,6 @@ a = Analysis(
     datas=[
         ('public', 'public'), 
         ('Documentation', 'Documentation')
-        ('docs/public/Glance_nobg.png', 'docs/public')
     ],
     hiddenimports=[
         'serial.tools.list_ports',

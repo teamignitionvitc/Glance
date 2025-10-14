@@ -4531,7 +4531,8 @@ class MainWindow(QMainWindow):
         team_layout = QVBoxLayout(team_card); team_layout.setSpacing(8)
         team_header_layout = QHBoxLayout(); team_title = QLabel("About Team Ignition"); team_title.setObjectName("cardTitle")
         team_logo = QLabel()
-        logo_path = os.path.join("docs/public", "ign_logo_wht.png")
+        base_path = getattr(sys, '_MEIPASS', os.path.dirname(os.path.abspath(__file__)))
+        logo_path = os.path.join(base_path, "docs", "public", "ign_logo_wht.png")
         if os.path.exists(logo_path):
             pixmap = QPixmap(logo_path)
             scaled_pixmap = pixmap.scaled(50, 50, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation)
