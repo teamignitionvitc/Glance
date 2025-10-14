@@ -4947,7 +4947,10 @@ class MainWindow(QMainWindow):
         try:
             from PySide6.QtGui import QPixmap
             logo = QLabel("")
-            pix = QPixmap("docs/public/Glance_nobg.png")
+            base_path = getattr(sys, '_MEIPASS', os.path.dirname(os.path.abspath(__file__)))
+            image_path = os.path.join(base_path, "docs", "public", "Glance_nobg.png")
+            pix = QPixmap(image_path)
+
             if not pix.isNull():
                 logo.setPixmap(pix.scaledToWidth(300, Qt.TransformationMode.SmoothTransformation))
                 logo.setAlignment(Qt.AlignmentFlag.AlignCenter)
