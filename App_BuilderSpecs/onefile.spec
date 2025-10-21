@@ -10,8 +10,8 @@ block_cipher = None
 SPEC_DIR = os.getcwd()  # PyInstaller executes the spec with cwd set to the project root
 REPO_ROOT = os.path.abspath(os.path.join(SPEC_DIR, '.'))
 MAIN_PY = os.path.join(REPO_ROOT, 'main.py')
-ICON_PATH = os.path.abspath(os.path.join(REPO_ROOT, 'dist', 'Glance_nobg_jl.ico'))
-
+ICON_PATH = os.path.abspath(os.path.join(REPO_ROOT, 'docs', 'public', 'Glance_nobg_jl.ico'))
+    
 # Minimal one-file spec for Glance
 hiddenimports = [
     'serial.tools.list_ports',
@@ -57,8 +57,8 @@ exe = EXE(
     strip=False,
     upx=True,
     console=False,
-    icon=ICON_PATH if os.path.exists(ICON_PATH) else None
+    icon=ICON_PATH
 )
 
 # One-file build
-coll = COLLECT(exe, a.binaries, a.zipfiles, a.datas, strip=False, upx=True, name='Glance')
+coll = COLLECT(exe, a.binaries, a.zipfiles, a.datas, strip=False, upx=False, name='Glance')
