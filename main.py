@@ -1951,14 +1951,14 @@ class MainWindow(QMainWindow):
                 widget.setMinimumSize(400, 300)
             elif hasattr(widget, 'table'):  # For tables
                 widget.setMinimumSize(500, 300)
-            dock = QDockWidget(f"{widget_title} ({config['displayType']})", self)
+            tab_mainwindow = tab_info['mainwindow']
+            dock = QDockWidget(f"{widget_title} ({config['displayType']})", tab_mainwindow)
             dock.setObjectName(f"dock_{widget_id}")  # Set unique object name
             dock.setWidget(widget)
             dock.setMinimumSize(300, 200)
             # Add right-click context menu
             dock.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
             dock.customContextMenuRequested.connect(lambda pos: self._show_dock_context_menu(dock, pos))
-            tab_mainwindow = tab_info['mainwindow']
             num_docks = len(tab_info['docks'])
             docks_list = list(tab_info['docks'].values())
             if num_docks == 0:
@@ -2131,28 +2131,130 @@ class MainWindow(QMainWindow):
     def _retile_positions(self, tab_index):
         """Retile docks based on saved positions (row, col) without changing assignments."""
         tab_info = self.tab_data.get(tab_index)
-        if not tab_info: return
-        docks = tab_info['docks']; positions = tab_info.get('layout_positions', {})
-        if not docks: return
-        # Order docks by row-major
-        ordered = sorted(positions.items(), key=lambda x: (x[1][0], x[1][1]))
-        dock_list = [docks[wid] for wid, _ in ordered]
+        if not tab_info: 
+            return
+        docks = tab_info['docks']
+        positions = tab_info.get('layout_positions', {})
+        if not docks: 
+            return
+        
+        # Filter out floating docks - they shouldn't be retiled
+        non_floating_docks = {}
+        floating_docks = {}
+        
+        for widget_id, dock in docks.items():
+            if dock.isFloating():
+                floating_docks[widget_id] = dock
+            else:
+                non_floating_docks[widget_id] = dock
+        
+        # Only retile non-floating docks
+        if not non_floating_docks:
+            return
+            
+        # Create positions for non-floating docks only
+        non_floating_positions = {wid: pos for wid, pos in positions.items() if wid in non_floating_docks}
+        
+        # If no positions saved, create a default grid layout
+        if not non_floating_positions:
+            self._create_default_grid_positions(non_floating_docks, tab_index)
+            non_floating_positions = tab_info.get('layout_positions', {})
+        
+        # Order docks by row-major order
+        ordered = sorted(non_floating_positions.items(), key=lambda x: (x[1][0], x[1][1]))
+        dock_list = [non_floating_docks[wid] for wid, _ in ordered if wid in non_floating_docks]
+        
+        if not dock_list:
+            return
+            
         mw = tab_info['mainwindow']
+        
         try:
-            for d in dock_list:
-                mw.removeDockWidget(d)
+            # Remove all non-floating docks from layout
+            for dock in dock_list:
+                mw.removeDockWidget(dock)
+            
+            # Add first dock
             mw.addDockWidget(Qt.DockWidgetArea.LeftDockWidgetArea, dock_list[0])
-            cols = max(1, len(set(c for _, (_, c) in positions.items())))
-            for i, d in enumerate(dock_list[1:], 1):
-                if i % cols != 0:
-                    mw.splitDockWidget(dock_list[i - 1], d, Qt.Orientation.Horizontal)
+            dock_list[0].setVisible(True)
+            dock_list[0].raise_()
+            
+            # Calculate grid dimensions dynamically
+            if len(dock_list) == 1:
+                return
+                
+            # Calculate optimal grid dimensions
+            n = len(dock_list)
+            cols = max(1, len(set(c for _, (_, c) in non_floating_positions.items())))
+            rows = max(1, len(set(r for _, (r, _) in non_floating_positions.items())))
+            
+            # Ensure we have a reasonable grid
+            if cols == 0:
+                cols = int(np.ceil(np.sqrt(n)))
+            if rows == 0:
+                rows = int(np.ceil(n / cols))
+            
+            # Create grid layout dynamically
+            for i, dock in enumerate(dock_list[1:], 1):
+                row = i // cols
+                col = i % cols
+                
+                if col == 0:
+                    # First column of new row - split vertically with dock above
+                    above_idx = i - cols
+                    if above_idx >= 0 and above_idx < len(dock_list):
+                        mw.splitDockWidget(dock_list[above_idx], dock, Qt.Orientation.Vertical)
                 else:
-                    above = dock_list[i - cols]
-                    mw.splitDockWidget(above, d, Qt.Orientation.Vertical)
-        except Exception:
-            # Fallback to tabify
-            for d in dock_list[1:]:
-                mw.tabifyDockWidget(dock_list[0], d)
+                    # Same row - split horizontally with previous dock
+                    mw.splitDockWidget(dock_list[i - 1], dock, Qt.Orientation.Horizontal)
+                
+                dock.setVisible(True)
+                dock.raise_()
+            
+            # Ensure all docks are visible and properly positioned
+            for dock in dock_list:
+                dock.setVisible(True)
+                dock.raise_()
+            
+            # Force layout update
+            mw.update()
+            QApplication.processEvents()
+            
+        except Exception as e:
+            print(f"Retiling failed: {e}")
+            # Fallback to tabify all docks
+            try:
+                for dock in dock_list[1:]:
+                    mw.tabifyDockWidget(dock_list[0], dock)
+                    dock.setVisible(True)
+            except Exception as e2:
+                print(f"Fallback tabify also failed: {e2}")
+                # Last resort - just make sure docks are visible
+                for dock in dock_list:
+                    dock.setVisible(True)
+                    dock.show()
+
+    def _create_default_grid_positions(self, docks_dict, tab_index):
+        """Create default grid positions for docks that don't have saved positions."""
+        tab_info = self.tab_data.get(tab_index)
+        if not tab_info:
+            return
+            
+        positions = tab_info.setdefault('layout_positions', {})
+        n = len(docks_dict)
+        
+        if n == 0:
+            return
+            
+        # Calculate optimal grid dimensions
+        cols = int(np.ceil(np.sqrt(n)))
+        rows = int(np.ceil(n / cols))
+        
+        # Assign positions in row-major order
+        for i, widget_id in enumerate(docks_dict.keys()):
+            row = i // cols
+            col = i % cols
+            positions[widget_id] = (row, col)
 
     def _rename_widget(self, widget_id):
         """Rename a widget"""
@@ -2200,16 +2302,27 @@ class MainWindow(QMainWindow):
             dock.setWindowTitle(new_name)
 
     def _toggle_float_direct(self):
-        """Toggle float for the dock that was right-clicked"""
-        if not hasattr(self, '_context_dock'): return
+        """Toggle float for the dock that was right-clicked with improved snapping back behavior"""
+        if not hasattr(self, '_context_dock'): 
+            return
         dock = self._context_dock
-        dock.setFloating(not dock.isFloating())
+        
         if dock.isFloating():
+            # Snapping back to docked state
+            dock.setFloating(False)
+            dock.setVisible(True)
+            dock.show()
+            
+            # Trigger retiling to ensure proper positioning
+            self._retile_positions(self.tab_widget.currentIndex())
+        else:
+            # Floating the widget
+            dock.setFloating(True)
             dock.raise_()
             dock.activateWindow()
 
     def _tile_evenly_safe(self, tab_index):
-        """Safely tile widgets in a grid pattern"""
+        """Safely tile widgets in a grid pattern - handles any number of widgets dynamically"""
         tab_info = self.tab_data.get(tab_index)
         if not tab_info or not tab_info.get('docks'): 
             return
@@ -2223,9 +2336,10 @@ class MainWindow(QMainWindow):
         mainwindow = tab_info['mainwindow']
         
         try:
-            # Calculate grid dimensions
+            # Calculate optimal grid dimensions dynamically
             n = len(docks)
             cols = int(np.ceil(np.sqrt(n)))
+            rows = int(np.ceil(n / cols))
             
             # Store visibility and floating state
             dock_states = {}
@@ -2247,33 +2361,29 @@ class MainWindow(QMainWindow):
             docks[0].setVisible(True)
             docks[0].raise_()
             
-            # Tile based on count
-            if n == 2:
-                mainwindow.splitDockWidget(docks[0], docks[1], Qt.Orientation.Horizontal)
-                docks[1].setVisible(True)
-            elif n == 3:
-                mainwindow.splitDockWidget(docks[0], docks[1], Qt.Orientation.Horizontal)
-                mainwindow.splitDockWidget(docks[0], docks[2], Qt.Orientation.Vertical)
-                docks[1].setVisible(True)
-                docks[2].setVisible(True)
-            elif n == 4:
-                mainwindow.splitDockWidget(docks[0], docks[1], Qt.Orientation.Horizontal)
-                mainwindow.splitDockWidget(docks[0], docks[2], Qt.Orientation.Vertical)
-                mainwindow.splitDockWidget(docks[1], docks[3], Qt.Orientation.Vertical)
-                for dock in docks[1:4]:
-                    dock.setVisible(True)
-            else:
-                # More than 4: create grid
-                for i, dock in enumerate(docks[1:], 1):
-                    if i < cols:
-                        # First row: horizontal split
-                        mainwindow.splitDockWidget(docks[0], dock, Qt.Orientation.Horizontal)
-                    else:
-                        # Subsequent rows: vertical split with dock above
-                        above_idx = i - cols
-                        if 0 <= above_idx < len(docks):
-                            mainwindow.splitDockWidget(docks[above_idx], dock, Qt.Orientation.Vertical)
-                    dock.setVisible(True)
+            # Create grid layout dynamically for any number of widgets
+            for i, dock in enumerate(docks[1:], 1):
+                row = i // cols
+                col = i % cols
+                
+                if col == 0:
+                    # First column of new row - split vertically with dock above
+                    above_idx = i - cols
+                    if above_idx >= 0 and above_idx < len(docks):
+                        mainwindow.splitDockWidget(docks[above_idx], dock, Qt.Orientation.Vertical)
+                else:
+                    # Same row - split horizontally with previous dock
+                    mainwindow.splitDockWidget(docks[i - 1], dock, Qt.Orientation.Horizontal)
+                
+                dock.setVisible(True)
+                dock.raise_()
+            
+            # Update layout positions for future retiling
+            positions = tab_info.setdefault('layout_positions', {})
+            for i, (widget_id, dock) in enumerate(docks_dict.items()):
+                row = i // cols
+                col = i % cols
+                positions[widget_id] = (row, col)
             
             # Ensure all docks are visible and raised
             for dock in docks:
@@ -2290,22 +2400,36 @@ class MainWindow(QMainWindow):
             import traceback
             traceback.print_exc()
             
-            for dock in docks:
-                try:
+            # Try to recover by making docks visible
+            try:
+                for dock in docks:
                     if not dock.parent():
                         mainwindow.addDockWidget(Qt.DockWidgetArea.LeftDockWidgetArea, dock)
                     dock.setVisible(True)
                     dock.show()
-                except Exception as e2:
-                    print(f"Failed to recover dock: {e2}")
+            except Exception as e2:
+                print(f"Failed to recover dock: {e2}")
 
     def _toggle_float_widget(self, widget_id):
+        """Toggle float for a widget with improved snapping back behavior"""
         tab_info = self.tab_data.get(self.tab_widget.currentIndex())
-        if not tab_info or widget_id not in tab_info['docks']: return
+        if not tab_info or widget_id not in tab_info['docks']: 
+            return
         dock = tab_info['docks'][widget_id]
-        dock.setFloating(not dock.isFloating())
+        
         if dock.isFloating():
-            dock.raise_(); dock.activateWindow()
+            # Snapping back to docked state
+            dock.setFloating(False)
+            dock.setVisible(True)
+            dock.show()
+            
+            # Trigger retiling to ensure proper positioning
+            self._retile_positions(self.tab_widget.currentIndex())
+        else:
+            # Floating the widget
+            dock.setFloating(True)
+            dock.raise_()
+            dock.activateWindow()
 
     def _toggle_maximize_widget(self, widget_id):
         tab_info = self.tab_data.get(self.tab_widget.currentIndex())
@@ -2375,15 +2499,84 @@ class MainWindow(QMainWindow):
         self._normalize_positions(positions)
         self._retile_positions(tab_index)
 
+    def _handle_dock_snapping(self, dock):
+        """Handle automatic snapping back when dock is dragged close to main window"""
+        if not dock.isFloating():
+            return
+            
+        # Get the main window geometry
+        main_window = self.geometry()
+        dock_geometry = dock.geometry()
+        
+        # Define snap threshold (pixels)
+        snap_threshold = 50
+        
+        # Check if dock is close to main window edges
+        dock_left = dock_geometry.left()
+        dock_right = dock_geometry.right()
+        dock_top = dock_geometry.top()
+        dock_bottom = dock_geometry.bottom()
+        
+        main_left = main_window.left()
+        main_right = main_window.right()
+        main_top = main_window.top()
+        main_bottom = main_window.bottom()
+        
+        # Check for proximity to main window
+        close_to_left = abs(dock_right - main_left) < snap_threshold
+        close_to_right = abs(dock_left - main_right) < snap_threshold
+        close_to_top = abs(dock_bottom - main_top) < snap_threshold
+        close_to_bottom = abs(dock_top - main_bottom) < snap_threshold
+        
+        # Check if dock is overlapping with main window
+        overlapping = (dock_left < main_right and dock_right > main_left and 
+                     dock_top < main_bottom and dock_bottom > main_top)
+        
+        # If dock is close to or overlapping with main window, snap it back
+        if (close_to_left or close_to_right or close_to_top or close_to_bottom or overlapping):
+            dock.setFloating(False)
+            dock.setVisible(True)
+            dock.show()
+            
+            # Trigger retiling to ensure proper positioning
+            self._retile_positions(self.tab_widget.currentIndex())
+
     def _normalize_positions(self, positions):
-        """Compress rows/cols to remove gaps after moves/closures."""
-        if not positions: return
-        rows = sorted(set(r for (r, c) in positions.values()))
-        cols = sorted(set(c for (r, c) in positions.values()))
+        """Compress rows/cols to remove gaps after moves/closures with improved robustness."""
+        if not positions: 
+            return
+            
+        # Handle empty positions gracefully
+        if not positions.values():
+            return
+            
+        # Extract all unique rows and columns
+        rows = sorted(set(r for (r, c) in positions.values() if isinstance(r, (int, float))))
+        cols = sorted(set(c for (r, c) in positions.values() if isinstance(c, (int, float))))
+        
+        # Handle edge cases
+        if not rows or not cols:
+            return
+            
+        # Create mapping to compact grid (starting from 0)
         row_map = {r: i for i, r in enumerate(rows)}
         col_map = {c: i for i, c in enumerate(cols)}
+        
+        # Update positions with normalized coordinates
         for wid, (r, c) in list(positions.items()):
-            positions[wid] = (row_map[r], col_map[c])
+            if isinstance(r, (int, float)) and isinstance(c, (int, float)):
+                if r in row_map and c in col_map:
+                    positions[wid] = (row_map[r], col_map[c])
+                else:
+                    # Handle invalid positions by placing at (0, 0)
+                    positions[wid] = (0, 0)
+            else:
+                # Handle non-numeric positions
+                positions[wid] = (0, 0)
+        
+        # Ensure all positions are valid integers
+        for wid, (r, c) in list(positions.items()):
+            positions[wid] = (int(r), int(c))
 
     # --- HEAVILY MODIFIED: Core logic now processes an array, not a dict ---
     def update_data(self, packet: list):
@@ -3017,6 +3210,8 @@ class MainWindow(QMainWindow):
             if not ok or not name: return
         tab_main_window = QMainWindow()
         tab_main_window.setDockNestingEnabled(True)
+        # Ensure proper dock widget area setup
+        tab_main_window.setCentralWidget(None)  # Clear any central widget
         tab_index = self.tab_widget.addTab(tab_main_window, name)
         self.tab_data[tab_index] = {
             'mainwindow': tab_main_window, 
@@ -3024,7 +3219,8 @@ class MainWindow(QMainWindow):
             'docks': {}, 
             'configs': {},
             'is_floating': False,
-            'floating_window': None
+            'floating_window': None,
+            'layout_positions': {}  # Initialize layout positions
         }
         if not is_closable:
             self.tab_widget.tabBar().setTabButton(tab_index, QTabBar.ButtonPosition.RightSide, None)
@@ -3702,23 +3898,39 @@ class MainWindow(QMainWindow):
             from PySide6.QtCore import QTimer
             
             def restore_dock_states():
-                for widget_id, pos_info in explicit_layout['positions'].items():
-                    if widget_id not in tab_info['docks']:
-                        continue
-                    
-                    dock = tab_info['docks'][widget_id]
-                    
-                    # Restore floating and geometry
-                    if pos_info['floating']:
-                        dock.setFloating(True)
-                        geom = pos_info['geometry']
-                        dock.setGeometry(geom['x'], geom['y'], geom['width'], geom['height'])
-                    
-                    # Restore visibility
-                    dock.setVisible(pos_info.get('visible', True))
+                try:
+                    for widget_id, pos_info in explicit_layout['positions'].items():
+                        if widget_id not in tab_info['docks']:
+                            continue
+                        
+                        dock = tab_info['docks'][widget_id]
+                        
+                        # Ensure dock is visible first
+                        dock.setVisible(True)
+                        
+                        # Restore floating and geometry
+                        if pos_info.get('floating', False):
+                            dock.setFloating(True)
+                            geom = pos_info.get('geometry', {})
+                            if geom:
+                                dock.setGeometry(
+                                    geom.get('x', 100), 
+                                    geom.get('y', 100), 
+                                    geom.get('width', 400), 
+                                    geom.get('height', 300)
+                                )
+                        else:
+                            dock.setFloating(False)
+                        
+                        # Ensure dock is raised and visible
+                        dock.show()
+                        dock.raise_()
+                        
+                except Exception as e:
+                    print(f"Error restoring dock states for tab {tab_index}: {e}")
             
-            # Delay to let Qt finish initial layout
-            QTimer.singleShot(200, restore_dock_states)
+            # Delay to let Qt finish initial layout and state restoration
+            QTimer.singleShot(300, restore_dock_states)
 
     def load_project(self):
         """Load project with improved functionality"""
@@ -3784,20 +3996,46 @@ class MainWindow(QMainWindow):
                 self.close_tab(0)
             
             # Load layout data
-            # Load layout data
             layout_data = project_data.get('layout', {})
             for tab_name, tab_layout_data in layout_data.items():
                 index = self.add_new_tab(name=tab_name)
+                
+                # Add all widgets first
                 for widget_id, config in tab_layout_data.get('configs', {}).items():
                     self.add_widget_to_dashboard(config, index, widget_id)
                 
-                # First try Qt's built-in state restoration
-                state_data = base64.b64decode(tab_layout_data['state'])
-                self.tab_data[index]['mainwindow'].restoreState(QByteArray(state_data))
+                # Use QTimer to ensure proper timing for state restoration
+                from PySide6.QtCore import QTimer
                 
-                # Then apply explicit layout restoration for better accuracy
-                if 'explicit_layout' in tab_layout_data:
-                    self._restore_tab_layout_explicit(index, tab_layout_data['explicit_layout'])
+                def restore_tab_state(tab_idx, state_bytes, explicit_layout_data):
+                    def delayed_restore():
+                        try:
+                            # First restore Qt's built-in state
+                            if state_bytes:
+                                self.tab_data[tab_idx]['mainwindow'].restoreState(QByteArray(state_bytes))
+                            
+                            # Then apply explicit layout restoration for better accuracy
+                            if explicit_layout_data:
+                                self._restore_tab_layout_explicit(tab_idx, explicit_layout_data)
+                                
+                            # Ensure all docks are visible
+                            tab_info = self.tab_data.get(tab_idx)
+                            if tab_info:
+                                for dock in tab_info['docks'].values():
+                                    dock.show()
+                                    dock.raise_()
+                        except Exception as e:
+                            print(f"Error restoring tab {tab_idx}: {e}")
+                    
+                    # Delay restoration to let Qt finish widget creation
+                    QTimer.singleShot(100, delayed_restore)
+                
+                # Prepare state data
+                state_data = base64.b64decode(tab_layout_data['state']) if tab_layout_data.get('state') else None
+                explicit_layout = tab_layout_data.get('explicit_layout')
+                
+                # Schedule restoration
+                restore_tab_state(index, state_data, explicit_layout)
             
             self.current_project_path = path
             self.mark_as_saved()
