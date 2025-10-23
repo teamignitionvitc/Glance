@@ -3716,6 +3716,11 @@ class MainWindow(QMainWindow):
                     
                     # Restore visibility
                     dock.setVisible(pos_info.get('visible', True))
+                    
+                    # Ensure dock features are properly enabled for resizing
+                    dock.setFeatures(QDockWidget.DockWidgetFeature.DockWidgetMovable | 
+                                   QDockWidget.DockWidgetFeature.DockWidgetFloatable | 
+                                   QDockWidget.DockWidgetFeature.DockWidgetClosable)
             
             # Delay to let Qt finish initial layout
             QTimer.singleShot(200, restore_dock_states)
