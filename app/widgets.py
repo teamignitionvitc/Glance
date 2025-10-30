@@ -55,9 +55,9 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 
 
-from PySide6.QtWidgets import QWidget, QVBoxLayout, QFrame, QLabel, QTableWidget, QHeaderView, QAbstractItemView, QGroupBox, QHBoxLayout, QTableWidgetItem, QComboBox, QPushButton, QApplication, QMessageBox, QDoubleSpinBox
+from PySide6.QtWidgets import QWidget, QVBoxLayout, QFrame, QLabel, QTableWidget, QHeaderView, QAbstractItemView, QGroupBox, QHBoxLayout, QTableWidgetItem, QComboBox, QPushButton, QApplication, QMessageBox, QDoubleSpinBox, QDockWidget
 from PySide6.QtGui import QFont, QColor, QBrush
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, Signal
 import time
 import math
 import numpy as np
@@ -68,6 +68,21 @@ try:
     from PySide6.QtWebEngineWidgets import QWebEngineView  # type: ignore
 except Exception:
     QWebEngineView = None
+
+class ClosableDock(QDockWidget):
+    """Custom QDockWidget that emits a signal only when the close button is clicked."""
+    closed = Signal(str)# will emit the widget_id when closed
+
+    def __init__(self, title, parent=None, widget_id=None):
+        super().__init__(title, parent)
+        self.widget_id = widget_id
+
+    def closeEvent(self, event):
+        """Emit the closed signal only when the dock's X button is clicked."""
+        if self.widget_id is not None:
+            self.closed.emit(self.widget_id)
+        event.accept()
+
 
 class ValueCard(QFrame):
     def __init__(self, param_name, unit, priority):

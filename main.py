@@ -82,6 +82,8 @@ import numpy as np
 from backend import DataReader
 from app.widgets import ValueCard, TimeGraph, LogTable, GaugeWidget, HistogramWidget, LEDWidget, MapWidget
 from app.dialogs import ConnectionSettingsDialog, AddWidgetDialog, ParameterEntryDialog, ManageParametersDialog, DataLoggingDialog
+from app.widgets import ClosableDock
+
 
 try:
     from serial.tools import list_ports as _serial_list_ports  # type: ignore
@@ -1951,13 +1953,20 @@ class MainWindow(QMainWindow):
                 widget.setMinimumSize(400, 300)
             elif hasattr(widget, 'table'):  # For tables
                 widget.setMinimumSize(500, 300)
-            dock = QDockWidget(f"{widget_title} ({config['displayType']})", self)
+            dock = ClosableDock(f"{widget_title} ({config['displayType']})", self, widget_id)
             dock.setObjectName(f"dock_{widget_id}")  # Set unique object name
             dock.setWidget(widget)
+
+            dock.setFeatures(QDockWidget.DockWidgetFeature.DockWidgetClosable |
+                 QDockWidget.DockWidgetFeature.DockWidgetMovable |
+                 QDockWidget.DockWidgetFeature.DockWidgetFloatable)
+
             dock.setMinimumSize(300, 200)
             # Add right-click context menu
             dock.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
             dock.customContextMenuRequested.connect(lambda pos: self._show_dock_context_menu(dock, pos))
+            dock.closed.connect(self._handle_dock_close)
+
             tab_mainwindow = tab_info['mainwindow']
             num_docks = len(tab_info['docks'])
             docks_list = list(tab_info['docks'].values())
@@ -2481,6 +2490,30 @@ class MainWindow(QMainWindow):
         QTimer.singleShot(500, self.update_connection_status)
 
     # --- All other MainWindow methods are unchanged ---
+
+    def _handle_dock_close(self, widget_id):
+        #Called when the dock is closed using the title bar button
+        index = self.tab_widget.currentIndex()
+        if index < 0:
+            return
+
+        tab_info = self.tab_data.get(index)
+        if not tab_info:
+            return
+
+        if widget_id in tab_info['docks']:
+            tab_info['docks'][widget_id].deleteLater()
+            del tab_info['docks'][widget_id]
+        if widget_id in tab_info['widgets']:
+            del tab_info['widgets'][widget_id]
+        if widget_id in tab_info['configs']:
+            del tab_info['configs'][widget_id]
+        if 'layout_positions' in tab_info and widget_id in tab_info['layout_positions']:
+            del tab_info['layout_positions'][widget_id]
+
+        self.refresh_active_displays_list()
+        self.mark_as_unsaved()
+
     def open_add_widget_dialog(self):
         index = self.tab_widget.currentIndex()
         if index < 0: QMessageBox.warning(self, "No Tab", "No active tab to add a widget to."); return
