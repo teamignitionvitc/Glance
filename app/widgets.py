@@ -78,7 +78,7 @@ class ClosableDock(QDockWidget):
         self.widget_id = widget_id
 
     def closeEvent(self, event):
-        """Emit the closed signal only when the dock's X button is clicked."""
+        #Emit the closed signal only when the dock's X button is clicked.
         if self.widget_id is not None:
             self.closed.emit(self.widget_id)
         event.accept()
