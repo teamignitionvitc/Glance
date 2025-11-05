@@ -57,7 +57,8 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 from PySide6.QtWidgets import QWidget, QVBoxLayout, QFrame, QLabel, QTableWidget, QHeaderView, QAbstractItemView, QGroupBox, QHBoxLayout, QTableWidgetItem, QComboBox, QPushButton, QApplication, QMessageBox, QDoubleSpinBox, QDockWidget
 from PySide6.QtGui import QFont, QColor, QBrush
-from PySide6.QtCore import Qt, Signal
+from PySide6.QtNetwork import QNetworkAccessManager, QNetworkRequest
+from PySide6.QtCore import Qt, Signal, QUrl
 import time
 import math
 import numpy as np
@@ -672,8 +673,39 @@ class MapWidget(QWidget):
                 </body>
                 </html>
                 """
-            from PySide6.QtCore import QUrl
+            from PySide6.QtCore import QUrl,QTimer
             self.web.setHtml(html, baseUrl=QUrl("https://local/"))
+
+            def verify_leaflet_loaded():
+                if not self.web:
+                    return
+                try:
+                    # Run JS: returns true if Leaflet is loaded
+                    self.web.page().runJavaScript("typeof L !== 'undefined';", handle_leaflet_check)
+                except Exception:
+                    show_offline_message()
+
+            def handle_leaflet_check(result):
+                if result is not True:
+                    show_offline_message()
+
+            def show_offline_message():
+                if not self.web:
+                    return
+                offline_html = """
+                <html>
+                <body style='background:#1e1e1e;color:#ff6666;
+                font-family:sans-serif;text-align:center;padding:50px;'>
+                Unable to load map.<br>
+                Please check your internet connection.
+                </body>
+                </html>
+                """
+                self.web.setHtml(offline_html)
+
+            # Check after 3 seconds (gives JS time to load)
+            QTimer.singleShot(3000, verify_leaflet_loaded)
+
             # Hide the top coords label when web map is available
             self.coords_label.setVisible(False)
             # Prepare throttled updates every 10 seconds
