@@ -57,8 +57,8 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 from PySide6.QtWidgets import QWidget, QVBoxLayout, QFrame, QLabel, QTableWidget, QHeaderView, QAbstractItemView, QGroupBox, QHBoxLayout, QTableWidgetItem, QComboBox, QPushButton, QApplication, QMessageBox, QDoubleSpinBox, QDockWidget
 from PySide6.QtGui import QFont, QColor, QBrush
-from PySide6.QtNetwork import QNetworkAccessManager, QNetworkRequest
-from PySide6.QtCore import Qt, Signal, QUrl
+from PySide6.QtNetwork import QNetworkAccessManager, QNetworkRequest, QNetworkReply
+from PySide6.QtCore import Qt, Signal, QUrl,QTimer
 import time
 import math
 import numpy as np
@@ -522,6 +522,7 @@ try:
 except Exception:
     QWebEngineView = None
 
+
 class MapWidget(QWidget):
     def __init__(self, param_configs):
         super().__init__()
@@ -531,30 +532,53 @@ class MapWidget(QWidget):
             lay = QVBoxLayout(self)
             lay.addWidget(lbl)
             return
-        
+
         self.lat_id = param_configs[0]['id']
         self.lon_id = param_configs[1]['id']
         layout = QVBoxLayout(self)
         layout.setContentsMargins(16, 16, 16, 16)
         layout.setSpacing(8)
-        
-        # Clean parameter names
-        lat_name = param_configs[0]['name'].replace('GPS(', '').replace(')', '') if param_configs[0]['name'].startswith('GPS(') else param_configs[0]['name']
-        lon_name = param_configs[1]['name'].replace('GPS(', '').replace(')', '') if param_configs[1]['name'].startswith('GPS(') else param_configs[1]['name']
-        
-        # Coordinates display (top label hidden when web map is available)
+
+        # Clean parameter names (kept if you want to show them somewhere)
+        lat_name = param_configs[0]['name'].replace('GPS(', '').replace(')', '') \
+            if param_configs[0]['name'].startswith('GPS(') else param_configs[0]['name']
+        lon_name = param_configs[1]['name'].replace('GPS(', '').replace(')', '') \
+            if param_configs[1]['name'].startswith('GPS(') else param_configs[1]['name']
+
+        # Coordinates display (hidden when web map is available)
         self.coords_label = QLabel("No GPS data")
         self.coords_label.setFont(QFont("Monospace", 10))
         self.coords_label.setStyleSheet("color: #aaaaaa; padding: 4px;")
         self.coords_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        
-        # Map widget
+        self.coords_label.hide() 
+
+        self._last_lat = None
+        self._last_lon = None
+        self._last_sent_lat = None
+        self._last_sent_lon = None
+
+        # --- NEW: online state + network manager for periodic checks ---
+        self._online = None  # None = unknown, True/False once determined
+        self._nam = QNetworkAccessManager(self)
+        self._net_reply = None
+
         if QWebEngineView:
             self.web = QWebEngineView()
             self.web.setMinimumHeight(200)
             layout.addWidget(self.web)
-            # Embed a lightweight Leaflet map using OSM tiles, with a rocket emoji marker
-            html = """
+
+            # Factor the HTML into a method so we can reload it on reconnect
+            self._offline_html = """
+            <html>
+            <body style='background:#1e1e1e;color:#ff6666;
+            font-family:sans-serif;text-align:center;padding:50px;'>
+            Unable to load map.<br>
+            Please check your internet connection.
+            </body>
+            </html>
+            """
+
+            self._map_html = """
                 <!DOCTYPE html>
                 <html>
                 <head>
@@ -567,182 +591,218 @@ class MapWidget(QWidget):
                   .leaflet-container { background: #1e1e1e; }
                   .rocket-icon { font-size: 28px; line-height: 28px; }
                   .rocket-icon span { filter: drop-shadow(0 0 2px #000); }
-                    /* Make attribution minimally obtrusive while still visible */
-                    .leaflet-control-attribution {
-                      font-size: 10px;
-                      opacity: 0.35;
-                      background: rgba(0,0,0,0.25);
-                      color: #ddd;
-                    }
-                    .leaflet-control-attribution:hover { opacity: 0.85; }
-                    /* Style for custom magnifier control */
-                    .leaflet-bar a.magnifier-btn {
-                      font-size: 16px;
-                      line-height: 26px;
-                      text-align: center;
-                      width: 26px;
-                      height: 26px;
-                      display: block;
-                      text-decoration: none;
-                      background: #fff;
-                      color: #000;
-                    }
-                    .leaflet-bar a.magnifier-btn:hover { background: #f4f4f4; }
-  /* Bottom-left overlay for coordinates */
-  #coordsOverlay {
-    position: absolute;
-    bottom: 8px;
-    left: 8px;
-    z-index: 1000;
-    background: rgba(0, 0, 0, 0.55);
-    color: #eee;
-    padding: 4px 8px;
-    border-radius: 6px;
-    font-family: monospace;
-    font-size: 12px;
-    pointer-events: none;
-  }
-                                  </style>
-                                  <title>Map</title>
-                                  <meta name="referrer" content="no-referrer">
-                                  </head>
-                                  <body>
-                <div id="map"></div>
-                <div id="coordsOverlay">Lat: ---, Lon: ---</div>
-                                  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
-                                    integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
-                                  <script>
-                                    const initialLat = 0, initialLon = 0, initialZoom = 2;
-                                    const map = L.map('map', { zoomControl: true }).setView([initialLat, initialLon], initialZoom);
-                                    // Esri World Imagery (satellite) tiles - no API key required
-                                    const tiles = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
-                                      maxZoom: 19,
-                                      maxNativeZoom: 19,
-                                      attribution: 'Tiles &copy; Esri — Source: Esri, Maxar, Earthstar Geographics, and the GIS User Community'
-                                    });
-                                    tiles.addTo(map);
-                                    // Prevent over-zooming beyond available data
-                  const maxAvailableZoom = tiles.options.maxNativeZoom || tiles.options.maxZoom || 19;
-                  const MAX_SAFE_ZOOM = Math.min(maxAvailableZoom, 17); // conservative cap to avoid empty tiles
-                                    map.setMaxZoom(MAX_SAFE_ZOOM);
-                                  
-                                    const rocketIcon = L.divIcon({ className: 'rocket-icon', html: '<span>🚀</span>', iconSize: [28,28], iconAnchor: [14,14] });
-                                    const marker = L.marker([initialLat, initialLon], { icon: rocketIcon }).addTo(map);
-                                    // Red path line to track rocket trajectory
-                                    const pathLine = L.polyline([], { color: 'red', weight: 3, opacity: 0.9 }).addTo(map);
-
-                  function setOverlay(lat, lon) {
-                    const el = document.getElementById('coordsOverlay');
-                    if (el) {
-                      el.textContent = `Lat: ${lat.toFixed(6)}, Lon: ${lon.toFixed(6)}`;
-                    }
+                  .leaflet-control-attribution {
+                    font-size: 10px; opacity: 0.35; background: rgba(0,0,0,0.25); color: #ddd;
                   }
-                    
-                    // Custom magnifier control: zoom to current rocket position in one click
+                  .leaflet-control-attribution:hover { opacity: 0.85; }
+                  .leaflet-bar a.magnifier-btn {
+                    font-size: 16px; line-height: 26px; text-align: center; width: 26px; height: 26px;
+                    display: block; text-decoration: none; background: #fff; color: #000;
+                  }
+                  .leaflet-bar a.magnifier-btn:hover { background: #f4f4f4; }
+                  #coordsOverlay {
+                    position: absolute; bottom: 8px; left: 8px; z-index: 1000;
+                    background: rgba(0, 0, 0, 0.55); color: #eee; padding: 4px 8px; border-radius: 6px;
+                    font-family: monospace; font-size: 12px; pointer-events: none;
+                  }
+                </style>
+                <title>Map</title>
+                <meta name="referrer" content="no-referrer">
+                </head>
+                <body>
+                  <div id="map"></div>
+                  <div id="coordsOverlay">Lat: ---, Lon: ---</div>
+                  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+                    integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+                  <script>
+                    const initialLat = 0, initialLon = 0, initialZoom = 2;
+                    const map = L.map('map', { zoomControl: true }).setView([initialLat, initialLon], initialZoom);
+
+                    const tiles = L.tileLayer(
+                      'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+                        maxZoom: 19, maxNativeZoom: 19,
+                        attribution: 'Tiles &copy; Esri — Source: Esri, Maxar, Earthstar Geographics, and the GIS User Community'
+                      }
+                    );
+                    tiles.addTo(map);
+
+                    const maxAvailableZoom = tiles.options.maxNativeZoom || tiles.options.maxZoom || 19;
+                    const MAX_SAFE_ZOOM = Math.min(maxAvailableZoom, 17);
+
+                    const rocketIcon = L.divIcon({ className: 'rocket-icon', html: '<span>🚀</span>', iconSize: [28,28], iconAnchor: [14,14] });
+                    const marker = L.marker([initialLat, initialLon], { icon: rocketIcon }).addTo(map);
+                    const pathLine = L.polyline([], { color: 'red', weight: 3, opacity: 0.9 }).addTo(map);
+
+                    function setOverlay(lat, lon) {
+                      const el = document.getElementById('coordsOverlay');
+                      if (el) { el.textContent = `Lat: ${lat.toFixed(6)}, Lon: ${lon.toFixed(6)}`; }
+                    }
+
                     const focusControl = L.control({ position: 'topleft' });
                     focusControl.onAdd = function(map) {
                       const container = L.DomUtil.create('div', 'leaflet-bar');
                       const btn = L.DomUtil.create('a', 'magnifier-btn', container);
-                      btn.href = '#';
-                      btn.title = 'Zoom to rocket';
-                      btn.innerHTML = '🔍';
+                      btn.href = '#'; btn.title = 'Zoom to rocket'; btn.innerHTML = '🔍';
                       L.DomEvent.on(btn, 'click', L.DomEvent.stopPropagation)
                                 .on(btn, 'click', L.DomEvent.preventDefault)
                                 .on(btn, 'click', function() {
-                const ll = marker.getLatLng();
-                const desiredZoom = Math.max(map.getZoom(), 18);
-                const targetZoom = Math.min(desiredZoom, MAX_SAFE_ZOOM);
-                map.setView(ll, targetZoom, { animate: true });
+                                  const ll = marker.getLatLng();
+                                  const desiredZoom = Math.max(map.getZoom(), 18);
+                                  const targetZoom = Math.min(desiredZoom, MAX_SAFE_ZOOM);
+                                  map.setView(ll, targetZoom, { animate: true });
                                 });
                       return container;
                     };
                     focusControl.addTo(map);
-                
-                  window.updatePosition = function(lat, lon) {
-                    const ll = [lat, lon];
-                    marker.setLatLng(ll);
-                    // append to path
-                    pathLine.addLatLng(ll);
-                    setOverlay(lat, lon);
-                    // zoom conservatively to avoid over-zooming beyond imagery
-                    const desiredZoom = Math.max(map.getZoom(), 16);
-                    const targetZoom = Math.min(desiredZoom, MAX_SAFE_ZOOM);
-                    map.setView(ll, targetZoom, { animate: true });
-                  };
-                </script>
+
+                    window.updatePosition = function(lat, lon) {
+                      const ll = [lat, lon];
+                      marker.setLatLng(ll);
+                      pathLine.addLatLng(ll);
+                      setOverlay(lat, lon);
+                      const desiredZoom = Math.max(map.getZoom(), 16);
+                      const targetZoom = Math.min(desiredZoom, MAX_SAFE_ZOOM);
+                      map.setView(ll, targetZoom, { animate: true });
+                    };
+                  </script>
                 </body>
                 </html>
-                """
-            from PySide6.QtCore import QUrl,QTimer
-            self.web.setHtml(html, baseUrl=QUrl("https://local/"))
+            """
 
-            def verify_leaflet_loaded():
+            # Methods to load/show content ------------------------------------
+            def _verify_leaflet_loaded():
                 if not self.web:
                     return
                 try:
-                    # Run JS: returns true if Leaflet is loaded
-                    self.web.page().runJavaScript("typeof L !== 'undefined';", handle_leaflet_check)
+                    self.web.page().runJavaScript(
+                        "typeof L !== 'undefined' && typeof updatePosition === 'function';",
+                        _handle_leaflet_check
+                    )
                 except Exception:
-                    show_offline_message()
+                    _show_offline_message()
 
-            def handle_leaflet_check(result):
-                if result is not True:
-                    show_offline_message()
+            def _handle_leaflet_check(result):
+                if result is True:
+                    self._online = True
+                    # map is good; hide top label
+                    self.coords_label.setVisible(False)
+                else:
+                    _show_offline_message()
 
-            def show_offline_message():
+            def _load_map_html():
+                # Reset "sent" latch so we push fresh coords after reload
+                self._last_sent_lat = None
+                self._last_sent_lon = None
+                self.web.setHtml(self._map_html, baseUrl=QUrl("https://local/"))
+                QTimer.singleShot(3000, _verify_leaflet_loaded)
+
+            def _show_offline_message():
+                self._online = False
                 if not self.web:
                     return
-                offline_html = """
-                <html>
-                <body style='background:#1e1e1e;color:#ff6666;
-                font-family:sans-serif;text-align:center;padding:50px;'>
-                Unable to load map.<br>
-                Please check your internet connection.
-                </body>
-                </html>
-                """
-                self.web.setHtml(offline_html)
+                self.web.setHtml(self._offline_html)
+                # If you want, you can also show coords_label when offline:
+                self.coords_label.setVisible(False)
 
-            # Check after 3 seconds (gives JS time to load)
-            QTimer.singleShot(3000, verify_leaflet_loaded)
+            # Expose helpers on self so we can call them from other methods
+            self._load_map_html = _load_map_html
+            self._show_offline_message = _show_offline_message
+            self._verify_leaflet_loaded = _verify_leaflet_loaded
 
-            # Hide the top coords label when web map is available
-            self.coords_label.setVisible(False)
-            # Prepare throttled updates every 10 seconds
-            from PySide6.QtCore import QTimer
-            self._last_sent_lat = None
-            self._last_sent_lon = None
+            # Initial attempt: we'll let the connectivity timer decide what to show
+            # (so we don't flash map then error immediately)
+            self._show_offline_message()
+
+            # Prepare throttled updates every 10 seconds (fixed from 20s)
             self._update_timer = QTimer(self)
-            self._update_timer.setInterval(20000)  # 10 seconds
+            self._update_timer.setInterval(10000)   # 10 seconds
             self._update_timer.timeout.connect(self._push_position)
             self._update_timer.start()
+
+            # --- NEW: periodic connectivity checker (every 10s) ---------------
+            self._net_timer = QTimer(self)
+            self._net_timer.setInterval(10000)
+            self._net_timer.timeout.connect(self._check_connectivity)
+            self._net_timer.start()
+            self._check_connectivity()  # kick off immediately
+
         else:
             self.web = None
             self.fallback = QLabel("WebEngine not available.\nShowing coordinates only.")
             self.fallback.setAlignment(Qt.AlignmentFlag.AlignCenter)
             self.fallback.setStyleSheet("color: #ffaa00; padding: 20px;")
             layout.addWidget(self.fallback)
-        
-        self._last_lat = None
-        self._last_lon = None
-        
-        # Set frame style
+
+        # Frame style
         self.setStyleSheet("""
             background-color: #1a1a1a;
             border-radius: 12px;
             border: 2px solid #333;
         """)
-    
+
+    # --- NEW: connectivity probing with QNetworkAccessManager -----------------
+    def _check_connectivity(self):
+        # Cancel any in-flight probe to avoid piling up
+        if self._net_reply is not None:
+            try:
+                if not self._net_reply.isFinished():
+                    self._net_reply.abort()
+            except Exception:
+                pass
+            self._net_reply.deleteLater()
+            self._net_reply = None
+
+        # Use a tiny endpoint designed for connectivity checks (returns 204)
+        req = QNetworkRequest(QUrl("https://www.gstatic.com/generate_204"))
+        # Follow redirects if any  (Not supported on all PySide6)
+        # req.setAttribute(QNetworkRequest.FollowRedirectsAttribute, True)
+
+        self._net_reply = self._nam.get(req)
+        self._net_reply.finished.connect(self._on_connectivity_reply)
+
+    def _on_connectivity_reply(self):
+        ok = False
+        try:
+            if self._net_reply.error() == QNetworkReply.NetworkError.NoError:
+                status = self._net_reply.attribute(QNetworkRequest.HttpStatusCodeAttribute)
+                if status is None:
+                    ok = True
+                else:
+                    code = int(status)
+                    ok = (200 <= code < 400) or (code == 204)
+        except Exception:
+            ok = False
+        finally:
+            self._net_reply.deleteLater()
+            self._net_reply = None
+
+        # Transition handling
+        if ok:
+            if not self._online:
+                # came online -> load the map html and verify
+                if self.web:
+                    self._load_map_html()
+            else:
+                # already online -> optionally re-verify Leaflet (cheap)
+                if self.web:
+                    self._verify_leaflet_loaded()
+        else:
+            if self._online or self._online is None:
+                # went offline (or unknown -> offline)
+                if self.web:
+                    self._show_offline_message()
+
+    # -------------------------------------------------------------------------
     def update_position(self, history):
         lat_hist = history.get(self.lat_id, [])
         lon_hist = history.get(self.lon_id, [])
         if not lat_hist or not lon_hist:
             return
-        
+
         lat = lat_hist[-1]['value']
         lon = lon_hist[-1]['value']
         self._last_lat, self._last_lon = lat, lon
-        
+
         # Update text for fallback only; web overlay is updated in JS push
         if not self.web:
             self.coords_label.setText(f"Lat: {lat:.6f}° | Lon: {lon:.6f}°")
@@ -752,17 +812,21 @@ class MapWidget(QWidget):
 
     def _push_position(self):
         # Called by timer every 10 seconds to push latest coords to the map
-        if not self.web: return
-        if self._last_lat is None or self._last_lon is None: return
+        if not self.web:
+            return
+        if self._last_lat is None or self._last_lon is None:
+            return
         if self._last_sent_lat == self._last_lat and self._last_sent_lon == self._last_lon:
             return
-        try:
-            self.web.page().runJavaScript(f"updatePosition({self._last_lat}, {self._last_lon});")
-            self._last_sent_lat = self._last_lat
-            self._last_sent_lon = self._last_lon
-        except Exception:
-            pass
-
+        # Only try to talk to the page if we believe we're online
+        if self._online:
+            try:
+                self.web.page().runJavaScript(f"updatePosition({self._last_lat}, {self._last_lon});")
+                self._last_sent_lat = self._last_lat
+                self._last_sent_lon = self._last_lon
+            except Exception:
+                # If this fails (e.g., page not ready), force a re-verify soon
+                QTimer.singleShot(1500, self._verify_leaflet_loaded)
 class LogTable(QWidget):
     # (Unchanged)
     def __init__(self, param_configs):
