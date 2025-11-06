@@ -1,23 +1,304 @@
-# Run all tests
-pytest test.py
+# Comprehensive Test Suite Guide for Glance Dashboard
+# ======================================================
 
-# Run with coverage
-pytest test.py --cov=main --cov-report=html
+## Quick Start
+---------------
+# Run all tests
+pytest test.py -v
+
+# Run with detailed output and stop on first failure
+pytest test.py -vv --tb=long -x
 
 # Run specific test class
 pytest test.py::TestDataLogger -v
 
-# Run tests with specific marker
-pytest test.py -m "not slow"
+# Run specific test method
+pytest test.py::TestDataLogger::test_init -v
 
-# Run tests matching pattern
-pytest test.py -k "filter" -v
 
-# Run with detailed output
+## Test Organization
+---------------------
+The test suite is organized into the following categories:
+
+1. **Backend DataReader Tests** (TestDataReader)
+   - Connection modes: serial, TCP, UDP, invalid modes
+   - Data formats: json_array, csv, raw_bytes, bits
+   - Edge cases: empty data, invalid data, encoding errors
+   - Connection handling: open, close, error recovery
+
+2. **Data Logger Tests** (TestDataLogger)
+   - CSV and JSON logging formats
+   - Buffer management and flushing
+   - File operations and error handling
+   - Concurrent access scenarios
+
+3. **Signal Filter Tests** (TestSignalFilters, TestFilterManager)
+   - MovingAverageFilter, LowPassFilter, KalmanFilter, MedianFilter
+   - Filter chaining and management
+   - Edge cases: None, NaN, Inf, extreme values
+   - Serialization and deserialization
+
+4. **Data Simulator Tests** (TestDataSimulator)
+   - Dummy and backend modes
+   - Connection settings and error handling
+   - Pause/resume functionality
+   - Thread safety
+
+5. **Widget Tests** (TestValueCard, TestLEDWidget, etc.)
+   - UI widget initialization and updates
+   - Value formatting and display
+   - Threshold-based state changes
+   - Raw telemetry monitoring
+
+6. **Dialog Tests** (TestParameterEntryDialog, etc.)
+   - Parameter entry validation
+   - Connection settings dialog
+   - Manage parameters dialog
+   - Edge cases: empty lists, invalid inputs
+
+7. **Main Window Tests** (TestMainWindow)
+   - Window initialization and phases
+   - Project save/load functionality
+   - Data update processing
+   - Widget management
+   - Unsaved changes tracking
+
+8. **Integration Tests** (TestIntegration)
+   - Complete workflows
+   - Multi-component interactions
+   - End-to-end scenarios
+
+9. **Performance Tests** (TestPerformance)
+   - Filter performance with large datasets
+   - Memory management
+   - Data history limits
+
+10. **Error Handling Tests** (TestErrorHandling)
+    - Invalid inputs
+    - Missing data
+    - Connection failures
+    - File I/O errors
+    - Edge case boundaries
+
+11. **Resource Management Tests** (TestResourceManagement)
+    - Memory limits
+    - Buffer overflow protection
+    - Cleanup and teardown
+
+12. **Regression Tests** (TestRegressions)
+    - Previously found bugs
+    - Known edge cases
+    - Corrupted file handling
+
+
+## Running Tests by Category
+----------------------------
+
+# Run only fast tests (exclude slow/integration)
+pytest test.py -m "not slow" -v
+
+# Run only integration tests
+pytest test.py -m integration -v
+
+# Run only UI tests
+pytest test.py -m ui -v
+
+# Run tests matching a pattern
+pytest test.py -k "filter" -v          # All filter-related tests
+pytest test.py -k "logger" -v         # All logger tests
+pytest test.py -k "error" -v          # All error handling tests
+
+
+## Coverage Analysis
+--------------------
+
+# Run with coverage report (requires pytest-cov)
+pytest test.py --cov=main --cov=backend --cov-report=html
+pytest test.py --cov=main --cov=backend --cov-report=term-missing
+
+# View HTML coverage report
+# Open htmlcov/index.html in browser
+
+
+## Parallel Execution
+---------------------
+
+# Run tests in parallel (requires pytest-xdist)
+pytest test.py -n auto                # Auto-detect CPU count
+pytest test.py -n 4                   # Use 4 workers
+
+
+## Debugging Failed Tests
+-------------------------
+
+# Run with maximum verbosity and full traceback
 pytest test.py -vv --tb=long
 
-# Run and stop on first failure
+# Run specific failing test with debugger
+pytest test.py::TestDataLogger::test_init --pdb
+
+# Run with print statements visible
+pytest test.py -s
+
+# Run and stop after first failure
 pytest test.py -x
 
-# Run in parallel (requires pytest-xdist)
-pytest test.py -n auto
+# Run and stop after N failures
+pytest test.py --maxfail=3
+
+
+## Test Markers
+---------------
+
+Available markers:
+- @pytest.mark.slow          - Slow-running tests
+- @pytest.mark.integration    - Integration tests
+- @pytest.mark.ui             - UI interaction tests
+- @pytest.mark.performance    - Performance benchmarks
+
+Usage:
+pytest test.py -m "not slow"        # Skip slow tests
+pytest test.py -m "slow"              # Run only slow tests
+
+
+## Edge Cases Covered
+---------------------
+
+### Backend DataReader
+- All connection modes (serial, TCP, UDP)
+- All data formats (json_array, csv, raw_bytes, bits)
+- Invalid modes and formats
+- Empty and malformed data
+- Encoding errors
+- Connection failures
+- Timeout handling
+- Buffer management
+
+### Data Logger
+- CSV and JSON formats
+- Buffer overflow protection
+- Invalid file paths
+- Concurrent access
+- Empty data history
+- Missing parameters
+- File locking scenarios
+
+### Signal Filters
+- None, NaN, Inf values
+- Extreme values (very large/small)
+- Negative and zero values
+- Rapid value changes
+- Window size edge cases
+- Filter chain operations
+- Serialization edge cases
+
+### Main Window
+- Empty parameter lists
+- Invalid array indices
+- None packets
+- Wrong packet types
+- Invalid thresholds
+- Project save/load errors
+- Corrupted project files
+- Widget lifecycle management
+
+### Dialogs
+- Empty parameter lists
+- Duplicate IDs
+- Invalid inputs
+- Large parameter lists
+- Missing selections
+- Validation edge cases
+
+
+## Continuous Integration
+-------------------------
+
+For CI/CD pipelines:
+pytest test.py --tb=short --maxfail=10 -v
+
+For comprehensive CI testing:
+pytest test.py --cov=main --cov=backend --cov-report=xml --junitxml=test-results.xml
+
+
+## Troubleshooting
+------------------
+
+### Common Issues:
+
+1. **QApplication errors**
+   - Ensure qapp fixture is properly used
+   - Some tests require QApplication instance
+
+2. **Import errors**
+   - Ensure all dependencies are installed
+   - Check PYTHONPATH includes project root
+
+3. **File permission errors**
+   - Tests use temporary directories
+   - Ensure write permissions in temp locations
+
+4. **Connection timeout errors**
+   - Some backend tests may timeout
+   - These are expected for unavailable connections
+
+5. **UI widget errors**
+   - Some widget tests require QApplication
+   - Ensure qapp fixture is used
+
+
+## Best Practices
+-----------------
+
+1. **Run tests frequently** during development
+2. **Run specific test classes** when working on specific features
+3. **Use markers** to organize test execution
+4. **Check coverage** regularly to identify untested code
+5. **Update tests** when adding new features
+6. **Add regression tests** for any bugs found
+7. **Test edge cases** thoroughly before deployment
+
+
+## Test File Structure
+----------------------
+
+test.py contains:
+- ~2500+ lines of comprehensive tests
+- 100+ test methods covering all major functionality
+- Edge cases for every class and method
+- Integration tests for complete workflows
+- Performance and resource management tests
+- Regression tests for known issues
+
+Tests are organized by:
+- Module/Class being tested
+- Test type (unit, integration, performance)
+- Edge case category
+
+
+## Performance Benchmarks
+--------------------------
+
+Key performance tests verify:
+- Filter processing speed (< 1s for 10k values)
+- Memory usage limits (history capped at 500 entries)
+- Buffer management efficiency
+- File I/O performance
+
+Run performance tests:
+pytest test.py -k "performance" -v
+
+
+## Maintenance
+--------------
+
+When adding new features:
+1. Add corresponding test methods
+2. Include edge case tests
+3. Update this guide if needed
+4. Ensure tests pass before committing
+
+When fixing bugs:
+1. Add regression test to prevent recurrence
+2. Update related edge case tests
+3. Verify all tests still pass

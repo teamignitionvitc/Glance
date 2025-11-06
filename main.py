@@ -2589,6 +2589,8 @@ class MainWindow(QMainWindow):
 
     # --- HEAVILY MODIFIED: Core logic now processes an array, not a dict ---
     def update_data(self, packet: list):
+        if packet is None or not isinstance(packet, (list, tuple)):
+            return
         timestamp = time.time()
 
         # Track packets for status bar
@@ -3786,9 +3788,32 @@ class MainWindow(QMainWindow):
         if ok and new_name: self.tab_widget.setTabText(index, new_name)
     def on_tab_changed(self, index): self.refresh_active_displays_list()
     def get_alarm_state(self, value, thresholds):
-        if value < thresholds['low_crit'] or value > thresholds['high_crit']: return 'Critical'
-        if value < thresholds['low_warn'] or value > thresholds['high_warn']: return 'Warning'
+        # Handle None or non-numeric values gracefully
+        if value is None or not isinstance(value, (int, float)):
+            return 'Nominal'
+
+        # Validate thresholds structure and values
+        required_keys = {'low_crit', 'low_warn', 'high_warn', 'high_crit'}
+        if not isinstance(thresholds, dict) or not required_keys.issubset(thresholds.keys()):
+            return 'Nominal'
+
+        # Ensure all threshold values are numeric
+        try:
+            low_crit = float(thresholds['low_crit'])
+            low_warn = float(thresholds['low_warn'])
+            high_warn = float(thresholds['high_warn'])
+            high_crit = float(thresholds['high_crit'])
+        except (TypeError, ValueError):
+            # In case any threshold is None or non-numeric
+            return 'Nominal'
+
+        # Normal evaluation logic
+        if value < low_crit or value > high_crit:
+            return 'Critical'
+        if value < low_warn or value > high_warn:
+            return 'Warning'
         return 'Nominal'
+
     def toggle_pause_stream(self):
         if self.simulator:
             is_paused = self.simulator.toggle_pause()
