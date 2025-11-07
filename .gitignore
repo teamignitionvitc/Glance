@@ -9,3 +9,4 @@ logs/
 venv/
 build/
 dist/ 
+.coverage
