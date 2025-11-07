@@ -326,7 +326,7 @@
             border-radius: 0;
             background: transparent;
         }
-        pre code { padding: 1.25rem 1.5rem; display: block; overflow-x: auto; font-size: 0.85rem; line-height: 1.6; color: var(--text-primary); }
+        pre code { padding: 1.25rem 1.5rem; display: block; overflow-x: auto; font-size: 0.85rem; line-height: 1.6; color: var(--text-primary); white-space: pre;}
         .copy-btn { background: none; border: none; color: var(--text-secondary); padding: 0.5rem; border-radius: 6px; cursor: pointer; transition: all 0.2s ease; display: flex; align-items: center; gap: 0.5rem; }
         .copy-btn:hover { background: var(--border); color: var(--text-primary); }
         .copy-btn svg { width: 16px; height: 16px; vertical-align: middle; transition: transform 0.1s ease; }
@@ -1545,14 +1545,151 @@ main.py
                     <pre><code class="language-bash">pytest test.py -k "filter" -v</code></pre>
                 </div>
 
-                <h4>Generate a Coverage Report</h4>
-                <p>To measure how much of the application code is covered by tests, use <code>pytest-cov</code>. This command runs tests and generates an HTML report in a new <code>htmlcov/</code> directory.</p>
-                 <div class="code-block-wrapper">
+                <h4>Run specific test method</h4>
+                    <p>To run a specific test method within a test class using <code>pytest</code>, use the double-colon syntax; for example, <code>pytest test.py::TestDataLogger::test_init -v</code> executes only the <code>test_init</code> method from the <code>TestDataLogger</code> class with verbose output.</p>                 <div class="code-block-wrapper">
                     <div class="code-header">
                         <span>bash</span>
                         <button class="copy-btn" title="Copy code"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg><span>Copy</span></button>
                     </div>
-                    <pre><code class="language-bash">pytest test.py --cov=main --cov-report=html</code></pre>
+                    <pre><code class="language-bash">pytest test.py::TestDataLogger::test_init -v</code></pre>
+                </div>
+
+                <h4>Running Tests by Category</h4>
+                <p>Use <code>pytest</code> markers and expressions to selectively run tests by category, such as skipping slow tests or focusing on integration or UI tests.</p>
+                <div class="code-block-wrapper">
+                   <div class="code-header">
+                      <span>bash</span>
+                      <button class="copy-btn" title="Copy code">
+                         <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
+                         </svg>
+                         <span>Copy</span>
+                      </button>
+                   </div>
+                   <pre><code class="language-bash"># Run only fast tests (exclude slow/integration)
+pytest test.py -m "not slow" -v
+
+# Run only integration tests
+pytest test.py -m integration -v
+
+# Run only UI tests
+pytest test.py -m ui -v
+
+# Run tests matching a pattern
+pytest test.py -k "filter" -v          # All filter-related tests
+pytest test.py -k "logger" -v          # All logger tests
+pytest test.py -k "error" -v           # All error handling tests
+                    </code></pre>
+                </div>
+                <h4>Coverage Analysis</h4>
+                <p>To measure test coverage and generate reports using <code>pytest-cov</code>, run the following commands to create HTML or terminal summaries.</p>
+                <div class="code-block-wrapper">
+                   <div class="code-header">
+                      <span>bash</span>
+                      <button class="copy-btn" title="Copy code">
+                         <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
+                         </svg>
+                         <span>Copy</span>
+                      </button>
+                   </div>
+                   <pre><code class="language-bash"># Run with coverage report (requires pytest-cov)
+pytest test.py --cov=main --cov=backend --cov-report=html
+pytest test.py --cov=main --cov=backend --cov-report=term-missing
+                
+# View HTML coverage report
+# Open htmlcov/index.html in browser</code></pre>
+                </div>
+                <h4>Parallel Execution</h4>
+                <p>To speed up testing, use <code>pytest-xdist</code> to run tests in parallel across multiple CPU cores.</p>
+                <div class="code-block-wrapper">
+                   <div class="code-header">
+                      <span>bash</span>
+                      <button class="copy-btn" title="Copy code">
+                         <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
+                         </svg>
+                         <span>Copy</span>
+                      </button>
+                   </div>
+                   <pre><code class="language-bash"># Run tests in parallel (requires pytest-xdist)
+pytest test.py -n auto                # Auto-detect CPU count
+pytest test.py -n 4                   # Use 4 workers</code></pre>
+                </div>
+                
+                <h4>Debugging Failed Tests</h4>
+                <p>Use these <code>pytest</code> flags to debug failures, view detailed tracebacks, or control test execution flow.</p>
+                <div class="code-block-wrapper">
+                   <div class="code-header">
+                      <span>bash</span>
+                      <button class="copy-btn" title="Copy code">
+                         <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
+                         </svg>
+                         <span>Copy</span>
+                      </button>
+                   </div>
+                   <pre><code class="language-bash"># Run with maximum verbosity and full traceback
+pytest test.py -vv --tb=long
+
+# Run specific failing test with debugger
+pytest test.py::TestDataLogger::test_init --pdb
+
+# Run with print statements visible
+pytest test.py -s
+
+# Run and stop after first failure
+pytest test.py -x
+
+# Run and stop after N failures
+pytest test.py --maxfail=3
+</code></pre>
+                </div>
+                <h4>Test Markers</h4>
+                <p>Use <code>@pytest.mark</code> decorators to categorize tests for selective execution, such as slow, integration, or UI tests.</p>
+                <div class="code-block-wrapper">
+                   <div class="code-header">
+                      <span>bash</span>
+                      <button class="copy-btn" title="Copy code">
+                         <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
+                         </svg>
+                         <span>Copy</span>
+                      </button>
+                   </div>
+                   <pre><code class="language-bash">Available markers:
+- @pytest.mark.slow          - Slow-running tests
+- @pytest.mark.integration   - Integration tests
+- @pytest.mark.ui            - UI interaction tests
+- @pytest.mark.performance   - Performance benchmarks
+
+Usage:
+pytest test.py -m "not slow"        # Skip slow tests
+pytest test.py -m "slow"            # Run only slow tests</code></pre>
+                </div>
+                <h4>Continuous Integration</h4>
+                <p>For CI/CD pipelines, configure <code>pytest</code> to produce concise or comprehensive reports suitable for automated testing environments.</p>
+                <div class="code-block-wrapper">
+                   <div class="code-header">
+                      <span>bash</span>
+                      <button class="copy-btn" title="Copy code">
+                         <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
+                         </svg>
+                         <span>Copy</span>
+                      </button>
+                   </div>
+                   <pre><code class="language-bash"># For CI/CD pipelines
+pytest test.py --tb=short --maxfail=10 -v
+
+# For comprehensive CI testing
+pytest test.py --cov=main --cov=backend --cov-report=xml --junitxml=test-results.xml</code></pre>
+                </div>
+
+                <div>
+                    <p>
+                        Refer to <code>test.txt</code> for more information
+                    </p>
                 </div>
             </section>
 

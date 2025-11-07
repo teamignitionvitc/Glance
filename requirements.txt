@@ -3,3 +3,5 @@ pyqtgraph
 numpy
 pyserial
 reportlab
+pytest
+pytest-cov
