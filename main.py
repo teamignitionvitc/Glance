@@ -76,7 +76,7 @@ from PySide6.QtWidgets import (
     QSpinBox, QStackedWidget, QCheckBox, QTreeWidget, QTreeWidgetItem  # Added QTreeWidget, QTreeWidgetItem
 )
 from PySide6.QtCore import QThread, Signal, Qt, QTimer, QByteArray
-from PySide6.QtGui import QFont, QColor, QBrush, QAction, QPixmap
+from PySide6.QtGui import QFont, QColor, QBrush, QAction, QPixmap,QIcon
 import pyqtgraph as pg
 import numpy as np
 from backend import DataReader
@@ -1728,6 +1728,7 @@ class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("Glance - Telemetry Dashboard")
+        self.setWindowIcon(QIcon("./docs/public/Glance_nobg.ico"))
         
         # CRITICAL: Initialize fullscreen state before anything else
         self.is_fullscreen = False
@@ -6652,8 +6653,13 @@ class ConnectionSettingsDialog(QDialog):
 
 # --- 4. APPLICATION EXECUTION ---
 if __name__ == "__main__":
+    base_path = getattr(sys, "_MEIPASS", os.path.dirname(os.path.abspath(__file__)))
+    icon_path = os.path.join(base_path, "docs", "public", "Glance_nobg_jl.ico")
+
     from app.ui.main_window import MainWindow as AppMainWindow
     app = QApplication(sys.argv)
+    app.setWindowIcon(QIcon(icon_path))
     window = AppMainWindow()
+    window.setWindowIcon(QIcon(icon_path))
     window.show()
     sys.exit(app.exec())
