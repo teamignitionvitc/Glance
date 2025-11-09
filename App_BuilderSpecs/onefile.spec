@@ -61,4 +61,4 @@ exe = EXE(
 )
 
 # One-file build
-coll = COLLECT(exe, a.binaries, a.zipfiles, a.datas, strip=False, upx=False, name='Glance')
+coll = COLLECT(exe, a.binaries, a.zipfiles, a.datas, strip=False, upx=True, name='Glance')
