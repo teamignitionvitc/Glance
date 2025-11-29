@@ -1,0 +1,141 @@
+name: CD - Build and Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build Application
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        python-version: ['3.11']
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ matrix.python-version }}
+        cache: 'pip'
+    
+    - name: Install system dependencies (Linux)
+      if: runner.os == 'Linux'
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y \
+          libxcb-xinerama0 \
+          libxcb-icccm4 \
+          libxcb-image0 \
+          libxcb-keysyms1 \
+          libxcb-randr0 \
+          libxcb-render-util0 \
+          libxcb-shape0 \
+          libxcb-sync1 \
+          libxcb-xfixes0 \
+          libxkbcommon-x11-0 \
+          libgl1-mesa-glx \
+          libegl1-mesa \
+          libxcb-cursor0
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install pyinstaller
+    
+    - name: Build with PyInstaller (Linux)
+      if: runner.os == 'Linux'
+      run: |
+        pyinstaller --name=Glance \
+          --windowed \
+          --onefile \
+          --add-data="docs:docs" \
+          --hidden-import=PySide6 \
+          --hidden-import=pyqtgraph \
+          --hidden-import=numpy \
+          --hidden-import=serial \
+          --hidden-import=reportlab \
+          --icon=docs/assets/logo.png \
+          main.py
+    
+    - name: Build with PyInstaller (Windows)
+      if: runner.os == 'Windows'
+      run: |
+        pyinstaller --name=Glance `
+          --windowed `
+          --onefile `
+          --add-data="docs;docs" `
+          --hidden-import=PySide6 `
+          --hidden-import=pyqtgraph `
+          --hidden-import=numpy `
+          --hidden-import=serial `
+          --hidden-import=reportlab `
+          main.py
+    
+    - name: Build with PyInstaller (macOS)
+      if: runner.os == 'macOS'
+      run: |
+        pyinstaller --name=Glance \
+          --windowed \
+          --onefile \
+          --add-data="docs:docs" \
+          --hidden-import=PySide6 \
+          --hidden-import=pyqtgraph \
+          --hidden-import=numpy \
+          --hidden-import=serial \
+          --hidden-import=reportlab \
+          main.py
+    
+    - name: Upload artifacts (Linux)
+      if: runner.os == 'Linux'
+      uses: actions/upload-artifact@v4
+      with:
+        name: Glance-Linux
+        path: dist/Glance
+    
+    - name: Upload artifacts (Windows)
+      if: runner.os == 'Windows'
+      uses: actions/upload-artifact@v4
+      with:
+        name: Glance-Windows
+        path: dist/Glance.exe
+    
+    - name: Upload artifacts (macOS)
+      if: runner.os == 'macOS'
+      uses: actions/upload-artifact@v4
+      with:
+        name: Glance-macOS
+        path: dist/Glance
+
+  release:
+    name: Create Release
+    needs: build
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/')
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Download all artifacts
+      uses: actions/download-artifact@v4
+    
+    - name: Create Release
+      uses: softprops/action-gh-release@v1
+      with:
+        files: |
+          Glance-Linux/Glance
+          Glance-Windows/Glance.exe
+          Glance-macOS/Glance
+        draft: false
+        prerelease: false
+        generate_release_notes: true
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

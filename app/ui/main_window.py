@@ -3535,62 +3535,107 @@ class MainWindow(QMainWindow):
         sb = self.statusBar()
         sb.setStyleSheet("""
             QStatusBar {
-                background: #1e1e1e;
-                border-top: 1px solid #333;
+                background: qlineargradient(x1:0, y1:0, x2:0, y2:1, 
+                    stop:0 #252525, stop:1 #1e1e1e);
+                border-top: 2px solid #333;
                 color: #e0e0e0;
-                padding: 4px 10px;
+                padding: 6px 12px;
                 font-family: 'Segoe UI', sans-serif;
             }
             QStatusBar QLabel {
                 color: #e0e0e0;
-                padding: 0 8px;
+                padding: 0 6px;
                 font-size: 11px;
             }
             QStatusBar QLabel#SBClock {
                 font-family: 'Consolas', monospace;
                 font-weight: bold;
                 color: #64b5f6;
+                background: rgba(100, 181, 246, 0.1);
+                border-radius: 4px;
+                padding: 4px 10px;
             }
             QStatusBar QLabel#SBConnected {
                 color: #81c784;
                 font-weight: bold;
+                background: rgba(129, 199, 132, 0.15);
+                border-radius: 4px;
+                padding: 4px 8px;
             }
             QStatusBar QLabel#SBDisconnected {
                 color: #e57373;
                 font-weight: bold;
+                background: rgba(229, 115, 115, 0.15);
+                border-radius: 4px;
+                padding: 4px 8px;
             }
             QStatusBar QLabel#SBValue {
                 font-family: 'Consolas', monospace;
                 color: #ffb74d;
+                background: rgba(255, 183, 77, 0.1);
+                border-radius: 3px;
+                padding: 3px 8px;
+            }
+            QStatusBar QLabel#SBMetric {
+                font-family: 'Consolas', monospace;
+                color: #90caf9;
+                font-size: 10px;
+            }
+            QStatusBar QLabel#Separator {
+                color: #555;
+                padding: 0 4px;
             }
             QStatusBar QPushButton {
-                background: #333;
+                background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                    stop:0 #3a3a3a, stop:1 #2e2e2e);
                 border: 1px solid #555;
-                border-radius: 3px;
+                border-radius: 4px;
                 color: #fff;
-                padding: 2px 8px;
+                padding: 4px 12px;
                 font-size: 10px;
+                font-weight: 500;
                 margin: 0 4px;
             }
             QStatusBar QPushButton:hover {
-                background: #444;
+                background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                    stop:0 #4a4a4a, stop:1 #3e3e3e);
                 border-color: #666;
             }
+            QStatusBar QPushButton:pressed {
+                background: #2a2a2a;
+            }
             QStatusBar QPushButton#LoggingActive {
-                background: #2e7d32;
+                background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                    stop:0 #388e3c, stop:1 #2e7d32);
                 border-color: #4caf50;
+            }
+            QStatusBar QPushButton#LoggingActive:hover {
+                background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                    stop:0 #4caf50, stop:1 #388e3c);
+            }
+            QStatusBar QPushButton#TelemetryBtn {
+                background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                    stop:0 #1976d2, stop:1 #1565c0);
+                border-color: #2196f3;
+                font-weight: 600;
+            }
+            QStatusBar QPushButton#TelemetryBtn:hover {
+                background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                    stop:0 #2196f3, stop:1 #1976d2);
             }
         """)
         
-        # Clock
-        self.clock_label = QLabel("")
+        # Clock with icon
+        self.clock_label = QLabel("🕐 00:00:00")
         self.clock_label.setObjectName("SBClock")
+        self.clock_label.setToolTip("Current Time")
         
         # Connection Status (Clickable)
-        self.conn_label = QLabel("Disconnected")
+        self.conn_label = QLabel("⚠ Disconnected")
         self.conn_label.setObjectName("SBDisconnected")
         self.conn_label.setCursor(Qt.CursorShape.PointingHandCursor)
         self.conn_label.mousePressEvent = lambda e: self.open_connection_settings()
+        self.conn_label.setToolTip("Click to configure connection")
         
         # Session Time
         self.session_time_label = QLabel("")
@@ -3604,22 +3649,49 @@ class MainWindow(QMainWindow):
         self.status_label.setVisible(False)
         
         # Logging Button & Size
-        self.logging_btn = QPushButton("Start Logging")
+        self.logging_btn = QPushButton("📊 Start Logging")
         self.logging_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         self.logging_btn.clicked.connect(self.toggle_logging_from_statusbar)
+        self.logging_btn.setToolTip("Start/Stop data logging")
         
         self.log_size_label = QLabel("")
         self.log_size_label.setObjectName("SBValue")
         self.log_size_label.setVisible(False)
+        
+        # NEW: Packet Counter
+        self.packet_count_label = QLabel("📦 0")
+        self.packet_count_label.setObjectName("SBMetric")
+        self.packet_count_label.setToolTip("Total Packets Received")
+        
+        # NEW: RX Bytes
+        self.rx_bytes_label = QLabel("📥 0 B")
+        self.rx_bytes_label.setObjectName("SBMetric")
+        self.rx_bytes_label.setToolTip("Total Data Received")
+        
+        # NEW: Active Parameters
+        self.active_params_label = QLabel("📊 0 params")
+        self.active_params_label.setObjectName("SBMetric")
+        self.active_params_label.setToolTip("Active Parameters")
+        
+        # NEW: Widget Count
+        self.widget_count_label = QLabel("🎛 0 widgets")
+        self.widget_count_label.setObjectName("SBMetric")
+        self.widget_count_label.setToolTip("Widgets in Current Tab")
+        
+        # NEW: FPS Counter
+        self.fps_label = QLabel("⚡ 0 FPS")
+        self.fps_label.setObjectName("SBMetric")
+        self.fps_label.setToolTip("UI Update Rate")
+        self.fps_counter = 0
+        self.fps_last_time = time.time()
         
         # Metrics
         self.rate_label = QLabel("")
         self.rate_label.setObjectName("SBValue")
         self.rate_label.setToolTip("Data Rate")
         
-        # Add widgets
-        # NEW: Raw Telemetry Viewer button - always visible
-        self.telemetry_viewer_btn = QPushButton("Raw Telemetry")
+        # Raw Telemetry Viewer button - enhanced styling
+        self.telemetry_viewer_btn = QPushButton("📡 Raw Telemetry")
         self.telemetry_viewer_btn.setObjectName("TelemetryBtn")
         self.telemetry_viewer_btn.setToolTip("Open standalone telemetry monitor")
         self.telemetry_viewer_btn.clicked.connect(self.open_standalone_telemetry_viewer)
@@ -3634,6 +3706,10 @@ class MainWindow(QMainWindow):
         self.sep3.setObjectName("Separator")
         self.sep4 = QLabel("|")
         self.sep4.setObjectName("Separator")
+        self.sep5 = QLabel("|")
+        self.sep5.setObjectName("Separator")
+        self.sep6 = QLabel("|")
+        self.sep6.setObjectName("Separator")
         
         # Layout - Left side
         sb.addWidget(self.clock_label)
@@ -3642,12 +3718,21 @@ class MainWindow(QMainWindow):
         sb.addWidget(self.sep2)
         sb.addWidget(self.status_label)
         sb.addWidget(self.logging_btn)
+        sb.addWidget(self.log_size_label)
+        
+        # Middle - Metrics
+        sb.addWidget(self.sep3)
+        sb.addWidget(self.packet_count_label)
+        sb.addWidget(self.rx_bytes_label)
+        sb.addWidget(self.sep4)
+        sb.addWidget(self.active_params_label)
+        sb.addWidget(self.widget_count_label)
         
         # Right side - use addPermanentWidget for right alignment
+        sb.addPermanentWidget(self.fps_label)
+        sb.addPermanentWidget(self.sep5)
         sb.addPermanentWidget(self.telemetry_viewer_btn)
-        sb.addPermanentWidget(self.sep3)
-        sb.addPermanentWidget(self.log_size_label)
-        sb.addPermanentWidget(self.sep4)
+        sb.addPermanentWidget(self.sep6)
         sb.addPermanentWidget(self.rate_label)
         
         # Timer for clock and session updates
@@ -3656,10 +3741,13 @@ class MainWindow(QMainWindow):
         self.status_timer.start(1000)
         
         self.session_start_time = None
+        self.total_packets = 0
+        self.total_rx_bytes = 0
+
 
     def _update_status_bar_periodic(self):
         # Update Clock
-        self.clock_label.setText(datetime.now().strftime("%H:%M:%S"))
+        self.clock_label.setText(f"🕐 {datetime.now().strftime('%H:%M:%S')}")
         
         # Update Session Time
         if self.session_start_time:
@@ -3686,6 +3774,39 @@ class MainWindow(QMainWindow):
                 self.log_size_label.setText("Error")
         else:
             self.log_size_label.setVisible(False)
+        
+        # Update Packet Counter
+        self.packet_count_label.setText(f"📦 {self.total_packets}")
+        
+        # Update RX Bytes
+        rx_bytes = self.total_rx_bytes
+        for unit in ['B', 'KB', 'MB', 'GB']:
+            if rx_bytes < 1024:
+                break
+            rx_bytes /= 1024
+        self.rx_bytes_label.setText(f"📥 {rx_bytes:.1f} {unit}")
+        
+        # Update Active Parameters
+        active_count = len(self.parameters)
+        self.active_params_label.setText(f"📊 {active_count} params")
+        
+        # Update Widget Count for current tab
+        current_idx = self.tab_widget.currentIndex()
+        widget_count = 0
+        if current_idx in self.tab_data:
+            widget_count = len(self.tab_data[current_idx].get('docks', {}))
+        self.widget_count_label.setText(f"🎛 {widget_count} widgets")
+        
+        # Update FPS
+        self.fps_counter += 1
+        current_time = time.time()
+        elapsed = current_time - self.fps_last_time
+        if elapsed >= 1.0:
+            fps = self.fps_counter / elapsed
+            self.fps_label.setText(f"⚡ {int(fps)} FPS")
+            self.fps_counter = 0
+            self.fps_last_time = current_time
+
 
     def toggle_logging_from_statusbar(self):
         """Toggle data logging from status bar button"""
@@ -3724,7 +3845,7 @@ class MainWindow(QMainWindow):
     def update_logging_button(self):
         """Update logging button text and style based on state"""
         if self.data_logger.is_logging:
-            self.logging_btn.setText("Stop Logging")
+            self.logging_btn.setText("🛑 Stop Logging")
             self.logging_btn.setObjectName("LoggingActive")
             self.logging_btn.setStyleSheet("")  # Reset to apply new object name
             
@@ -3733,7 +3854,7 @@ class MainWindow(QMainWindow):
             self.logging_status_label.setText(f"Logging: ON ({filename})")
             self.logging_status_label.setStyleSheet("color: #21b35a; font-weight: bold;")
         else:
-            self.logging_btn.setText("Start Logging")
+            self.logging_btn.setText("📊 Start Logging")
             self.logging_btn.setObjectName("")  # Remove object name
             self.logging_btn.setStyleSheet("")  # Reset styling
             
