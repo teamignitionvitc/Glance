@@ -34,19 +34,24 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 """
 ####################################################################################################
 # File:        backend.py
-# Author:      Shawn Liju Thomas
-# Created On:  16-09-2025
+# Author:      MuhammadRamzy
+# Created On:  21-09-2025
 #
 # @brief       This module serves as the backend for the Dashboard Builder project
 # @details     Detailed explanation of module functionality and behavior
 ####################################################################################################
 # HISTORY:
 #
-#       +----- (NEW | MODify | ADD | DELete)
+#       +----- (NEW | MOD | ADD | DEL)
 #       |
 # No#   |       when       who                  what
 ######+*********+**********+********************+**************************************************
-# 000  NEW      <Date>      <Author Name>        Initial creation
+# 000  NEW      21-09-2025  Shawn                Added backend.py with ability to output serial data into terminal
+# 001  MOD      23-09-2025  Shawn                Created connection between backend and frontend
+# 002  MOD      25-09-2025  Shawn                Added file template
+# 003  MOD      26-09-2025  MuhammadRamzy        First commit with the ui/ux and flow changes
+# 004  MOD      01-10-2025  MuhammadRamzy        License Update
+# 005  MOD      29-11-2025  MuhammadRamzy        feat: Redesign AddWidgetDialog with side-by-side layout and QStackedWidget
 ####################################################################################################
 
 ####################################################################################################

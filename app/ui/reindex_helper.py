@@ -1,3 +1,57 @@
+"""
+                                        ::                                                      
+                                        ::                                                      
+                                        ::                                                      
+                                        ::                                                      
+                                        ::                                                      
+    ..    ..........    :.      ::      ::     .........  ..    ..........    ...      .        
+    ::    ::            : .:.   ::     .::.       ::      ::    ::       :    :: :.    :        
+    ::    ::   ..:::    :   .:. ::    ::::::      ::      ::    ::       :    ::   ::  :        
+    ::    ::......::    :      :::    ::::::      ::      ::    ::.......:    ::     :::        
+                                      ::::::                                                    
+                                      :.::.:                                                    
+                         .::::          ::          ::::.                                      
+                       .::::::::.       ::       .:::::::::                                    
+                       ::::::::::::....::::.....:::::::::::                                    
+                        .:::::::::::::::::::::::::::::::::.        
+
+                    Copyright (c) 2025 Ignition Software Department
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, version 3, with the additional restriction
+that this software may not be used for commercial purposes without
+explicit written permission from the authors.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program. If not, see <https://www.gnu.org/licenses/>.
+
+"""
+####################################################################################################
+# File:        reindex_helper.py
+# Author:      MuhammadRamzy
+# Created On:  30-11-2025
+#
+# @brief       Helper utilities for UI reindexing.
+# @details     Provides utility functions for managing UI element indices.
+####################################################################################################
+# HISTORY:
+#
+#       +----- (NEW | MOD | ADD | DEL)
+#       |
+# No#   |       when       who                  what
+# ######+*********+**********+********************+**************************************************
+# 000  NEW      30-11-2025  MuhammadRamzy        fix: Simplify status bar and remove CI/CD workflows
+####################################################################################################
+
+####################################################################################################
+# Imports
+
     def _reindex_tabs(self):
         """Re-sync tab_data keys with current QTabWidget indices"""
         new_tab_data = {}

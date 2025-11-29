@@ -34,8 +34,8 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 """
 ####################################################################################################
 # File:        dialogs.py
-# Author:      Shawn Liju Thomas
-# Created On:  16-09-2025
+# Author:      MuhammadRamzy
+# Created On:  26-09-2025
 #
 # @brief       Application dialogs for configuration and user interaction.
 # @details     Contains dialog classes for connection settings, widget creation, parameter management,
@@ -43,11 +43,17 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 ####################################################################################################
 # HISTORY:
 #
-#       +----- (NEW | MODify | ADD | DELete)
+#       +----- (NEW | MOD | ADD | DEL)
 #       |
 # No#   |       when       who                  what
 # ######+*********+**********+********************+**************************************************
-# 000  NEW      16-09-2025  Shawn Liju Thomas    Initial creation
+# 000  NEW      26-09-2025  MuhammadRamzy        First commit with the ui/ux and flow changes
+# 001  MOD      27-09-2025  MuhammadRamzy        Stream Fix
+# 002  MOD      28-09-2025  MuhammadRamzy        Logging Fixed
+# 003  MOD      02-10-2025  MuhammadRamzy        UI Fix, Bottom bar fix, Default Logging location fix
+# 004  MOD      09-10-2025  MuhammadRamzy        Formatting
+# 005  MOD      11-10-2025  oslowtech            Fixed Dialogs.py logging os and datetime import error
+# 006  MOD      29-11-2025  MuhammadRamzy        feat: Redesign AddWidgetDialog with side-by-side layout and QStackedWidget
 ####################################################################################################
 
 ####################################################################################################

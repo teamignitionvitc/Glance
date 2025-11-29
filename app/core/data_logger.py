@@ -34,19 +34,20 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 """
 ####################################################################################################
 # File:        data_logger.py
-# Author:      Shawn Liju Thomas
-# Created On:  16-09-2025
+# Author:      MuhammadRamzy
+# Created On:  29-11-2025
 #
 # @brief       Data logging functionality.
 # @details     Handles logging of telemetry data to CSV and JSON formats with buffering.
 ####################################################################################################
 # HISTORY:
 #
-#       +----- (NEW | MODify | ADD | DELete)
+#       +----- (NEW | MOD | ADD | DEL)
 #       |
 # No#   |       when       who                  what
 # ######+*********+**********+********************+**************************************************
-# 000  NEW      16-09-2025  Shawn Liju Thomas    Initial creation
+# 000  NEW      29-11-2025  MuhammadRamzy        feat: Redesign AddWidgetDialog with side-by-side
+#                                                layout and QStackedWidget
 ####################################################################################################
 
 ####################################################################################################
