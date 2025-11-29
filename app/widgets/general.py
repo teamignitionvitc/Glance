@@ -35,8 +35,8 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 """
 ####################################################################################################
 # File:        general.py
-# Author:      Shawn Liju Thomas
-# Created On:  16-09-2025
+# Author:      MuhammadRamzy
+# Created On:  26-09-2025
 #
 # @brief       Dashboard display widgets for telemetry visualization.
 # @details     Provides reusable PySide6 widgets for displaying telemetry data, including value cards,
@@ -45,11 +45,18 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 ####################################################################################################
 # HISTORY:
 #
-#       +----- (NEW | MODify | ADD | DELete)
+#       +----- (NEW | MOD | ADD | DEL)
 #       |
 # No#   |       when       who                  what
 # ######+*********+**********+********************+**************************************************
-# 000  NEW      16-09-2025  Shawn Liju Thomas    Initial creation
+# 000  NEW      26-09-2025  MuhammadRamzy        First commit with the ui/ux and flow changes
+# 001  MOD      27-09-2025  MuhammadRamzy        Stream Fix
+# 002  MOD      09-10-2025  MuhammadRamzy        Formatting
+# 003  MOD      12-10-2025  MuhammadRamzy        modularized main.py into widget.py
+# 004  MOD      13-10-2025  oslowtech            Fixed Dashboard creation failed.
+# 005  MOD      30-10-2025  Shawn                Fixed issue where close button hides widget instead of actually closing it, changed comment type
+# 006  MOD      06-11-2025  Shawn                Fixed map issue on no wifi, fixed minor bugs with the map
+# 007  MOD      29-11-2025  MuhammadRamzy        feat: Redesign AddWidgetDialog with side-by-side layout and QStackedWidget
 ####################################################################################################
 
 

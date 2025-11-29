@@ -34,8 +34,8 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 """
 ####################################################################################################
 # File:        main_window.py
-# Author:      Shawn Liju Thomas
-# Created On:  16-09-2025
+# Author:      MuhammadRamzy
+# Created On:  26-09-2025
 #
 # @brief       Main application window and UI logic.
 # @details     Manages the application lifecycle, UI phases (Splash, Welcome, Setup, Dashboard),
@@ -43,11 +43,16 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 ####################################################################################################
 # HISTORY:
 #
-#       +----- (NEW | MODify | ADD | DELete)
+#       +----- (NEW | MOD | ADD | DEL)
 #       |
 # No#   |       when       who                  what
 # ######+*********+**********+********************+**************************************************
-# 000  NEW      16-09-2025  Shawn Liju Thomas    Initial creation
+# 000  NEW      26-09-2025  MuhammadRamzy        First commit with the ui/ux and flow changes
+# 001  MOD      29-11-2025  MuhammadRamzy        feat: Redesign AddWidgetDialog with side-by-side
+#                                                layout and QStackedWidget
+# 002  MOD      30-11-2025  MuhammadRamzy        feat: Enhance status bar UI/UX and implement CI/CD
+#                                                workflows, fix: Simplify status bar and remove
+#                                                CI/CD workflows
 ####################################################################################################
 
 ####################################################################################################
@@ -109,6 +114,8 @@ from app.widgets.telemetry import RawTelemetryMonitor, StandaloneTelemetryViewer
 from app.dialogs import ConnectionSettingsDialog, AddWidgetDialog, ParameterEntryDialog, ManageParametersDialog, DataLoggingDialog
 from app.core.history import CommandHistory
 from app.core.commands import AddWidgetCommand, RemoveWidgetCommand, UpdateParametersCommand
+
+####################################################################################################
 class MainWindow(QMainWindow):
     """
     @brief Main application window.

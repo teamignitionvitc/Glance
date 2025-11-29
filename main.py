@@ -34,19 +34,67 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 """
 ####################################################################################################
 # File:        main.py
-# Author:      Shawn Liju Thomas
-# Created On:  16-09-2025
+# Author:      MuhammadRamzy
+# Created On:  14-09-2025
 #
 # @brief       Entry point for the Glance Telemetry Dashboard application.
 # @details     Initializes the QApplication, sets up the main window, and starts the event loop.
 ####################################################################################################
 # HISTORY:
 #
-#       +----- (NEW | MODify | ADD | DELete)
+#       +----- (NEW | MOD | ADD | DEL)
 #       |
 # No#   |       when       who                  what
 # ######+*********+**********+********************+**************************************************
-# 000  NEW      16-09-2025  Shawn Liju Thomas    Initial creation
+# 000  NEW      14-09-2025  NeilBaranwal9        Initial creation
+# 001  MOD      20-09-2025  MuhammadRamzy        Update main.py with latest changes
+# 002  MOD      25-09-2025  Shawn                Fixed issue with main.py commit and updated working
+#                                                main.py
+# 003  MOD      26-09-2025  MuhammadRamzy        First commit with the ui/ux and flow changes
+# 004  MOD      27-09-2025  MuhammadRamzy        Stream Fix
+# 005  MOD      30-09-2025  Shawn                Fixed map functionality using leaflet, removed extra
+#                                                items from MapWidget, cleaned up the map view
+# 006  MOD      30-09-2025  MuhammadRamzy        Add Ctrl key check to disable hover interactions on
+#                                                TimeGraph
+# 007  MOD      01-10-2025  MuhammadRamzy        Fixed the top bar, improved the bottom bar, License
+#                                                Update, added RAW TELEMETRY PACKET VIEWER, added
+#                                                refresh button and functionality for the connection
+#                                                settings, added option to edit the dashboard header
+#                                                and updated project saving methods, tab layout save
+#                                                and load with dock arrangment saves, dummy app name
+#                                                added (Glance)
+# 008  MOD      02-10-2025  MuhammadRamzy        UI Fix, Bottom bar fix, Default Logging location
+#                                                fix, added documentaion viewer in the help menu,
+#                                                _tile_evenly_safe method fix, Added Standalone Raw
+#                                                telemetry
+# 009  MOD      03-10-2025  MuhammadRamzy        Updated namefields
+# 010  MOD      04-10-2025  MuhammadRamzy        Updated main.py, added filters, updated the doc view
+#                                                to web from local method, changed the about, added
+#                                                keyboard shortcuts
+# 011  MOD      06-10-2025  MuhammadRamzy        Updated main.py, welcome screen ui changes, gps
+#                                                delay, added splash screen
+# 012  MOD      07-10-2025  MuhammadRamzy        Pytest error fix
+# 013  MOD      08-10-2025  MuhammadRamzy        Improved the manage filter option, fixed text-shadow
+#                                                & box-shadow error, added fullscreen and improved
+#                                                the tab views, improved about, improved dashboard
+#                                                config ui/ux
+# 014  MOD      09-10-2025  MuhammadRamzy        Formatting
+# 015  MOD      11-10-2025  MuhammadRamzy        Added Automated summary generator from the data log
+# 016  MOD      12-10-2025  oslowtech            Cleaned Up the main.py file, with Documentation
+#                                                Openning on Windows
+# 017  MOD      12-10-2025  MuhammadRamzy        modularized main.py into widget.py, refactor(main):
+#                                                remove redundant DataSimulator import
+# 018  MOD      14-10-2025  Shawn                fixed rendering of glance on main page in
+#                                                executable, Fixed ignition logo rendering in about
+#                                                tab
+# 019  MOD      21-10-2025  MuhammadRamzy        fixed the multiple tab saving issue
+# 020  MOD      23-10-2025  Shawn                Fixed resizing on project load
+# 021  MOD      30-10-2025  Shawn                Fixed issue where close button hides widget instead
+#                                                of actually closing it
+# 022  MOD      06-11-2025  MuhammadRamzy        updated the test.py file and fixed minor bugs
+# 023  MOD      09-11-2025  Shawn                Fixed taskbar icon and app window icon loading
+# 024  MOD      29-11-2025  MuhammadRamzy        feat: Redesign AddWidgetDialog with side-by-side
+#                                                layout and QStackedWidget
 ####################################################################################################
 
 ####################################################################################################
