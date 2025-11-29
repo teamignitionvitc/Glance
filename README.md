@@ -268,11 +268,11 @@ With multi-source connectivity, advanced signal filtering, powerful data logging
 **Status Bar Metrics**
 - Live clock display
 - Connection status with details
-- Stream status (streaming/paused)
-- Packet count and rate
-- Total data received
-- Session uptime
+- Packet count and data received
+- Active parameters and widget count
+- UI update rate (FPS)
 - Data logging indicator
+- Quick access to Raw Telemetry viewer
 
 </td>
 <td width="50%">
@@ -708,8 +708,8 @@ Click **"Add Widget..."** or press **Ctrl+W**
 </tr>
 <tr>
 <td>Value Card</td>
-<td>1</td>
-<td>Critical single values</td>
+<td>1+</td>
+<td>Multiple critical values</td>
 </tr>
 <tr>
 <td>Time Graph</td>
@@ -728,8 +728,8 @@ Click **"Add Widget..."** or press **Ctrl+W**
 </tr>
 <tr>
 <td>LED Indicator</td>
-<td>1</td>
-<td>Status monitoring</td>
+<td>1+</td>
+<td>Multi-status monitoring with per-parameter thresholds</td>
 </tr>
 <tr>
 <td>Log Table</td>

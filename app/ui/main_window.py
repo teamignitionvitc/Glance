@@ -1043,9 +1043,10 @@ class MainWindow(QMainWindow):
             return
         timestamp = time.time()
 
-        # Track packets for status bar
-        self.packet_count += 1
-        self.packet_timestamps.append(timestamp)
+        # Track packets and bytes for status bar
+        self.total_packets += 1
+        # Estimate bytes (each value as 4 bytes for simplicity)
+        self.total_rx_bytes += len(packet) * 4
 
         # Iterate through the user-defined parameters, not the incoming data keys
         for param_meta in self.parameters:
@@ -1078,6 +1079,7 @@ class MainWindow(QMainWindow):
         # Send RAW data to raw telemetry monitor if open
         if self.raw_tlm_monitor and self.raw_tlm_monitor.isVisible():
             self.raw_tlm_monitor.append_packet(packet)
+
 
     def update_dashboard_ui(self):
         """
@@ -3535,62 +3537,107 @@ class MainWindow(QMainWindow):
         sb = self.statusBar()
         sb.setStyleSheet("""
             QStatusBar {
-                background: #1e1e1e;
-                border-top: 1px solid #333;
+                background: qlineargradient(x1:0, y1:0, x2:0, y2:1, 
+                    stop:0 #252525, stop:1 #1e1e1e);
+                border-top: 2px solid #333;
                 color: #e0e0e0;
-                padding: 4px 10px;
+                padding: 6px 12px;
                 font-family: 'Segoe UI', sans-serif;
             }
             QStatusBar QLabel {
                 color: #e0e0e0;
-                padding: 0 8px;
+                padding: 0 6px;
                 font-size: 11px;
             }
             QStatusBar QLabel#SBClock {
                 font-family: 'Consolas', monospace;
                 font-weight: bold;
                 color: #64b5f6;
+                background: rgba(100, 181, 246, 0.1);
+                border-radius: 4px;
+                padding: 4px 10px;
             }
             QStatusBar QLabel#SBConnected {
                 color: #81c784;
                 font-weight: bold;
+                background: rgba(129, 199, 132, 0.15);
+                border-radius: 4px;
+                padding: 4px 8px;
             }
             QStatusBar QLabel#SBDisconnected {
                 color: #e57373;
                 font-weight: bold;
+                background: rgba(229, 115, 115, 0.15);
+                border-radius: 4px;
+                padding: 4px 8px;
             }
             QStatusBar QLabel#SBValue {
                 font-family: 'Consolas', monospace;
                 color: #ffb74d;
+                background: rgba(255, 183, 77, 0.1);
+                border-radius: 3px;
+                padding: 3px 8px;
+            }
+            QStatusBar QLabel#SBMetric {
+                font-family: 'Consolas', monospace;
+                color: #90caf9;
+                font-size: 10px;
+            }
+            QStatusBar QLabel#Separator {
+                color: #555;
+                padding: 0 4px;
             }
             QStatusBar QPushButton {
-                background: #333;
+                background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                    stop:0 #3a3a3a, stop:1 #2e2e2e);
                 border: 1px solid #555;
-                border-radius: 3px;
+                border-radius: 4px;
                 color: #fff;
-                padding: 2px 8px;
+                padding: 4px 12px;
                 font-size: 10px;
+                font-weight: 500;
                 margin: 0 4px;
             }
             QStatusBar QPushButton:hover {
-                background: #444;
+                background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                    stop:0 #4a4a4a, stop:1 #3e3e3e);
                 border-color: #666;
             }
+            QStatusBar QPushButton:pressed {
+                background: #2a2a2a;
+            }
             QStatusBar QPushButton#LoggingActive {
-                background: #2e7d32;
+                background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                    stop:0 #388e3c, stop:1 #2e7d32);
                 border-color: #4caf50;
+            }
+            QStatusBar QPushButton#LoggingActive:hover {
+                background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                    stop:0 #4caf50, stop:1 #388e3c);
+            }
+            QStatusBar QPushButton#TelemetryBtn {
+                background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                    stop:0 #1976d2, stop:1 #1565c0);
+                border-color: #2196f3;
+                font-weight: 600;
+            }
+            QStatusBar QPushButton#TelemetryBtn:hover {
+                background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                    stop:0 #2196f3, stop:1 #1976d2);
             }
         """)
         
         # Clock
-        self.clock_label = QLabel("")
+        self.clock_label = QLabel("00:00:00")
         self.clock_label.setObjectName("SBClock")
+        self.clock_label.setToolTip("Current Time")
         
         # Connection Status (Clickable)
         self.conn_label = QLabel("Disconnected")
         self.conn_label.setObjectName("SBDisconnected")
         self.conn_label.setCursor(Qt.CursorShape.PointingHandCursor)
         self.conn_label.mousePressEvent = lambda e: self.open_connection_settings()
+        self.conn_label.setToolTip("Click to configure connection")
         
         # Session Time
         self.session_time_label = QLabel("")
@@ -3607,18 +3654,45 @@ class MainWindow(QMainWindow):
         self.logging_btn = QPushButton("Start Logging")
         self.logging_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         self.logging_btn.clicked.connect(self.toggle_logging_from_statusbar)
+        self.logging_btn.setToolTip("Start/Stop data logging")
         
         self.log_size_label = QLabel("")
         self.log_size_label.setObjectName("SBValue")
         self.log_size_label.setVisible(False)
+        
+        # Packet Counter
+        self.packet_count_label = QLabel("Packets: 0")
+        self.packet_count_label.setObjectName("SBMetric")
+        self.packet_count_label.setToolTip("Total Packets Received")
+        
+        # RX Bytes
+        self.rx_bytes_label = QLabel("RX: 0 B")
+        self.rx_bytes_label.setObjectName("SBMetric")
+        self.rx_bytes_label.setToolTip("Total Data Received")
+        
+        # Active Parameters
+        self.active_params_label = QLabel("Parameters: 0")
+        self.active_params_label.setObjectName("SBMetric")
+        self.active_params_label.setToolTip("Active Parameters")
+        
+        # Widget Count
+        self.widget_count_label = QLabel("Widgets: 0")
+        self.widget_count_label.setObjectName("SBMetric")
+        self.widget_count_label.setToolTip("Widgets in Current Tab")
+        
+        # FPS Counter
+        self.fps_label = QLabel("FPS: 0")
+        self.fps_label.setObjectName("SBMetric")
+        self.fps_label.setToolTip("UI Update Rate")
+        self.fps_counter = 0
+        self.fps_last_time = time.time()
         
         # Metrics
         self.rate_label = QLabel("")
         self.rate_label.setObjectName("SBValue")
         self.rate_label.setToolTip("Data Rate")
         
-        # Add widgets
-        # NEW: Raw Telemetry Viewer button - always visible
+        # Raw Telemetry Viewer button
         self.telemetry_viewer_btn = QPushButton("Raw Telemetry")
         self.telemetry_viewer_btn.setObjectName("TelemetryBtn")
         self.telemetry_viewer_btn.setToolTip("Open standalone telemetry monitor")
@@ -3634,20 +3708,33 @@ class MainWindow(QMainWindow):
         self.sep3.setObjectName("Separator")
         self.sep4 = QLabel("|")
         self.sep4.setObjectName("Separator")
+        self.sep5 = QLabel("|")
+        self.sep5.setObjectName("Separator")
+        self.sep6 = QLabel("|")
+        self.sep6.setObjectName("Separator")
         
-        # Layout - Left side
+        # Layout - Left side (only clock on welcome screen)
         sb.addWidget(self.clock_label)
         sb.addWidget(self.sep1)
         sb.addWidget(self.conn_label)
         sb.addWidget(self.sep2)
         sb.addWidget(self.status_label)
         sb.addWidget(self.logging_btn)
+        sb.addWidget(self.log_size_label)
         
-        # Right side - use addPermanentWidget for right alignment
+        # Middle - Metrics (hidden on welcome screen)
+        sb.addWidget(self.sep3)
+        sb.addWidget(self.packet_count_label)
+        sb.addWidget(self.rx_bytes_label)
+        sb.addWidget(self.sep4)
+        sb.addWidget(self.active_params_label)
+        sb.addWidget(self.widget_count_label)
+        
+        # Right side
+        sb.addPermanentWidget(self.fps_label)
+        sb.addPermanentWidget(self.sep5)
         sb.addPermanentWidget(self.telemetry_viewer_btn)
-        sb.addPermanentWidget(self.sep3)
-        sb.addPermanentWidget(self.log_size_label)
-        sb.addPermanentWidget(self.sep4)
+        sb.addPermanentWidget(self.sep6)
         sb.addPermanentWidget(self.rate_label)
         
         # Timer for clock and session updates
@@ -3656,10 +3743,13 @@ class MainWindow(QMainWindow):
         self.status_timer.start(1000)
         
         self.session_start_time = None
+        self.total_packets = 0
+        self.total_rx_bytes = 0
+
 
     def _update_status_bar_periodic(self):
         # Update Clock
-        self.clock_label.setText(datetime.now().strftime("%H:%M:%S"))
+        self.clock_label.setText(datetime.now().strftime('%H:%M:%S'))
         
         # Update Session Time
         if self.session_start_time:
@@ -3686,6 +3776,38 @@ class MainWindow(QMainWindow):
                 self.log_size_label.setText("Error")
         else:
             self.log_size_label.setVisible(False)
+        
+        # Update Packet Counter
+        self.packet_count_label.setText(f"Packets: {self.total_packets}")
+        
+        # Update RX Bytes
+        rx_bytes = self.total_rx_bytes
+        for unit in ['B', 'KB', 'MB', 'GB']:
+            if rx_bytes < 1024:
+                break
+            rx_bytes /= 1024
+        self.rx_bytes_label.setText(f"RX: {rx_bytes:.1f} {unit}")
+        
+        # Update Active Parameters
+        active_count = len(self.parameters)
+        self.active_params_label.setText(f"Parameters: {active_count}")
+        
+        # Update Widget Count for current tab
+        current_idx = self.tab_widget.currentIndex()
+        widget_count = 0
+        if current_idx in self.tab_data:
+            widget_count = len(self.tab_data[current_idx].get('docks', {}))
+        self.widget_count_label.setText(f"Widgets: {widget_count}")
+        
+        # Update FPS
+        self.fps_counter += 1
+        current_time = time.time()
+        elapsed = current_time - self.fps_last_time
+        if elapsed >= 1.0:
+            fps = self.fps_counter / elapsed
+            self.fps_label.setText(f"FPS: {int(fps)}")
+            self.fps_counter = 0
+            self.fps_last_time = current_time
 
     def toggle_logging_from_statusbar(self):
         """Toggle data logging from status bar button"""
@@ -3746,29 +3868,61 @@ class MainWindow(QMainWindow):
         is_dashboard = (phase == "dashboard")
         is_splash = (phase == "splash")
         
-        # Always show status bar now, but control content
+        # Always show status bar
         self.statusBar().setVisible(True)
         
-        # Elements visible in dashboard only
-        self.conn_label.setVisible(is_dashboard)
-        self.status_label.setVisible(is_dashboard)
-        self.logging_btn.setVisible(is_dashboard)
-        self.rate_label.setVisible(is_dashboard)
-        
-        # Separators visible in dashboard only
-        self.sep1.setVisible(is_dashboard)
-        self.sep2.setVisible(is_dashboard)
-        self.sep3.setVisible(is_dashboard)
-        self.sep4.setVisible(is_dashboard)
-        
-        # Telemetry viewer visible in both (or always)
-        self.telemetry_viewer_btn.setVisible(True)
-        
-        # Session time and log size have their own visibility logic in the timer
-        # but we force hide them if not dashboard
+        # On welcome screen, show only clock and telemetry button
         if not is_dashboard:
-            self.session_time_label.setVisible(False)
+            # Hide all dashboard-specific elements
+            self.conn_label.setVisible(False)
+            self.status_label.setVisible(False)
+            self.logging_btn.setVisible(False)
             self.log_size_label.setVisible(False)
+            self.session_time_label.setVisible(False)
+            self.rate_label.setVisible(False)
+            
+            # Hide metrics
+            self.packet_count_label.setVisible(False)
+            self.rx_bytes_label.setVisible(False)
+            self.active_params_label.setVisible(False)
+            self.widget_count_label.setVisible(False)
+            self.fps_label.setVisible(False)
+            
+            # Hide separators
+            self.sep1.setVisible(False)
+            self.sep2.setVisible(False)
+            self.sep3.setVisible(False)
+            self.sep4.setVisible(False)
+            self.sep5.setVisible(False)
+            self.sep6.setVisible(False)
+            
+            # Show only clock and telemetry button
+            self.clock_label.setVisible(True)
+            self.telemetry_viewer_btn.setVisible(True)
+        else:
+            # Dashboard - show all elements
+            self.clock_label.setVisible(True)
+            self.conn_label.setVisible(True)
+            self.status_label.setVisible(True)
+            self.logging_btn.setVisible(True)
+            self.telemetry_viewer_btn.setVisible(True)
+            self.rate_label.setVisible(True)
+            
+            # Show metrics
+            self.packet_count_label.setVisible(True)
+            self.rx_bytes_label.setVisible(True)
+            self.active_params_label.setVisible(True)
+            self.widget_count_label.setVisible(True)
+            self.fps_label.setVisible(True)
+            
+            # Show separators
+            self.sep1.setVisible(True)
+            self.sep2.setVisible(True)
+            self.sep3.setVisible(True)
+            self.sep4.setVisible(True)
+            self.sep5.setVisible(True)
+            self.sep6.setVisible(True)
+
 
 
     def _build_welcome_page(self):
