@@ -19,7 +19,7 @@
                     Copyright (c) 2025 Ignition Software Department
 
 This program is free software: you can redistribute it and/or modify
-it under the terms of the GNU General Public License as published by
+under the terms of the GNU General Public License as published by
 the Free Software Foundation, version 3, with the additional restriction
 that this software may not be used for commercial purposes without
 explicit written permission from the authors.
@@ -33,29 +33,28 @@ You should have received a copy of the GNU General Public License
 along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 """
-
 ####################################################################################################
-# File:        widgets.py
-# Author:      Ramzy
-# Created On:  <Date>
+# File:        general.py
+# Author:      Shawn Liju Thomas
+# Created On:  16-09-2025
 #
 # @brief       Dashboard display widgets for telemetry visualization.
 # @details     Provides reusable PySide6 widgets for displaying telemetry data, including value cards,
 #              time graphs, log tables, gauges, histograms, LED indicators, and map views. Enables
 #              interactive and real-time visualization of sensor and telemetry parameters.
-###################################################################################################
+####################################################################################################
 # HISTORY:
 #
 #       +----- (NEW | MODify | ADD | DELete)
 #       |
 # No#   |       when       who                  what
-######+*********+**********+********************+**************************************************
-# 000  NEW      <Date>      Ramzy               Initial creation
+# ######+*********+**********+********************+**************************************************
+# 000  NEW      16-09-2025  Shawn Liju Thomas    Initial creation
 ####################################################################################################
 
 
 
-from PySide6.QtWidgets import QWidget, QVBoxLayout, QFrame, QLabel, QTableWidget, QHeaderView, QAbstractItemView, QGroupBox, QHBoxLayout, QTableWidgetItem, QComboBox, QPushButton, QApplication, QMessageBox, QDoubleSpinBox, QDockWidget
+from PySide6.QtWidgets import QWidget, QVBoxLayout, QFrame, QLabel, QTableWidget, QHeaderView, QAbstractItemView, QGroupBox, QHBoxLayout, QTableWidgetItem, QComboBox, QPushButton, QApplication, QMessageBox, QDoubleSpinBox, QDockWidget, QGridLayout
 from PySide6.QtGui import QFont, QColor, QBrush
 from PySide6.QtNetwork import QNetworkAccessManager, QNetworkRequest, QNetworkReply
 from PySide6.QtCore import Qt, Signal, QUrl,QTimer
@@ -71,7 +70,10 @@ except Exception:
     QWebEngineView = None
 
 class ClosableDock(QDockWidget):
-    """Custom QDockWidget that emits a signal only when the close button is clicked."""
+    """
+    @brief Custom QDockWidget that emits a signal only when the close button is clicked.
+    @details Used for widgets that can be closed/hidden from the dashboard layout.
+    """
     closed = Signal(str)# will emit the widget_id when closed
 
     def __init__(self, title, parent=None, widget_id=None):
@@ -86,45 +88,65 @@ class ClosableDock(QDockWidget):
 
 
 class ValueCard(QFrame):
-    def __init__(self, param_name, unit, priority):
+    """
+    @brief Widget for displaying multiple scalar values in a grid (Value Panel).
+    @details Shows parameter names, values, and units for a list of parameters.
+    """
+    def __init__(self, param_configs, priority=None):
         super().__init__()
-        self.param_name = param_name
-        self.unit = unit
+        self.param_configs = param_configs
         self.priority = priority
         
         # Clean, frameless container
         self.setFrameShape(QFrame.Shape.NoFrame)
         
         # Main layout
-        layout = QVBoxLayout(self)
-        layout.setContentsMargins(24, 24, 24, 24)
-        layout.setSpacing(4)
+        self.main_layout = QGridLayout(self)
+        self.main_layout.setContentsMargins(16, 16, 16, 16)
+        self.main_layout.setSpacing(16)
         
-        # Parameter name - top
-        self.name_label = QLabel(param_name)
-        self.name_label.setFont(QFont("Arial", 11))
-        self.name_label.setStyleSheet("color: #999999;")
-        self.name_label.setAlignment(Qt.AlignmentFlag.AlignLeft)
+        self.value_labels = {}
         
-        # Main value - huge and centered
-        self.value_label = QLabel("---")
-        value_font = QFont("Arial", 70, QFont.Weight.Bold)
-        self.value_label.setFont(value_font)
-        self.value_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.value_label.setStyleSheet("color: #ffffff; padding: 20px 0px;")
+        # Calculate grid dimensions
+        n = len(param_configs)
+        cols = math.ceil(math.sqrt(n))
         
-        # Unit - small, right below value
-        self.unit_label = QLabel(unit)
-        self.unit_label.setFont(QFont("Arial", 14))
-        self.unit_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.unit_label.setStyleSheet("color: #666666;")
-        
-        # Add to layout
-        layout.addWidget(self.name_label)
-        layout.addStretch()
-        layout.addWidget(self.value_label)
-        layout.addWidget(self.unit_label)
-        layout.addStretch()
+        for i, p_config in enumerate(param_configs):
+            row = i // cols
+            col = i % cols
+            
+            # Container for each value
+            container = QFrame()
+            container.setStyleSheet("background-color: #252525; border-radius: 6px;")
+            v_layout = QVBoxLayout(container)
+            v_layout.setContentsMargins(12, 12, 12, 12)
+            v_layout.setSpacing(4)
+            
+            # Name
+            name_label = QLabel(p_config['name'])
+            name_label.setFont(QFont("Arial", 10))
+            name_label.setStyleSheet("color: #aaaaaa;")
+            name_label.setAlignment(Qt.AlignmentFlag.AlignLeft)
+            
+            # Value
+            value_label = QLabel("---")
+            value_font = QFont("Arial", 24, QFont.Weight.Bold)
+            value_label.setFont(value_font)
+            value_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            value_label.setStyleSheet("color: #ffffff;")
+            self.value_labels[p_config['id']] = value_label
+            
+            # Unit
+            unit_label = QLabel(p_config['unit'])
+            unit_label.setFont(QFont("Arial", 10))
+            unit_label.setAlignment(Qt.AlignmentFlag.AlignRight)
+            unit_label.setStyleSheet("color: #666666;")
+            
+            v_layout.addWidget(name_label)
+            v_layout.addWidget(value_label)
+            v_layout.addWidget(unit_label)
+            
+            self.main_layout.addWidget(container, row, col)
         
         # Set base style
         self.setStyleSheet("""
@@ -136,56 +158,38 @@ class ValueCard(QFrame):
         
         # Minimum size
         self.setMinimumSize(240, 200)
-        self.setMaximumHeight(280)
     
-    def update_value(self, value, alarm_state):
-        if value is not None:
-            # Smart formatting
-            if abs(value) >= 1000:
-                display_value = f"{value:,.1f}"
-            elif abs(value) >= 100:
-                display_value = f"{value:.1f}"
-            elif abs(value) >= 10:
-                display_value = f"{value:.2f}"
-            elif abs(value) >= 1:
-                display_value = f"{value:.2f}"
-            else:
-                display_value = f"{value:.3f}"
-            
-            self.value_label.setText(display_value)
-            
-            # Color based on state
-            if alarm_state == 'Critical':
-                value_color = '#ff4757'
-                bg_color = '#1e1e1e'
-            elif alarm_state == 'Warning':
-                value_color = '#ffa502'
-                bg_color = '#1e1e1e'
-            else:
-                value_color = '#ffffff'
-                bg_color = '#1e1e1e'
-
-            self.value_label.setStyleSheet(f"color: {value_color}; padding: 20px 0px;")
-            self.setStyleSheet(f"""
-                QFrame {{
-                    background-color: {bg_color};
-                    border-radius: 8px;
-                }}
-            """)
-        else:
-            self.value_label.setText("--")
-            self.value_label.setStyleSheet("color: #555555; padding: 20px 0px;")
-        
-        self.set_alarm_state(alarm_state)
-    
-    def set_alarm_state(self, state):
-        # Just update the internal state, visual already handled in update_value
-        pass
+    def update_values(self, values_dict):
+        for pid, val in values_dict.items():
+            if pid in self.value_labels:
+                lbl = self.value_labels[pid]
+                if val is not None:
+                    # Smart formatting
+                    if abs(val) >= 1000:
+                        display_value = f"{val:,.1f}"
+                    elif abs(val) >= 100:
+                        display_value = f"{val:.1f}"
+                    elif abs(val) >= 10:
+                        display_value = f"{val:.2f}"
+                    elif abs(val) >= 1:
+                        display_value = f"{val:.2f}"
+                    else:
+                        display_value = f"{val:.3f}"
+                    lbl.setText(display_value)
+                    lbl.setStyleSheet("color: #ffffff;")
+                else:
+                    lbl.setText("--")
+                    lbl.setStyleSheet("color: #555555;")
 
 class GaugeWidget(QFrame):
-    def __init__(self, param_config):
+    """
+    @brief Widget for displaying a value on a linear gauge.
+    @details Visualizes the value relative to defined thresholds (low/high warning/critical).
+    """
+    def __init__(self, param_config, options=None):
         super().__init__()
         self.param = param_config
+        self.options = options or {}
         layout = QVBoxLayout(self)
         layout.setContentsMargins(16, 16, 16, 16)
         layout.setSpacing(8)
@@ -228,18 +232,11 @@ class GaugeWidget(QFrame):
         self.bar.hideAxis('left')
         self.bar.hideAxis('bottom')
         self.bar.setMenuEnabled(False)
+        
+        self.min_val = float(self.options.get('min_value', 0))
+        self.max_val = float(self.options.get('max_value', 100))
         self.bar.setYRange(0, 100, padding=0)
         self.bar.setXRange(0, 100, padding=0)
-        
-        # Color regions
-        self.low_region = pg.LinearRegionItem(values=(0, 25), brush=(255, 49, 49, 80))
-        self.warn_region = pg.LinearRegionItem(values=(25, 75), brush=(255, 191, 0, 60))
-        self.high_region = pg.LinearRegionItem(values=(75, 100), brush=(28, 156, 79, 80))
-        
-        for reg in [self.low_region, self.warn_region, self.high_region]:
-            reg.setZValue(-10)
-            reg.setMovable(False)
-            self.bar.addItem(reg)
         
         # Indicator line
         self.indicator = pg.InfiniteLine(pos=0, angle=90, pen=pg.mkPen('#00BFFF', width=4))
@@ -262,16 +259,16 @@ class GaugeWidget(QFrame):
         except Exception:
             self.value_lbl.setText("--")
         
-        # Normalize gauge range based on thresholds
-        t = self.param.get('threshold', {'low_crit': 0, 'low_warn': 25, 'high_warn': 75, 'high_crit': 100})
-        lo = float(t.get('low_crit', 0))
-        hi = float(t.get('high_crit', 100))
-        val = float(value) if value is not None else lo
-        span = max(1e-6, hi - lo)
-        x = max(0.0, min(1.0, (val - lo) / span)) * 100.0
+        val = float(value) if value is not None else self.min_val
+        span = max(1e-6, self.max_val - self.min_val)
+        x = max(0.0, min(1.0, (val - self.min_val) / span)) * 100.0
         self.indicator.setPos(x)
         
 class TimeGraph(QWidget):
+    """
+    @brief Widget for plotting parameter values over time.
+    @details Supports multiple curves, zooming, panning, and value inspection via mouse hover/click.
+    """
     def __init__(self, param_configs):
         super().__init__()
         self.param_configs = param_configs
@@ -293,6 +290,9 @@ class TimeGraph(QWidget):
         self.plot_widget.setBackground(QColor(12, 12, 12))
         self.plot_widget.showGrid(x=True, y=True, alpha=0.25)
         self.plot_widget.setAntialiasing(True)
+        # Optimization: Enable downsampling and clipping
+        self.plot_widget.setDownsampling(mode='peak')
+        self.plot_widget.setClipToView(True)
         self.plot_widget.setLabel('bottom', 'Time (s)', color='#FFFFFF')
         self.plot_widget.addLegend(offset=(10, 10))
 
@@ -394,6 +394,10 @@ class TimeGraph(QWidget):
 
 
 class HistogramWidget(QWidget):
+    """
+    @brief Widget for displaying the distribution of parameter values.
+    @details Uses a bar graph to show a histogram of the data.
+    """
     def __init__(self, param_config):
         super().__init__(); self.param = param_config
         layout = QVBoxLayout(self); layout.setContentsMargins(0,0,0,0)
@@ -413,54 +417,69 @@ class HistogramWidget(QWidget):
             pass
 
 class LEDWidget(QFrame):
-    def __init__(self, param_config):
+    """
+    @brief Widget for displaying multiple status LEDs (LED Panel).
+    @details Changes color (Green/Gray) based on value thresholds/conditions.
+    """
+    def __init__(self, param_configs, options=None):
         super().__init__()
-        self.param = param_config
-        layout = QVBoxLayout(self)
-        layout.setContentsMargins(16, 16, 16, 16)
-        layout.setSpacing(12)
+        self.param_configs = param_configs
+        self.options = options or {}
         
-        # Clean parameter name
-        clean_name = param_config['name'].replace('GPS(', '').replace(')', '') if param_config['name'].startswith('GPS(') else param_config['name']
+        # Main layout
+        self.main_layout = QGridLayout(self)
+        self.main_layout.setContentsMargins(16, 16, 16, 16)
+        self.main_layout.setSpacing(16)
         
-        # Title with icon
-        title_layout = QHBoxLayout()
-        icon_label = QLabel("LED")
-        icon_label.setFont(QFont("Arial", 14))
-        title = QLabel(f"{clean_name}")
-        title.setFont(QFont("Arial", 12, QFont.Weight.Bold))
-        title.setStyleSheet("color: #ffffff;")
-        if param_config.get('unit'):
-            unit_label = QLabel(f"({param_config['unit']})")
-            unit_label.setFont(QFont("Arial", 10))
-            unit_label.setStyleSheet("color: #aaaaaa;")
-            title_layout.addWidget(icon_label)
-            title_layout.addWidget(title)
-            title_layout.addWidget(unit_label)
-            title_layout.addStretch()
-        else:
-            title_layout.addWidget(icon_label)
-            title_layout.addWidget(title)
-            title_layout.addStretch()
+        self.leds = {}
+        self.value_labels = {}
         
-        # LED indicator
-        self.led = QLabel("")
-        self.led.setFixedSize(40, 40)
-        self.led.setStyleSheet("""
-            border-radius: 20px; 
-            background: #555; 
-            border: 3px solid #333;
-        """)
+        # Calculate grid dimensions
+        n = len(param_configs)
+        cols = math.ceil(math.sqrt(n))
         
-        # Value display
-        self.value_lbl = QLabel("--")
-        self.value_lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.value_lbl.setFont(QFont("Monospace", 16, QFont.Weight.Bold))
-        self.value_lbl.setStyleSheet("color: #ffffff;")
-        
-        layout.addLayout(title_layout)
-        layout.addWidget(self.led, alignment=Qt.AlignmentFlag.AlignCenter)
-        layout.addWidget(self.value_lbl)
+        for i, p_config in enumerate(param_configs):
+            row = i // cols
+            col = i % cols
+            
+            # Container
+            container = QFrame()
+            container.setStyleSheet("background-color: #252525; border-radius: 6px;")
+            v_layout = QVBoxLayout(container)
+            v_layout.setContentsMargins(8, 8, 8, 8)
+            v_layout.setSpacing(8)
+            
+            # Clean parameter name
+            clean_name = p_config['name'].replace('GPS(', '').replace(')', '') if p_config['name'].startswith('GPS(') else p_config['name']
+            
+            # Title
+            title = QLabel(f"{clean_name}")
+            title.setFont(QFont("Arial", 10, QFont.Weight.Bold))
+            title.setStyleSheet("color: #ffffff;")
+            title.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            
+            # LED indicator
+            led = QLabel("")
+            led.setFixedSize(32, 32)
+            led.setStyleSheet("""
+                border-radius: 16px; 
+                background: #555; 
+                border: 2px solid #333;
+            """)
+            self.leds[p_config['id']] = led
+            
+            # Value display
+            value_lbl = QLabel("--")
+            value_lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            value_lbl.setFont(QFont("Monospace", 10))
+            value_lbl.setStyleSheet("color: #aaaaaa;")
+            self.value_labels[p_config['id']] = value_lbl
+            
+            v_layout.addWidget(title)
+            v_layout.addWidget(led, alignment=Qt.AlignmentFlag.AlignCenter)
+            v_layout.addWidget(value_lbl)
+            
+            self.main_layout.addWidget(container, row, col)
         
         # Set frame style
         self.setStyleSheet("""
@@ -470,52 +489,56 @@ class LEDWidget(QFrame):
         """)
 
     
-    def update_value(self, value):
-        try:
-            v = float(value)
-            self.value_lbl.setText(f"{v:.2f}")
-        except Exception:
-            self.value_lbl.setText("--")
-            v = None
+    def update_values(self, values_dict):
+        # Get global defaults
+        default_threshold = float(self.options.get('threshold', 0))
+        default_condition = self.options.get('condition', '>')
         
-        # Determine LED state based on thresholds
-        t = self.param.get('threshold', {'low_crit': 0, 'low_warn': 25, 'high_warn': 75, 'high_crit': 100})
-        if v is not None:
-            if v >= t.get('high_crit', 100):
-                # Critical - red
-                self.led.setStyleSheet("""
-                    border-radius: 20px; 
-                    background: #ff3131; 
-                    border: 3px solid #ff6666;
-                """)
-            elif v >= t.get('high_warn', 75):
-                # Warning - yellow
-                self.led.setStyleSheet("""
-                    border-radius: 20px; 
-                    background: #ffbf00; 
-                    border: 3px solid #ffcc33;
-                """)
-            elif v >= t.get('low_warn', 25):
-                # Normal - green
-                self.led.setStyleSheet("""
-                    border-radius: 20px; 
-                    background: #21b35a; 
-                    border: 3px solid #4ade80;
-                """)
-            else:
-                # Low - blue
-                self.led.setStyleSheet("""
-                    border-radius: 20px; 
-                    background: #0078ff; 
-                    border: 3px solid #3b82f6;
-                """)
-        else:
-            # No data - gray
-            self.led.setStyleSheet("""
-                border-radius: 20px; 
-                background: #555; 
-                border: 3px solid #333;
-            """)
+        # Get per-parameter configs
+        led_configs = self.options.get('led_configs', {})
+        
+        for pid, val in values_dict.items():
+            if pid in self.leds:
+                led = self.leds[pid]
+                lbl = self.value_labels[pid]
+                
+                # Get specific config or fallback to default
+                config = led_configs.get(pid, {})
+                threshold = float(config.get('threshold', default_threshold))
+                condition = config.get('condition', default_condition)
+                
+                try:
+                    v = float(val) if val is not None else None
+                    if v is not None:
+                        lbl.setText(f"{v:.2f}")
+                    else:
+                        lbl.setText("--")
+                except:
+                    v = None
+                    lbl.setText("--")
+                
+                is_active = False
+                if v is not None:
+                    if condition == '>': is_active = v > threshold
+                    elif condition == '<': is_active = v < threshold
+                    elif condition == '>=': is_active = v >= threshold
+                    elif condition == '<=': is_active = v <= threshold
+                    elif condition == '==': is_active = abs(v - threshold) < 0.0001
+                
+                if is_active:
+                    # Active - Green
+                    led.setStyleSheet("""
+                        border-radius: 16px; 
+                        background: #21b35a; 
+                        border: 2px solid #4ade80;
+                    """)
+                else:
+                    # Inactive - Gray
+                    led.setStyleSheet("""
+                        border-radius: 16px; 
+                        background: #555; 
+                        border: 2px solid #333;
+                    """)
 # Optional: Map widget using QWebEngineView if available
 try:
     from PySide6.QtWebEngineWidgets import QWebEngineView  # type: ignore
@@ -524,6 +547,10 @@ except Exception:
 
 
 class MapWidget(QWidget):
+    """
+    @brief Widget for displaying GPS position on a map.
+    @details Uses Leaflet.js via QWebEngineView if available, otherwise falls back to text display.
+    """
     def __init__(self, param_configs):
         super().__init__()
         self.param_configs = param_configs
@@ -828,7 +855,10 @@ class MapWidget(QWidget):
                 # If this fails (e.g., page not ready), force a re-verify soon
                 QTimer.singleShot(1500, self._verify_leaflet_loaded)
 class LogTable(QWidget):
-    # (Unchanged)
+    """
+    @brief Widget for displaying a tabular log of telemetry data.
+    @details Shows timestamped values and supports searching/highlighting specific conditions.
+    """
     def __init__(self, param_configs):
         super().__init__()
         self.param_configs = param_configs
@@ -854,7 +884,8 @@ class LogTable(QWidget):
         search_btn.clicked.connect(self.search_and_highlight)
         clear_btn.clicked.connect(self.clear_highlights)
     def update_data(self, updated_param_id, history):
-        if self.table.rowCount() > 500: self.table.removeRow(500)
+        # Optimization: Limit rows to 100
+        if self.table.rowCount() > 100: self.table.removeRow(100)
         self.table.insertRow(0)
         for pid in self.param_map.keys():
             if pid in history and history[pid]: self.last_known_values[pid] = history[pid][-1]

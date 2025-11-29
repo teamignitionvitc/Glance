@@ -1959,29 +1959,38 @@ timestamp,elapsed_time,temp_sensor_Temperature,humidity_Humidity
 
 ```
 Glance/
-├── main.py                      # Application entry point & main window
-├── backend.py                   # Data reader and protocol parser
+├── main.py                      # Application entry point
 ├── requirements.txt             # Python dependencies
 ├── README.md                    # This file
 ├── LICENSE                      # GPL v3.0 license
 ├── app/
 │   ├── __init__.py
-│   ├── widgets.py               # Widget implementations (7+ types)
-│   ├── dialogs.py               # Dialog windows and forms
-│   └── ui/
+│   ├── core/
+│   │   ├── __init__.py
+│   │   ├── backend.py           # Data reader and protocol parser
+│   │   ├── data_logger.py       # Data logging functionality
+│   │   ├── filters.py           # Signal processing filters
+│   │   └── simulator.py         # Data simulation
+│   ├── dialogs.py               # Configuration dialogs
+│   ├── ui/
+│   │   ├── __init__.py
+│   │   └── main_window.py       # Main window class
+│   └── widgets/
 │       ├── __init__.py
-│       └── main_window.py       # Main window class
-├── docs/
-│   └── public/
-│       ├── Glance_nobg.png      # Application logo
-│       ├── Glance_nobg _jl.png  # Alternate logo
-│       ├── ign_logo_wht.png     # Team Ignition logo
-│       └── Doc Images/          # Documentation screenshots
+│       ├── general.py           # General widgets (Graphs, Gauges, etc.)
+│       └── telemetry.py         # Telemetry monitoring widgets
+├── docs/                        # Documentation assets
 ├── logs/                        # Auto-generated log directory
-├── examples/
-│   └── preset1.json             # Example configuration
-└── Documentation/
-    └── index.html               # Built-in documentation (if available)
+├── tests/                       # Unit tests
+│   ├── __init__.py
+│   ├── conftest.py              # Pytest configuration
+│   ├── test_backend.py
+│   ├── test_data_logger.py
+│   ├── test_filters.py
+│   ├── test_simulator.py
+│   └── test_widgets.py
+└── examples/
+    └── preset1.json             # Example configuration
 ```
 
 ### Architecture Overview
@@ -1997,13 +2006,13 @@ Glance/
 <dd>Main application window, UI phases, widget management, project save/load, filter management</dd>
 
 <dt><strong>backend.py</strong></dt>
-<dd>DataReader class for serial/TCP/UDP communication, protocol parsing, data buffering</dd>
+<dd>Located in <code>app/core/</code>. Handles serial/TCP/UDP communication, protocol parsing, and data buffering.</dd>
 
-<dt><strong>widgets.py</strong></dt>
-<dd>7+ widget types: ValueCard, TimeGraph, Gauge, Histogram, LED, LogTable, MapWidget</dd>
+<dt><strong>widgets/</strong></dt>
+<dd>Contains <code>general.py</code> (standard widgets) and <code>telemetry.py</code> (raw monitors).</dd>
 
 <dt><strong>dialogs.py</strong></dt>
-<dd>Configuration dialogs: ConnectionSettings, AddWidget, ParameterEntry, ManageParameters, DataLogging</dd>
+<dd>Configuration dialogs: ConnectionSettings, AddWidget, ParameterEntry, ManageParameters, DataLogging.</dd>
 </dl>
 
 </td>
@@ -2131,7 +2140,8 @@ pyinstaller --onefile --windowed \
 
 - **PEP 8** compliance for Python code
 - Type hints for function parameters and returns
-- Docstrings for public methods and classes
+- **Doxygen-style docstrings** for all classes and functions (`@brief`, `@param`, `@return`)
+- **Standard File Headers** including copyright and history log
 - Descriptive variable names (no single letters except loops)
 - Comments for complex logic
 - Consistent indentation (4 spaces)
@@ -2139,7 +2149,27 @@ pyinstaller --onefile --windowed \
 ### Testing
 
 <details>
-<summary><h4>Testing Procedures</h4></summary>
+<summary><h4>Automated Tests (pytest)</h4></summary>
+
+The project uses `pytest` for automated testing.
+
+**Running Tests:**
+
+```bash
+# Install test dependencies
+pip install pytest pytest-qt
+
+# Run all tests
+pytest tests/
+
+# Run specific test file
+pytest tests/test_filters.py
+```
+
+</details>
+
+<details>
+<summary><h4>Manual Testing Procedures</h4></summary>
 
 **Manual Testing with Dummy Data**
 

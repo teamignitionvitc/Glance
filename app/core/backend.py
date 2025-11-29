@@ -55,6 +55,7 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 import json
 import re
 import socket
+import struct
 from typing import Optional, List, Union
 
 try:
@@ -86,6 +87,7 @@ class DataReader:
         sample_width_bytes: int = 2,
         little_endian: bool = True,
         csv_separator: str = ",",
+        parameters: list = None,
     ) -> None:
         self.mode = mode.lower()
         self.timeout = timeout
@@ -96,6 +98,14 @@ class DataReader:
         self.sample_width_bytes = max(1, int(sample_width_bytes))
         self.little_endian = bool(little_endian)
         self.csv_separator = csv_separator or ","
+        self.parameters = parameters or []
+        
+        # Pre-calculate struct format if possible
+        self._struct_fmt = ""
+        self._struct_size = 0
+        self._bit_parsers = []
+        if self.data_format == "binary_struct" and self.parameters:
+            self._compile_struct()
 
         self.ser = None
         self.sock: Optional[socket.socket] = None
@@ -159,7 +169,104 @@ class DataReader:
         except Exception:
             return None
 
+    def _compile_struct(self):
+        """Compile the binary structure definition from parameters"""
+        endian = "<" if self.little_endian else ">"
+        fmt = endian
+        total_bytes = 0
+        current_bit_offset = 0
+        
+        # We need to handle bitfields manually, but standard types can be struct-packed
+        # For simplicity in this version, we'll assume a mix of standard types and we'll
+        # read them sequentially. Bitfields will need special handling if they are packed
+        # into standard types (e.g. 32-bit int containing flags).
+        
+        # Current implementation: strictly sequential standard types
+        # TODO: Advanced bit-packing support
+        
+        type_map = {
+            'int8': 'b', 'uint8': 'B',
+            'int16': 'h', 'uint16': 'H',
+            'int32': 'i', 'uint32': 'I',
+            'float32': 'f', 'float64': 'd'
+        }
+        
+        self._parsers = []
+        
+        for p in self.parameters:
+            ptype = p.get('type', 'float32')
+            if ptype in type_map:
+                char = type_map[ptype]
+                fmt += char
+                self._parsers.append({'type': 'standard', 'fmt': char})
+            elif ptype == 'Bitfield':
+                # For now, treat bitfield as uint32
+                fmt += 'I'
+                self._parsers.append({'type': 'bitfield', 'bits': p.get('bit_length', 32)})
+            else:
+                # Default to float
+                fmt += 'f'
+                self._parsers.append({'type': 'standard', 'fmt': 'f'})
+                
+        try:
+            self._struct_size = struct.calcsize(fmt)
+            self._struct_fmt = fmt
+        except Exception as e:
+            print(f"Struct compilation failed: {e}")
+            self._struct_size = 0
+
+    def _read_exact(self, size) -> Optional[bytes]:
+        """Read exactly size bytes"""
+        # Check buffer first
+        if len(self._buffer) >= size:
+            data = self._buffer[:size]
+            self._buffer = self._buffer[size:]
+            return data
+            
+        # Need more data
+        needed = size - len(self._buffer)
+        try:
+            if self.mode == "serial" and self.ser:
+                chunk = self.ser.read(needed)
+                if chunk:
+                    self._buffer += chunk
+            elif self.mode in ("tcp", "udp") and self.sock:
+                chunk = self.sock.recv(4096)
+                if chunk:
+                    self._buffer += chunk
+        except Exception:
+            pass
+            
+        if len(self._buffer) >= size:
+            data = self._buffer[:size]
+            self._buffer = self._buffer[size:]
+            return data
+        return None
+
+    def _parse_binary_struct(self) -> Optional[List[float]]:
+        if self._struct_size == 0:
+            return None
+            
+        raw = self._read_exact(self._struct_size)
+        if not raw:
+            return None
+            
+        self.rx_bytes += len(raw)
+        
+        try:
+            values = list(struct.unpack(self._struct_fmt, raw))
+            # Post-process if needed (e.g. bitfields)
+            # For now, we return the unpacked values directly
+            # They map 1:1 to parameters in order
+            return [float(v) for v in values]
+        except Exception as e:
+            print(f"Struct unpack error: {e}")
+            return None
+
     def read_line(self) -> Union[None, List[float], str]:
+        if self.data_format == "binary_struct":
+            return self._parse_binary_struct()
+            
         raw = self._read_bytes()
         if raw is None:
             return None
@@ -177,7 +284,8 @@ class DataReader:
                 line = raw.decode("utf-8", errors="ignore").strip()
                 if not line:
                     return None
-                line = line.replace(";", ",")
+                if self.csv_separator != ';':
+                    line = line.replace(";", ",")
                 parts = [p.strip() for p in line.split(self.csv_separator)]
                 values = []
                 for p in parts:
