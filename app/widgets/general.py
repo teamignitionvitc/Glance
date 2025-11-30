@@ -81,11 +81,37 @@ class ClosableDock(QDockWidget):
     @brief Custom QDockWidget that emits a signal only when the close button is clicked.
     @details Used for widgets that can be closed/hidden from the dashboard layout.
     """
-    closed = Signal(str)# will emit the widget_id when closed
+    closed = Signal(str)  # will emit the widget_id when closed
+    edit_requested = Signal(str)  # will emit the widget_id when edit is requested
 
     def __init__(self, title, parent=None, widget_id=None):
         super().__init__(title, parent)
         self.widget_id = widget_id
+        self.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+        self.customContextMenuRequested.connect(self.show_context_menu)
+
+    def show_context_menu(self, pos):
+        """Show context menu for widget"""
+        from PySide6.QtWidgets import QMenu
+        from PySide6.QtGui import QAction
+        
+        menu = QMenu(self)
+        
+        edit_action = QAction("Edit Widget", self)
+        edit_action.triggered.connect(lambda: self._emit_edit_signal())
+        menu.addAction(edit_action)
+        
+        menu.addSeparator()
+        
+        remove_action = QAction("Remove Widget", self)
+        remove_action.triggered.connect(lambda: self.closed.emit(self.widget_id))
+        menu.addAction(remove_action)
+        
+        menu.exec(self.mapToGlobal(pos))
+    
+    def _emit_edit_signal(self):
+        """Emit edit signal"""
+        self.edit_requested.emit(self.widget_id)
 
     def closeEvent(self, event):
         #Emit the closed signal only when the dock's X button is clicked.
@@ -497,55 +523,113 @@ class LEDWidget(QFrame):
 
     
     def update_values(self, values_dict):
-        # Get global defaults
-        default_threshold = float(self.options.get('threshold', 0))
-        default_condition = self.options.get('condition', '>')
-        
-        # Get per-parameter configs
+        """Update LED colors based on multi-threshold configuration"""
         led_configs = self.options.get('led_configs', {})
         
         for pid, val in values_dict.items():
-            if pid in self.leds:
-                led = self.leds[pid]
-                lbl = self.value_labels[pid]
+            if pid not in self.leds:
+                continue
                 
-                # Get specific config or fallback to default
-                config = led_configs.get(pid, {})
-                threshold = float(config.get('threshold', default_threshold))
-                condition = config.get('condition', default_condition)
-                
-                try:
-                    v = float(val) if val is not None else None
-                    if v is not None:
-                        lbl.setText(f"{v:.2f}")
-                    else:
-                        lbl.setText("--")
-                except:
-                    v = None
-                    lbl.setText("--")
-                
-                is_active = False
+            led = self.leds[pid]
+            lbl = self.value_labels[pid]
+            
+            # Parse value
+            try:
+                v = float(val) if val is not None else None
                 if v is not None:
-                    if condition == '>': is_active = v > threshold
-                    elif condition == '<': is_active = v < threshold
-                    elif condition == '>=': is_active = v >= threshold
-                    elif condition == '<=': is_active = v <= threshold
-                    elif condition == '==': is_active = abs(v - threshold) < 0.0001
-                
-                if is_active:
-                    # Active - Green
-                    led.setStyleSheet("""
-                        border-radius: 16px; 
-                        background: #21b35a; 
-                        border: 2px solid #4ade80;
-                    """)
+                    lbl.setText(f"{v:.2f}")
                 else:
-                    # Inactive - Gray
-                    led.setStyleSheet("""
-                        border-radius: 16px; 
-                        background: #555; 
-                        border: 2px solid #333;
-                    """)
+                    lbl.setText("--")
+            except:
+                v = None
+                lbl.setText("--")
+            
+            # Get color based on multi-threshold configuration
+            color = self._get_led_color(v, led_configs.get(pid, {}))
+            
+            # Apply color to LED
+            if color:
+                led.setStyleSheet(f"""
+                    border-radius: 16px; 
+                    background: {color}; 
+                    border: 2px solid {self._adjust_brightness(color, 1.3)};
+                """)
+            else:
+                # Inactive - Gray
+                led.setStyleSheet("""
+                    border-radius: 16px; 
+                    background: #555; 
+                    border: 2px solid #333;
+                """)
+    
+    def _get_led_color(self, value, config):
+        """
+        Get LED color based on value and threshold configuration.
+        Supports both old single-threshold and new multi-threshold formats.
+        """
+        if value is None:
+            return None
+        
+        # New format: multi-threshold with colors
+        if 'thresholds' in config and config['thresholds']:
+            thresholds = config['thresholds']
+            
+            # Sort thresholds by value
+            sorted_thresholds = sorted(thresholds, key=lambda x: x['value'])
+            
+            # Find applicable threshold
+            for threshold in sorted_thresholds:
+                condition = threshold.get('condition', '≥')
+                threshold_val = threshold['value']
+                
+                # Check if condition is met
+                is_met = False
+                if condition in ['≥', '>=']:
+                    is_met = value >= threshold_val
+                elif condition in ['≤', '<=']:
+                    is_met = value <= threshold_val
+                elif condition == '>':
+                    is_met = value > threshold_val
+                elif condition == '<':
+                    is_met = value < threshold_val
+                elif condition == '==':
+                    is_met = abs(value - threshold_val) < 0.0001
+                
+                if is_met:
+                    return threshold.get('color', '#00ff00')
+            
+            # No threshold met - return None (gray)
+            return None
+        
+        # Old format: single threshold (backward compatibility)
+        elif 'threshold' in config:
+            threshold = float(config.get('threshold', 0))
+            condition = config.get('condition', '>')
+            
+            is_active = False
+            if condition == '>': is_active = value > threshold
+            elif condition == '<': is_active = value < threshold
+            elif condition == '>=': is_active = value >= threshold
+            elif condition == '<=': is_active = value <= threshold
+            elif condition == '==': is_active = abs(value - threshold) < 0.0001
+            
+            return '#21b35a' if is_active else None
+        
+        # No configuration - default to gray
+        return None
+    
+    def _adjust_brightness(self, color_hex, factor):
+        """Adjust color brightness for border effect"""
+        try:
+            from PySide6.QtGui import QColor
+            color = QColor(color_hex)
+            h, s, v, a = color.getHsv()
+            v = min(255, int(v * factor))
+            color.setHsv(h, s, v, a)
+            return color.name()
+        except:
+            return color_hex
+            
 # Optional: Map widget using QWebEngineView if available
 try:
     from PySide6.QtWebEngineWidgets import QWebEngineView  # type: ignore

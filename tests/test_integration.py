@@ -75,7 +75,7 @@ def test_app_lifecycle(main_window, qtbot):
     assert main_window.simulator is not None
     assert main_window.data_logger is not None
     assert main_window.filter_manager is not None
-    assert main_window.history is not None
+    assert main_window.dashboard_history is not None
     
     # Verify initial phase
     assert main_window.stack.count() > 0
@@ -135,6 +135,10 @@ def test_project_management(main_window, qtbot):
 
 def test_undo_redo_integration(main_window, qtbot):
     """Test Undo/Redo integration in the main window"""
+    # Ensure we're in dashboard phase for undo/redo to work
+    main_window.show_phase("dashboard")
+    qtbot.wait(100)
+    
     initial_params_count = len(main_window.parameters)
     
     # Add a parameter via dialog logic (simulated)
@@ -145,16 +149,16 @@ def test_undo_redo_integration(main_window, qtbot):
     # Push command directly as we can't easily drive the modal dialog
     from app.core.commands import UpdateParametersCommand
     cmd = UpdateParametersCommand(main_window, main_window.parameters, new_params)
-    main_window.history.push(cmd)
+    main_window.dashboard_history.push(cmd)
     
     assert len(main_window.parameters) == initial_params_count + 1
-    assert main_window.history.can_undo()
+    assert main_window.dashboard_history.can_undo()
     
     # Undo
-    main_window.undo()
+    main_window.context_aware_undo()
     assert len(main_window.parameters) == initial_params_count
-    assert main_window.history.can_redo()
+    assert main_window.dashboard_history.can_redo()
     
     # Redo
-    main_window.redo()
+    main_window.context_aware_redo()
     assert len(main_window.parameters) == initial_params_count + 1

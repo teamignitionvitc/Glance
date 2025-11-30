@@ -77,7 +77,7 @@ from PySide6.QtWidgets import (
     QInputDialog, QMessageBox, QTabBar, QAbstractItemView, QSpinBox, QStackedWidget,
     QCheckBox, QTreeWidget, QTreeWidgetItem, QApplication, QMenu, QScrollArea
 )
-from PySide6.QtCore import QThread, Signal, Qt, QTimer, QByteArray, QPropertyAnimation, QEasingCurve, QPoint, QRect, QUrl
+from PySide6.QtCore import Qt, QTimer, QThread, Signal, Slot, QByteArray, QPropertyAnimation, QEasingCurve, QPoint, QRect, QUrl
 from PySide6.QtGui import QFont, QColor, QBrush, QAction, QPixmap, QIcon
 import pyqtgraph as pg
 
@@ -168,8 +168,9 @@ class MainWindow(QMainWindow):
         self.filter_manager = FilterManager()
         self.logging_settings = None
         
-        # Undo/Redo History
-        self.history = CommandHistory()
+        # Undo/Redo History - Dashboard specific
+        self.dashboard_history = CommandHistory()  # For widget add/remove operations
+        # Note: Parameter dialog has its own history managed internally
         
         # Metrics
         self.packet_count = 0
@@ -288,17 +289,17 @@ class MainWindow(QMainWindow):
 
     def keyPressEvent(self, event):
         """Handle key press events"""
-        # Undo/Redo shortcuts
+        # Undo/Redo shortcuts - context-aware
         if event.modifiers() & Qt.KeyboardModifier.ControlModifier:
             if event.key() == Qt.Key.Key_Z:
                 if event.modifiers() & Qt.KeyboardModifier.ShiftModifier:
-                    self.redo()
+                    self.context_aware_redo()
                 else:
-                    self.undo()
+                    self.context_aware_undo()
                 event.accept()
                 return
             elif event.key() == Qt.Key.Key_Y:
-                self.redo()
+                self.context_aware_redo()
                 event.accept()
                 return
 
@@ -312,6 +313,60 @@ class MainWindow(QMainWindow):
             event.accept()
         else:
             super().keyPressEvent(event)
+    
+    def context_aware_undo(self):
+        """Context-aware undo"""
+        phase = self._get_current_phase()
+        
+        if phase == "dashboard":
+            if self.dashboard_history.can_undo():
+                self.dashboard_history.undo()
+            else:
+                self.statusBar().showMessage("No dashboard actions to undo", 2000)
+        else:
+            self.statusBar().showMessage("Undo not available in this view", 2000)
+    
+    def context_aware_redo(self):
+        """Redo based on current context - only works on dashboard"""
+        current_phase = self._get_current_phase()
+        
+        if current_phase == "dashboard":
+            if self.dashboard_history.can_redo():
+                self.dashboard_history.redo()
+                self.update_dashboard_ui()
+                self.refresh_active_displays_list()
+                self.update_control_states()
+            else:
+                self.statusBar().showMessage("No dashboard actions to redo", 2000)
+        else:
+            # Redo not available in other phases
+            self.statusBar().showMessage("Redo not available in this view", 2000)
+    
+    def _get_current_phase(self):
+        """Get the current UI phase"""
+        if not hasattr(self, 'stack'):
+            return "unknown"
+        
+        current_widget = self.stack.currentWidget()
+        if hasattr(self, 'dashboard_page') and current_widget == self.dashboard_page:
+            return "dashboard"
+        elif hasattr(self, 'setup_page') and current_widget == self.setup_page:
+            return "setup"
+        elif hasattr(self, 'widgets_page') and current_widget == self.widgets_page:
+            return "widgets"
+        elif hasattr(self, 'welcome_page') and current_widget == self.welcome_page:
+            return "welcome"
+        elif hasattr(self, 'splash_page') and current_widget == self.splash_page:
+            return "splash"
+        return "unknown"
+    
+    def undo(self):
+        """Legacy undo method - redirects to context-aware version"""
+        self.context_aware_undo()
+    
+    def redo(self):
+        """Legacy redo method - redirects to context-aware version"""
+        self.context_aware_redo()
 
     def refresh_setup_serial_ports(self):
         """
@@ -1228,7 +1283,7 @@ class MainWindow(QMainWindow):
             widget_config = dialog.get_selection()
             # Use Command for Undo/Redo
             command = AddWidgetCommand(self, widget_config, index)
-            self.history.push(command)
+            self.dashboard_history.push(command)
             self.has_unsaved_changes = True
             self.update_window_title()
 
@@ -1247,6 +1302,10 @@ class MainWindow(QMainWindow):
             
         widget = None
         if config['displayType'] == 'Time Graph':
+            # Assign colors to param_configs for graph display
+            for p_config in param_configs:
+                p_config['color'] = self.graph_color_palette[self.next_graph_color_index % len(self.graph_color_palette)]
+                self.next_graph_color_index += 1
             widget = TimeGraph(param_configs)
         elif config['displayType'] == 'Log Table':
             widget = LogTable(param_configs)
@@ -1263,9 +1322,13 @@ class MainWindow(QMainWindow):
         
         if widget:
             # Wrap in dock
-            dock = ClosableDock(config['displayType'], self, widget_id=widget_id)
+            mainwindow = tab_info['mainwindow']
+            dock = ClosableDock(config['displayType'], mainwindow, widget_id=widget_id)
             dock.setWidget(widget)
             dock.closed.connect(self.remove_widget_by_id)
+            
+            # Connect edit signal with explicit lambda
+            dock.edit_requested.connect(lambda wid: self.edit_widget(wid))
             
             # Store in tab_data
             tab_info['widgets'][widget_id] = widget
@@ -1273,7 +1336,6 @@ class MainWindow(QMainWindow):
             tab_info['docks'][widget_id] = dock
             
             # Add to the tab's QMainWindow
-            mainwindow = tab_info['mainwindow']
             mainwindow.addDockWidget(Qt.DockWidgetArea.LeftDockWidgetArea, dock)
             
             # Ensure new widget is visible and on top
@@ -1287,6 +1349,29 @@ class MainWindow(QMainWindow):
             
             return widget_id
         return None
+    
+    @Slot(str)
+    def edit_widget(self, widget_id):
+        """Open edit dialog for existing widget"""
+        # Find the widget configuration
+        for tab_idx, tab_info in self.tab_data.items():
+            if widget_id in tab_info['configs']:
+                config = tab_info['configs'][widget_id]
+                
+                # Open AddWidgetDialog in edit mode
+                dialog = AddWidgetDialog(self.parameters, self, edit_mode=True, existing_config=config)
+                if dialog.exec() == QDialog.DialogCode.Accepted:
+                    new_config = dialog.get_selection()
+                    
+                    # Remove old widget
+                    self._remove_widget_internal(widget_id, tab_idx)
+                    
+                    # Add new widget with same ID
+                    self._add_widget_internal(new_config, tab_idx, restore_id=widget_id)
+                    
+                    self.has_unsaved_changes = True
+                    self.update_window_title()
+                break
 
     def _remove_widget_internal(self, widget_id, tab_idx):
         """Internal method to remove a widget, used by Command"""
@@ -1294,13 +1379,19 @@ class MainWindow(QMainWindow):
             tab_info = self.tab_data[tab_idx]
             if widget_id in tab_info['widgets']:
                 dock = tab_info['docks'][widget_id]
-                layout = tab_info['layout']
-                layout.removeWidget(dock)
+                # Hide immediately for instant visual feedback
+                dock.hide()
                 dock.deleteLater()
                 
                 del tab_info['widgets'][widget_id]
                 del tab_info['configs'][widget_id]
                 del tab_info['docks'][widget_id]
+                
+                # Clean up layout positions
+                if 'layout_positions' in tab_info and widget_id in tab_info['layout_positions']:
+                    del tab_info['layout_positions'][widget_id]
+                    # Normalize positions after removal
+                    self._normalize_positions(tab_info['layout_positions'])
 
     def _get_widget_config(self, widget_id, tab_idx):
         """Helper to get config for undo"""
@@ -1314,7 +1405,7 @@ class MainWindow(QMainWindow):
             if widget_id in info['widgets']:
                 # Use Command
                 command = RemoveWidgetCommand(self, widget_id, tab_idx)
-                self.history.push(command)
+                self.dashboard_history.push(command)
                 self.has_unsaved_changes = True
                 self.update_window_title()
                 break
@@ -3646,6 +3737,9 @@ class MainWindow(QMainWindow):
         self.conn_label.mousePressEvent = lambda e: self.open_connection_settings()
         self.conn_label.setToolTip("Click to configure connection")
         
+        # Alias for update_connection_status compatibility
+        self.status_conn_label = self.conn_label
+        
         # Session Time
         self.session_time_label = QLabel("")
         self.session_time_label.setObjectName("SBValue")
@@ -4976,10 +5070,15 @@ class MainWindow(QMainWindow):
 
             
     def update_connection_status(self):
-        """Update connection status display"""
+        """Update connection status display (both header and status bar)"""
         if not self.simulator:
+            # Not connected
             self.connection_status_label.setText("Not Connected")
             self.connection_status_label.setStyleSheet("color: #ff3131; font-weight: bold;")
+            # Update status bar too
+            if hasattr(self, 'status_conn_label'):
+                self.status_conn_label.setText("● Disconnected")
+                self.status_conn_label.setStyleSheet("color: #ff3131;")
             return
         
         mode = self.connection_settings.get('mode', 'dummy')
@@ -4987,6 +5086,9 @@ class MainWindow(QMainWindow):
         if mode == 'dummy':
             self.connection_status_label.setText("Connected (Dummy Data)")
             self.connection_status_label.setStyleSheet("color: #21b35a; font-weight: bold;")
+            if hasattr(self, 'status_conn_label'):
+                self.status_conn_label.setText("● Connected (Dummy)")
+                self.status_conn_label.setStyleSheet("color: #21b35a;")
         else:
             # Check if backend connection is actually alive
             is_connected = False
@@ -5028,14 +5130,23 @@ class MainWindow(QMainWindow):
                 if mode == 'serial':
                     port = self.connection_settings.get('serial_port', 'N/A')
                     self.connection_status_label.setText(f"Connected (Serial: {port})")
+                    if hasattr(self, 'status_conn_label'):
+                        self.status_conn_label.setText(f"● Serial: {port}")
+                        self.status_conn_label.setStyleSheet("color: #21b35a;")
                 elif mode == 'tcp':
                     host = self.connection_settings.get('tcp_host', 'N/A')
                     port = self.connection_settings.get('tcp_port', 'N/A')
                     self.connection_status_label.setText(f"Connected (TCP: {host}:{port})")
+                    if hasattr(self, 'status_conn_label'):
+                        self.status_conn_label.setText(f"● TCP: {host}:{port}")
+                        self.status_conn_label.setStyleSheet("color: #21b35a;")
                 elif mode == 'udp':
                     host = self.connection_settings.get('udp_host', 'N/A')
                     port = self.connection_settings.get('udp_port', 'N/A')
                     self.connection_status_label.setText(f"Connected (UDP: {host}:{port})")
+                    if hasattr(self, 'status_conn_label'):
+                        self.status_conn_label.setText(f"● UDP: {port}")
+                        self.status_conn_label.setStyleSheet("color: #21b35a;")
                 
                 self.connection_status_label.setStyleSheet("color: #21b35a; font-weight: bold;")
             else:
@@ -5043,13 +5154,22 @@ class MainWindow(QMainWindow):
                 if mode == 'serial':
                     port = self.connection_settings.get('serial_port', 'N/A')
                     self.connection_status_label.setText(f"Disconnected (Serial: {port})")
+                    if hasattr(self, 'status_conn_label'):
+                        self.status_conn_label.setText(f"● Disconnected")
+                        self.status_conn_label.setStyleSheet("color: #ff9800;")
                 elif mode == 'tcp':
                     host = self.connection_settings.get('tcp_host', 'N/A')
                     port = self.connection_settings.get('tcp_port', 'N/A')
                     self.connection_status_label.setText(f"Connecting (TCP: {host}:{port})...")
+                    if hasattr(self, 'status_conn_label'):
+                        self.status_conn_label.setText(f"● Connecting...")
+                        self.status_conn_label.setStyleSheet("color: #ff9800;")
                 elif mode == 'udp':
                     port = self.connection_settings.get('udp_port', 'N/A')
                     self.connection_status_label.setText(f"Listening (UDP: {port})")
+                    if hasattr(self, 'status_conn_label'):
+                        self.status_conn_label.setText(f"● Listening")
+                        self.status_conn_label.setStyleSheet("color: #ff9800;")
                 
                 self.connection_status_label.setStyleSheet("color: #ff9800; font-weight: bold;")
 

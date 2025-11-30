@@ -638,9 +638,36 @@ class StandaloneTelemetryViewer(QDialog):
             QMessageBox.critical(self, "Error", str(e))
 
     def disconnect_source(self):
+        """Properly disconnect and clean up simulator"""
         if self.simulator:
-            self.simulator.stop()
-            self.simulator = None
+            try:
+                # Disconnect signal first to prevent any new data
+                try:
+                    self.simulator.newData.disconnect(self.on_data_received)
+                except Exception as e:
+                    pass  # Signal may already be disconnected
+                
+                # Stop the simulator thread
+                self.simulator.stop()
+                
+                # Wait for thread to finish (with timeout)
+                if self.simulator.isRunning():
+                    if not self.simulator.wait(3000):  # Wait up to 3 seconds
+                        # Force termination if thread doesn't stop
+                        self.simulator.terminate()
+                        self.simulator.wait(1000)
+                    
+            except Exception as e:
+                print(f"Error during disconnect: {e}")
+            finally:
+                self.simulator = None
+        
+        # Reset statistics
+        self.packet_count = 0
+        self.byte_count = 0
+        self.packet_timestamps = []
+        
+        # Update UI
         self.connect_btn.setText("Connect")
         self.connect_btn.setStyleSheet("background-color: #1c9c4f; border-color: #1c9c4f;")
         self.conn_status_label.setText("● Disconnected")
@@ -661,7 +688,9 @@ class StandaloneTelemetryViewer(QDialog):
         self.on_data_received(packet_data)
 
     def on_data_received(self, packet_data):
-        if self.is_paused: return
+        # Only process data if simulator is connected
+        if not self.simulator or self.is_paused:
+            return
         
         self.packet_count += 1
         

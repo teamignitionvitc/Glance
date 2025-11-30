@@ -70,10 +70,16 @@ class AddWidgetCommand(Command):
         # We need to call the actual implementation in MainWindow
         # For now, we'll assume MainWindow has a method _add_widget_internal that returns the ID
         self.widget_id = self.main_window._add_widget_internal(self.widget_config, self.tab_index)
+        # Refresh UI after adding widget
+        self.main_window.refresh_active_displays_list()
+        self.main_window.mark_as_unsaved()
 
     def undo(self):
         if self.widget_id:
             self.main_window._remove_widget_internal(self.widget_id, self.tab_index)
+            # Refresh UI after removing widget
+            self.main_window.refresh_active_displays_list()
+            self.main_window.mark_as_unsaved()
 
 class RemoveWidgetCommand(Command):
     def __init__(self, main_window, widget_id, tab_index):
@@ -86,10 +92,16 @@ class RemoveWidgetCommand(Command):
         # Save config before removing
         self.widget_config = self.main_window._get_widget_config(self.widget_id, self.tab_index)
         self.main_window._remove_widget_internal(self.widget_id, self.tab_index)
+        # Refresh UI after removing widget
+        self.main_window.refresh_active_displays_list()
+        self.main_window.mark_as_unsaved()
 
     def undo(self):
         if self.widget_config:
             self.main_window._add_widget_internal(self.widget_config, self.tab_index, restore_id=self.widget_id)
+            # Refresh UI after restoring widget
+            self.main_window.refresh_active_displays_list()
+            self.main_window.mark_as_unsaved()
 
 class UpdateParametersCommand(Command):
     def __init__(self, main_window, old_params, new_params):

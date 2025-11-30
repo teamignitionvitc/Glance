@@ -72,6 +72,7 @@ from PySide6.QtWidgets import (
 from PySide6.QtGui import QIcon, QAction
 from PySide6.QtCore import Qt, QSize
 from app.core.commands import UpdateParametersCommand
+from app.core.history import CommandHistory
 
 try:
     from serial.tools import list_ports as _serial_list_ports
@@ -297,10 +298,12 @@ class AddWidgetDialog(QDialog):
     @details Allows user to select parameters, widget type, and configure specific options.
              Uses QStackedWidget to manage option panels safely.
     """
-    def __init__(self, parameters, parent=None):
+    def __init__(self, parameters, parent=None, edit_mode=False, existing_config=None):
         super().__init__(parent)
-        self.setWindowTitle("Add Widget")
         self.parameters = parameters
+        self.edit_mode = edit_mode
+        self.existing_config = existing_config or {}
+        self.setWindowTitle("Edit Widget" if edit_mode else "Add Widget")
         self.setMinimumSize(900, 600)
         
         # Main layout - Side by Side
@@ -376,11 +379,35 @@ class AddWidgetDialog(QDialog):
         # 1. Graph Page
         graph_page = QWidget()
         graph_layout = QFormLayout(graph_page)
+        
         self.graph_time_range = QSpinBox()
         self.graph_time_range.setRange(10, 3600)
         self.graph_time_range.setValue(300)
         self.graph_time_range.setSuffix(" seconds")
         graph_layout.addRow("Time Range:", self.graph_time_range)
+        
+        # Line styling
+        graph_layout.addRow(QLabel(""))  # Spacer
+        graph_layout.addRow(QLabel("<b>Line Styling:</b>"))
+        
+        self.graph_line_width = QDoubleSpinBox()
+        self.graph_line_width.setRange(0.5, 5.0)
+        self.graph_line_width.setValue(2.0)
+        self.graph_line_width.setSingleStep(0.5)
+        graph_layout.addRow("Line Width:", self.graph_line_width)
+        
+        self.graph_line_style = QComboBox()
+        self.graph_line_style.addItems(["Solid", "Dashed", "Dotted"])
+        graph_layout.addRow("Line Style:", self.graph_line_style)
+        
+        # Y-axis
+        graph_layout.addRow(QLabel(""))  # Spacer
+        graph_layout.addRow(QLabel("<b>Y-Axis:</b>"))
+        
+        self.graph_y_auto = QComboBox()
+        self.graph_y_auto.addItems(["Auto Range", "Fixed Range"])
+        graph_layout.addRow("Y-Axis Mode:", self.graph_y_auto)
+        
         self.pages["Time Graph"] = graph_page
         self.options_stack.addWidget(graph_page)
         
@@ -399,14 +426,26 @@ class AddWidgetDialog(QDialog):
         # 4. Gauge Page
         gauge_page = QWidget()
         gauge_layout = QFormLayout(gauge_page)
+        
         self.gauge_min = QDoubleSpinBox()
         self.gauge_min.setRange(-100000, 100000)
         self.gauge_min.setValue(0)
+        
         self.gauge_max = QDoubleSpinBox()
         self.gauge_max.setRange(-100000, 100000)
         self.gauge_max.setValue(100)
-        gauge_layout.addRow("Min Value:", self.gauge_min)
-        gauge_layout.addRow("Max Value:", self.gauge_max)
+        
+        gauge_layout.addRow("Minimum Value:", self.gauge_min)
+        gauge_layout.addRow("Maximum Value:", self.gauge_max)
+        
+        # Color zones
+        gauge_layout.addRow(QLabel(""))  # Spacer
+        gauge_layout.addRow(QLabel("<b>Color Zones:</b>"))
+        
+        self.gauge_use_zones = QComboBox()
+        self.gauge_use_zones.addItems(["No Zones", "3 Zones (Safe/Warning/Critical)"])
+        gauge_layout.addRow("Zone Mode:", self.gauge_use_zones)
+        
         self.pages["Gauge"] = gauge_page
         self.options_stack.addWidget(gauge_page)
         
@@ -422,26 +461,32 @@ class AddWidgetDialog(QDialog):
         
         # 6. LED Page
         led_page = QWidget()
-        led_layout = QFormLayout(led_page)
+        led_layout = QVBoxLayout(led_page)
         
-        self.led_threshold = QDoubleSpinBox()
-        self.led_threshold.setRange(-100000, 100000)
-        self.led_threshold.setValue(50)
-        self.led_condition = QComboBox()
-        self.led_condition.addItems([">", "<", ">=", "<=", "=="])
+        # Instructions
+        instructions = QLabel("Configure LED thresholds and colors for each parameter:")
+        instructions.setStyleSheet("color: #aaa; font-style: italic;")
+        led_layout.addWidget(instructions)
         
-        # Advanced table
+        # LED configuration table with color support
         self.led_table = QTableWidget()
-        self.led_table.setColumnCount(3)
-        self.led_table.setHorizontalHeaderLabels(["Parameter", "Condition", "Threshold"])
+        self.led_table.setColumnCount(5)
+        self.led_table.setHorizontalHeaderLabels(["Parameter", "Threshold", "Condition", "Color", "Actions"])
         self.led_table.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)
         self.led_table.horizontalHeader().setSectionResizeMode(1, QHeaderView.ResizeMode.ResizeToContents)
         self.led_table.horizontalHeader().setSectionResizeMode(2, QHeaderView.ResizeMode.ResizeToContents)
+        self.led_table.horizontalHeader().setSectionResizeMode(3, QHeaderView.ResizeMode.ResizeToContents)
+        self.led_table.horizontalHeader().setSectionResizeMode(4, QHeaderView.ResizeMode.ResizeToContents)
         self.led_table.verticalHeader().setVisible(False)
-        self.led_table.setMinimumHeight(150)
+        self.led_table.setMinimumHeight(200)
         
-        led_layout.addRow(QLabel("Configure Thresholds:"))
-        led_layout.addRow(self.led_table)
+        led_layout.addWidget(self.led_table)
+        
+        # Add threshold button
+        add_threshold_btn = QPushButton("+ Add Threshold")
+        add_threshold_btn.setObjectName("SecondaryCTA")
+        add_threshold_btn.clicked.connect(self.add_led_threshold_row)
+        led_layout.addWidget(add_threshold_btn)
         
         self.pages["LED Indicator"] = led_page
         self.options_stack.addWidget(led_page)
@@ -476,6 +521,71 @@ class AddWidgetDialog(QDialog):
         # Initialize
         self.filter_parameters()
         self.on_type_changed(self.type_combo.currentText())
+        
+        # If in edit mode, pre-fill values
+        if self.edit_mode and self.existing_config:
+            self._populate_from_config()
+    
+    def _populate_from_config(self):
+        """Pre-fill dialog with existing widget configuration"""
+        config = self.existing_config
+        
+        # Set widget type
+        widget_type = config.get('displayType', '')
+        index = self.type_combo.findText(widget_type)
+        if index >= 0:
+            self.type_combo.setCurrentIndex(index)
+        
+        # Select parameters
+        param_ids = config.get('param_ids', [])
+        for i in range(self.param_list.count()):
+            item = self.param_list.item(i)
+            pid = item.data(Qt.ItemDataRole.UserRole)
+            if pid in param_ids:
+                item.setSelected(True)
+        
+        # Populate LED thresholds if LED widget
+        if "LED" in widget_type:
+            led_configs = config.get('options', {}).get('led_configs', {})
+            for pid, led_config in led_configs.items():
+                thresholds = led_config.get('thresholds', [])
+                for threshold in thresholds:
+                    # Find parameter name
+                    param_name = next((p['name'] for p in self.parameters if p['id'] == pid), str(pid))
+                    
+                    # Add row
+                    from app.ui.color_picker import ColorPickerButton
+                    row = self.led_table.rowCount()
+                    self.led_table.insertRow(row)
+                    
+                    # Parameter name
+                    name_item = QTableWidgetItem(param_name)
+                    name_item.setFlags(name_item.flags() & ~Qt.ItemFlag.ItemIsEditable)
+                    name_item.setData(Qt.ItemDataRole.UserRole, pid)
+                    self.led_table.setItem(row, 0, name_item)
+                    
+                    # Threshold value
+                    threshold_spin = QDoubleSpinBox()
+                    threshold_spin.setRange(-100000, 100000)
+                    threshold_spin.setValue(threshold.get('value', 50))
+                    threshold_spin.setDecimals(2)
+                    self.led_table.setCellWidget(row, 1, threshold_spin)
+                    
+                    # Condition
+                    condition_combo = QComboBox()
+                    condition_combo.addItems(["≥", "≤", ">", "<", "=="])
+                    condition_combo.setCurrentText(threshold.get('condition', '≥'))
+                    self.led_table.setCellWidget(row, 2, condition_combo)
+                    
+                    # Color picker
+                    color_btn = ColorPickerButton(threshold.get('color', '#00ff00'))
+                    self.led_table.setCellWidget(row, 3, color_btn)
+                    
+                    # Remove button
+                    remove_btn = QPushButton("Remove")
+                    remove_btn.setObjectName("SecondaryCTA")
+                    remove_btn.clicked.connect(lambda checked, r=row: self.led_table.removeRow(r))
+                    self.led_table.setCellWidget(row, 4, remove_btn)
     
     def filter_parameters(self):
         self.param_list.clear()
@@ -488,36 +598,53 @@ class AddWidgetDialog(QDialog):
                 self.param_list.addItem(item)
     
     def on_selection_changed(self):
-        # Update UI if needed based on selection count (e.g. for LED table)
-        if "LED" in self.type_combo.currentText():
-            self.update_led_table()
-            
-    def update_led_table(self):
+        # No longer need to update LED table automatically
+        pass
+    
+    def add_led_threshold_row(self):
+        """Add a new threshold row to LED configuration table"""
+        from app.ui.color_picker import ColorPickerButton
+        
         selected_items = self.param_list.selectedItems()
-        if len(selected_items) > 0:
-            self.led_table.setRowCount(len(selected_items))
-            for i, item in enumerate(selected_items):
-                param_name = item.text()
-                param_id = item.data(Qt.ItemDataRole.UserRole)
-                
-                # Name
-                name_item = QTableWidgetItem(param_name)
-                name_item.setFlags(name_item.flags() & ~Qt.ItemFlag.ItemIsEditable)
-                name_item.setData(Qt.ItemDataRole.UserRole, param_id)
-                self.led_table.setItem(i, 0, name_item)
-                
-                # Condition
-                combo = QComboBox()
-                combo.addItems([">", "<", ">=", "<=", "=="])
-                self.led_table.setCellWidget(i, 1, combo)
-                
-                # Threshold
-                spin = QDoubleSpinBox()
-                spin.setRange(-100000, 100000)
-                spin.setValue(50)
-                self.led_table.setCellWidget(i, 2, spin)
-        else:
-            self.led_table.setRowCount(0)
+        if not selected_items:
+            QMessageBox.warning(self, "No Parameter Selected", "Please select at least one parameter first.")
+            return
+        
+        # Use first selected parameter
+        item = selected_items[0]
+        param_name = item.text()
+        param_id = item.data(Qt.ItemDataRole.UserRole)
+        
+        row = self.led_table.rowCount()
+        self.led_table.insertRow(row)
+        
+        # Parameter name (read-only)
+        name_item = QTableWidgetItem(param_name)
+        name_item.setFlags(name_item.flags() & ~Qt.ItemFlag.ItemIsEditable)
+        name_item.setData(Qt.ItemDataRole.UserRole, param_id)
+        self.led_table.setItem(row, 0, name_item)
+        
+        # Threshold value
+        threshold_spin = QDoubleSpinBox()
+        threshold_spin.setRange(-100000, 100000)
+        threshold_spin.setValue(50)
+        threshold_spin.setDecimals(2)
+        self.led_table.setCellWidget(row, 1, threshold_spin)
+        
+        # Condition
+        condition_combo = QComboBox()
+        condition_combo.addItems(["≥", "≤", ">", "<", "=="])
+        self.led_table.setCellWidget(row, 2, condition_combo)
+        
+        # Color picker
+        color_btn = ColorPickerButton('#00ff00')
+        self.led_table.setCellWidget(row, 3, color_btn)
+        
+        # Remove button
+        remove_btn = QPushButton("Remove")
+        remove_btn.setObjectName("SecondaryCTA")
+        remove_btn.clicked.connect(lambda: self.led_table.removeRow(row))
+        self.led_table.setCellWidget(row, 4, remove_btn)
 
     def on_type_changed(self, text):
         # Switch stack page
@@ -537,7 +664,6 @@ class AddWidgetDialog(QDialog):
         elif "LED" in text:
             self.param_list.setSelectionMode(QAbstractItemView.SelectionMode.ExtendedSelection)
             self.priority_combo.setEnabled(False)
-            self.update_led_table()
         elif "Map" in text:
             self.param_list.setSelectionMode(QAbstractItemView.SelectionMode.MultiSelection)
             self.priority_combo.setEnabled(False)
@@ -585,18 +711,40 @@ class AddWidgetDialog(QDialog):
         
         if "Graph" in widget_type:
             options['time_range'] = self.graph_time_range.value()
+            options['line_width'] = self.graph_line_width.value()
+            options['line_style'] = self.graph_line_style.currentText()
+            options['y_axis_mode'] = self.graph_y_auto.currentText()
         elif "Gauge" in widget_type:
             options['min_value'] = self.gauge_min.value()
             options['max_value'] = self.gauge_max.value()
+            options['use_zones'] = self.gauge_use_zones.currentText() != "No Zones"
         elif "LED" in widget_type:
-            # Gather thresholds from table
+            # Gather multi-threshold configurations with colors
             led_configs = {}
             for row in range(self.led_table.rowCount()):
                 item = self.led_table.item(row, 0)
+                if not item:
+                    continue
+                    
                 pid = item.data(Qt.ItemDataRole.UserRole)
-                condition = self.led_table.cellWidget(row, 1).currentText()
-                threshold = self.led_table.cellWidget(row, 2).value()
-                led_configs[pid] = {'condition': condition, 'threshold': threshold}
+                threshold_widget = self.led_table.cellWidget(row, 1)
+                condition_widget = self.led_table.cellWidget(row, 2)
+                color_widget = self.led_table.cellWidget(row, 3)
+                
+                if not all([threshold_widget, condition_widget, color_widget]):
+                    continue
+                
+                # Initialize threshold list for this parameter if needed
+                if pid not in led_configs:
+                    led_configs[pid] = {'thresholds': []}
+                
+                # Add threshold configuration
+                led_configs[pid]['thresholds'].append({
+                    'value': threshold_widget.value(),
+                    'condition': condition_widget.currentText(),
+                    'color': color_widget.get_color()
+                })
+            
             options['led_configs'] = led_configs
             
         elif "Map" in widget_type:
@@ -910,7 +1058,7 @@ class ManageParametersDialog(QDialog):
         self.setWindowTitle("Manage Telemetry Parameters")
         self.parameters = parameters
         self.main_window = main_window
-        self.history = main_window.history
+        self.history = CommandHistory()  # Dialog-specific history (isolated from dashboard)
         self.setMinimumSize(900, 500)
         
         layout = QVBoxLayout(self)
