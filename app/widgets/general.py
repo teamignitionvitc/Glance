@@ -57,6 +57,7 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 # 005  MOD      30-10-2025  Shawn                Fixed issue where close button hides widget instead of actually closing it, changed comment type
 # 006  MOD      06-11-2025  Shawn                Fixed map issue on no wifi, fixed minor bugs with the map
 # 007  MOD      29-11-2025  MuhammadRamzy        feat: Redesign AddWidgetDialog with side-by-side layout and QStackedWidget
+# 008  MOD      29-11-2025  MuhammadRamzy        feat: Redesign AddWidgetDialog with side-by-side layout and QStackedWidget
 ####################################################################################################
 
 
@@ -307,6 +308,14 @@ class TimeGraph(QWidget):
         self.param_configs = param_configs
         self.curves = {}
         self.last_known_values = {}
+        
+        # --- NEW: Buffer and Threshold Control ---
+        self.latest_history = None  # Buffer to hold latest data
+        self.current_y_max = 1.0    # Track the current window top
+        self.update_timer = QTimer()
+        self.update_timer.timeout.connect(self._refresh_plot)
+        self.update_timer.start(50) # Update UI every 50ms (20 FPS) to prevent crashing
+        # -----------------------------------------
 
         # Toolbar
         container = QVBoxLayout(self)
@@ -323,11 +332,14 @@ class TimeGraph(QWidget):
         self.plot_widget.setBackground(QColor(12, 12, 12))
         self.plot_widget.showGrid(x=True, y=True, alpha=0.25)
         self.plot_widget.setAntialiasing(True)
-        # Optimization: Enable downsampling and clipping
         self.plot_widget.setDownsampling(mode='peak')
         self.plot_widget.setClipToView(True)
         self.plot_widget.setLabel('bottom', 'Time (s)', color='#FFFFFF')
         self.plot_widget.addLegend(offset=(10, 10))
+        
+        # Disable AutoRange for Y so our Threshold logic takes control
+        self.plot_widget.plotItem.vb.enableAutoRange(axis=pg.ViewBox.YAxis, enable=False) 
+        self.plot_widget.enableAutoRange(axis=pg.ViewBox.XAxis, enable=True)
 
         title = ", ".join([p['name'] for p in self.param_configs])
         units = list(set([p['unit'] for p in self.param_configs]))
@@ -351,6 +363,8 @@ class TimeGraph(QWidget):
         def _reset():
             try:
                 self.plot_widget.enableAutoRange(axis=pg.ViewBox.XYAxes, enable=True)
+                # Reset our internal threshold tracker on manual reset
+                self.current_y_max = 0 
             except Exception:
                 pass
 
@@ -368,16 +382,63 @@ class TimeGraph(QWidget):
         self.plot_widget.scene().sigMouseClicked.connect(self.mouse_clicked)
 
     def update_data(self, history):
+        """
+        Lightweight setter. 
+        Just saves the data reference. Does NOT compute or paint.
+        """
+        self.latest_history = history
+
+    def _refresh_plot(self):
+        """
+        Called by QTimer @ 20FPS. Handles plotting and Threshold logic.
+        """
+        if not self.latest_history:
+            return
+
+        global_max_val = -float('inf')
+        has_data = False
+
+        # 1. Update Curves
         for param_id, curve in self.curves.items():
-            if param_id in history and history[param_id]:
-                param_history = history[param_id]
+            if param_id in self.latest_history and self.latest_history[param_id]:
+                param_history = self.latest_history[param_id]
                 self.last_known_values[param_id] = param_history[-1]
+                
                 timestamps = [dp['timestamp'] - self.start_time for dp in param_history]
                 values = [dp['value'] for dp in param_history]
                 curve.setData(x=timestamps, y=values)
+                
+                # Track max value for threshold logic
+                if values:
+                    current_max = max(values)
+                    if current_max > global_max_val:
+                        global_max_val = current_max
+                    has_data = True
+
+        # 2. Threshold Window Logic
+        if has_data:
+            # Dynamic threshold (e.g., 20% of current max to prevent jitter)
+            # You can tune this multiplier.
+            hysteresis_gap = self.current_y_max * 0.2 
+
+            should_update = False
+            
+            # Case A: Graph goes UP -> Expand immediately
+            if global_max_val > self.current_y_max:
+                self.current_y_max = global_max_val * 1.1 # Add 10% headroom
+                should_update = True
+            
+            # Case B: Graph goes DOWN -> Only shrink if we drop below (Max - Threshold)
+            elif global_max_val < (self.current_y_max - hysteresis_gap):
+                self.current_y_max = global_max_val * 1.1 # Reset to new max + headroom
+                should_update = True
+
+            # Apply the stable window
+            if should_update:
+                # We only set Y range. X range is handled by standard auto-scroll.
+                self.plot_widget.setYRange(0, self.current_y_max, padding=0)
 
     def mouse_moved(self, evt):
-        # --- NEW: Ignore hover interaction if Ctrl is pressed ---
         if QApplication.keyboardModifiers() & Qt.ControlModifier:
             return
 
@@ -422,7 +483,6 @@ class TimeGraph(QWidget):
                 "Data Point Selected",
                 f"Parameter: {name}\nValue: {val:.3f}\nTimestamp: {time_str}"
             )
-
 
 
 
