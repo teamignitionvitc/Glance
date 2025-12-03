@@ -50,9 +50,7 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 # 000  NEW      26-09-2025  MuhammadRamzy        First commit with the ui/ux and flow changes
 # 001  MOD      29-11-2025  MuhammadRamzy        feat: Redesign AddWidgetDialog with side-by-side
 #                                                layout and QStackedWidget
-# 002  MOD      30-11-2025  MuhammadRamzy        feat: Enhance status bar UI/UX and implement CI/CD
-#                                                workflows, fix: Simplify status bar and remove
-#                                                CI/CD workflows
+# 002  MOD      30-11-2025  MuhammadRamzy        feat: Enhance status bar UI/UX 
 ####################################################################################################
 
 ####################################################################################################
@@ -77,8 +75,8 @@ from PySide6.QtWidgets import (
     QInputDialog, QMessageBox, QTabBar, QAbstractItemView, QSpinBox, QStackedWidget,
     QCheckBox, QTreeWidget, QTreeWidgetItem, QApplication, QMenu, QScrollArea
 )
-from PySide6.QtCore import Qt, QTimer, QThread, Signal, Slot, QByteArray, QPropertyAnimation, QEasingCurve, QPoint, QRect, QUrl
-from PySide6.QtGui import QFont, QColor, QBrush, QAction, QPixmap, QIcon
+from PySide6.QtCore import Qt, QTimer, QThread, Signal, Slot, QByteArray, QPropertyAnimation, QEasingCurve, QPoint, QRect, QUrl, QSize, QSettings
+from PySide6.QtGui import QFont, QColor, QBrush, QAction, QPixmap, QIcon, QDesktopServices, QKeySequence, QShortcut
 import pyqtgraph as pg
 
 try:
@@ -174,6 +172,8 @@ class MainWindow(QMainWindow):
         
         # Metrics
         self.packet_count = 0
+        self.total_packets = 0
+        self.total_rx_bytes = 0
         self.packet_timestamps = []
 
         # Raw telemetry monitor
@@ -194,26 +194,21 @@ class MainWindow(QMainWindow):
         self._setup_tab_drag_drop()
         # Minimal list to track active displays; not shown in UI currently
         self.active_displays_list = QListWidget()
-        header_widget = QWidget(); header_layout = QHBoxLayout(header_widget)
+        
+        # Header Components (Initialized here, added to layout in _build_dashboard_page)
         self.stream_status_label = QLabel("Awaiting Parameters")
         self.connection_status_label = QLabel("Not Connected")
         self.pause_button = QPushButton("Pause Stream"); self.pause_button.setCheckable(True)
         self.logging_status_label = QLabel("Logging: OFF")
+        
         # Customizable dashboard title
-        self.dashboard_title = QLabel("<h2>Dashboard</h2>")
+        self.dashboard_title = QLabel("Dashboard") # Removed <h2> for cleaner styling
         self.dashboard_title.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self.dashboard_title.customContextMenuRequested.connect(self._show_title_context_menu)
         self.dashboard_title_text = "Dashboard"
         self.dashboard_title_alignment = Qt.AlignmentFlag.AlignLeft
-
-        header_layout.addWidget(self.dashboard_title); header_layout.addStretch()
-        header_layout.addWidget(self.connection_status_label)
-        header_layout.addWidget(self.stream_status_label)
-        header_layout.addWidget(self.logging_status_label)
-        header_layout.addWidget(self.pause_button)
-        self.header_dock = QDockWidget(); self.header_dock.setTitleBarWidget(QWidget())
-        self.header_dock.setWidget(header_widget); self.header_dock.setFeatures(QDockWidget.DockWidgetFeature.NoDockWidgetFeatures)
-        self.addDockWidget(Qt.DockWidgetArea.TopDockWidgetArea, self.header_dock)
+        
+        # self.header_dock removed in favor of floating header in dashboard page
         
         # UI Update Timer (Throttling to ~30 FPS)
         self.ui_update_timer = QTimer(self)
@@ -252,9 +247,9 @@ class MainWindow(QMainWindow):
             self.menuBar().setVisible(True)
             self.statusBar().setVisible(True)
             
-            if hasattr(self, 'header_dock') and self.header_dock:
+            if hasattr(self, 'dashboard_header') and self.dashboard_header:
                 if self.stack.currentWidget() == self.dashboard_page:
-                    self.header_dock.setVisible(True)
+                    self.dashboard_header.setVisible(True)
             
             self.is_fullscreen = False
         else:
@@ -264,8 +259,8 @@ class MainWindow(QMainWindow):
             self.menuBar().setVisible(False)
             self.statusBar().setVisible(False)
             
-            if hasattr(self, 'header_dock') and self.header_dock:
-                self.header_dock.setVisible(False)
+            if hasattr(self, 'dashboard_header') and self.dashboard_header:
+                self.dashboard_header.setVisible(False)
             
             self.showFullScreen()
             
@@ -278,12 +273,12 @@ class MainWindow(QMainWindow):
             QTimer.singleShot(100, self.show_fullscreen_hint)
 
     def undo(self):
-        self.history.undo()
+        self.dashboard_history.undo()
         self.update_dashboard_ui() # Refresh UI
         self.update_control_states()
 
     def redo(self):
-        self.history.redo()
+        self.dashboard_history.redo()
         self.update_dashboard_ui() # Refresh UI
         self.update_control_states()
 
@@ -360,14 +355,6 @@ class MainWindow(QMainWindow):
             return "splash"
         return "unknown"
     
-    def undo(self):
-        """Legacy undo method - redirects to context-aware version"""
-        self.context_aware_undo()
-    
-    def redo(self):
-        """Legacy redo method - redirects to context-aware version"""
-        self.context_aware_redo()
-
     def refresh_setup_serial_ports(self):
         """
         @brief Refresh the list of available serial ports.
@@ -636,7 +623,10 @@ class MainWindow(QMainWindow):
             tile_action.triggered.connect(lambda: self._tile_evenly_safe(current_index))  # Pass current_index
         else:
             menu.addAction("No actions available")
-        menu.exec(dock.mapToGlobal(pos))
+        try:
+            menu.exec(dock.mapToGlobal(pos))
+        except RuntimeError:
+            pass
     
 
     def _next_grid_position(self, positions):
@@ -2682,9 +2672,12 @@ class MainWindow(QMainWindow):
             
             self.mark_as_saved()
             QMessageBox.information(self, "Success", f"Project saved successfully to:\n{self.current_project_path}")
+            self.update_status_bar_visibility("dashboard")
+            return True
             
         except Exception as e:
             QMessageBox.critical(self, "Error", f"Failed to save project: {e}")
+            return False
     
     def save_project_as(self):
         """Save project with new filename"""
@@ -2763,7 +2756,7 @@ class MainWindow(QMainWindow):
             path, _ = QFileDialog.getOpenFileName(self, "Load Project", "", "Dashboard Project (*.json);;JSON Files (*.json)")
         
         if not path:
-            return
+            return False
         
         try:
             with open(path, 'r') as f:
@@ -2864,9 +2857,11 @@ class MainWindow(QMainWindow):
             # self.update_status_bar()
             
             QMessageBox.information(self, "Success", f"Project loaded successfully from:\n{path}")
+            return True
             
         except Exception as e:
             QMessageBox.critical(self, "Error", f"Failed to load project: {e}")
+            return False
 
 
     def open_standalone_telemetry_viewer(self):
@@ -2876,6 +2871,7 @@ class MainWindow(QMainWindow):
     
     def _build_menu_bar(self):
         menubar = self.menuBar()
+        menubar.setNativeMenuBar(False) # Disable native menu bar for custom styling
         menubar.clear() 
 
         file_menu = menubar.addMenu("File")
@@ -3112,7 +3108,11 @@ class MainWindow(QMainWindow):
         
         # Create fade out animation for overlay after movement
         def cleanup_overlay():
-            overlay.deleteLater()
+            try:
+                if overlay:
+                    overlay.deleteLater()
+            except RuntimeError:
+                pass
         
         QTimer.singleShot(800, cleanup_overlay)
 
@@ -3156,9 +3156,7 @@ class MainWindow(QMainWindow):
 
     def _load_project_from_welcome(self):
         """Load project from welcome screen and navigate to dashboard"""
-        self.load_project()
-        # Only switch to dashboard if a project was actually loaded
-        if self.parameters or self.tab_widget.count() > 0:
+        if self.load_project():
             self.show_phase("dashboard")
 
     def show_documentation(self):
@@ -3633,165 +3631,49 @@ class MainWindow(QMainWindow):
 
     def _build_status_bar(self):
         sb = self.statusBar()
-        sb.setStyleSheet("""
-            QStatusBar {
-                background: qlineargradient(x1:0, y1:0, x2:0, y2:1, 
-                    stop:0 #252525, stop:1 #1e1e1e);
-                border-top: 2px solid #333;
-                color: #e0e0e0;
-                padding: 6px 12px;
-                font-family: 'Segoe UI', sans-serif;
-            }
-            QStatusBar QLabel {
-                color: #e0e0e0;
-                padding: 0 6px;
-                font-size: 11px;
-            }
-            QStatusBar QLabel#SBClock {
-                font-family: 'Consolas', monospace;
-                font-weight: bold;
-                color: #64b5f6;
-                background: rgba(100, 181, 246, 0.1);
-                border-radius: 4px;
-                padding: 4px 10px;
-            }
-            QStatusBar QLabel#SBConnected {
-                color: #81c784;
-                font-weight: bold;
-                background: rgba(129, 199, 132, 0.15);
-                border-radius: 4px;
-                padding: 4px 8px;
-            }
-            QStatusBar QLabel#SBDisconnected {
-                color: #e57373;
-                font-weight: bold;
-                background: rgba(229, 115, 115, 0.15);
-                border-radius: 4px;
-                padding: 4px 8px;
-            }
-            QStatusBar QLabel#SBValue {
-                font-family: 'Consolas', monospace;
-                color: #ffb74d;
-                background: rgba(255, 183, 77, 0.1);
-                border-radius: 3px;
-                padding: 3px 8px;
-            }
-            QStatusBar QLabel#SBMetric {
-                font-family: 'Consolas', monospace;
-                color: #90caf9;
-                font-size: 10px;
-            }
-            QStatusBar QLabel#Separator {
-                color: #555;
-                padding: 0 4px;
-            }
-            QStatusBar QPushButton {
-                background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
-                    stop:0 #3a3a3a, stop:1 #2e2e2e);
-                border: 1px solid #555;
-                border-radius: 4px;
-                color: #fff;
-                padding: 4px 12px;
-                font-size: 10px;
-                font-weight: 500;
-                margin: 0 4px;
-            }
-            QStatusBar QPushButton:hover {
-                background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
-                    stop:0 #4a4a4a, stop:1 #3e3e3e);
-                border-color: #666;
-            }
-            QStatusBar QPushButton:pressed {
-                background: #2a2a2a;
-            }
-            QStatusBar QPushButton#LoggingActive {
-                background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
-                    stop:0 #388e3c, stop:1 #2e7d32);
-                border-color: #4caf50;
-            }
-            QStatusBar QPushButton#LoggingActive:hover {
-                background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
-                    stop:0 #4caf50, stop:1 #388e3c);
-            }
-            QStatusBar QPushButton#TelemetryBtn {
-                background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
-                    stop:0 #1976d2, stop:1 #1565c0);
-                border-color: #2196f3;
-                font-weight: 600;
-            }
-            QStatusBar QPushButton#TelemetryBtn:hover {
-                background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
-                    stop:0 #2196f3, stop:1 #1976d2);
-            }
-        """)
+        sb.setSizeGripEnabled(False) # Cleaner look
         
-        # Clock
-        self.clock_label = QLabel("00:00:00")
-        self.clock_label.setObjectName("SBClock")
-        self.clock_label.setToolTip("Current Time")
+        # --- Left Side (Blue/Accent Background) ---
         
-        # Connection Status (Clickable)
-        self.conn_label = QLabel("Disconnected")
-        self.conn_label.setObjectName("SBDisconnected")
-        self.conn_label.setCursor(Qt.CursorShape.PointingHandCursor)
-        self.conn_label.mousePressEvent = lambda e: self.open_connection_settings()
-        self.conn_label.setToolTip("Click to configure connection")
+        # Connection Status
+        self.sb_connection_label = QPushButton("Disconnected")
+        self.sb_connection_label.setObjectName("SBLeft")
+        self.sb_connection_label.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.sb_connection_label.clicked.connect(self.open_connection_settings)
+        self.sb_connection_label.setToolTip("Click to configure connection")
+        sb.addWidget(self.sb_connection_label)
         
-        # Alias for update_connection_status compatibility
-        self.status_conn_label = self.conn_label
+        # --- Right Side (Standard Background) ---
+        
+        # FPS
+        self.fps_label = QLabel("FPS: 0")
+        self.fps_label.setObjectName("SBRight")
+        self.fps_label.setToolTip("Frames Per Second")
+        sb.addPermanentWidget(self.fps_label)
+        
+        # Packet Rate
+        self.rate_label = QLabel("0 pkt/s")
+        self.rate_label.setObjectName("SBRight")
+        self.rate_label.setToolTip("Incoming Data Rate")
+        sb.addPermanentWidget(self.rate_label)
+        
+        # Data Size
+        self.log_size_label = QLabel("0 B")
+        self.log_size_label.setObjectName("SBRight")
+        self.log_size_label.setToolTip("Logged Data Size")
+        sb.addPermanentWidget(self.log_size_label)
         
         # Session Time
-        self.session_time_label = QLabel("")
-        self.session_time_label.setObjectName("SBValue")
+        self.session_time_label = QLabel("00:00:00")
+        self.session_time_label.setObjectName("SBRight")
         self.session_time_label.setToolTip("Session Duration")
-        self.session_time_label.setVisible(False)
-        
-        # Stream status - hidden initially
-        self.status_label = QLabel("")
-        self.status_label.setToolTip("Stream Status")
-        self.status_label.setVisible(False)
-        
-        # Logging Button & Size
-        self.logging_btn = QPushButton("Start Logging")
-        self.logging_btn.setCursor(Qt.CursorShape.PointingHandCursor)
-        self.logging_btn.clicked.connect(self.toggle_logging_from_statusbar)
-        self.logging_btn.setToolTip("Start/Stop data logging")
-        
-        self.log_size_label = QLabel("")
-        self.log_size_label.setObjectName("SBValue")
-        self.log_size_label.setVisible(False)
-        
-        # Packet Counter
-        self.packet_count_label = QLabel("Packets: 0")
-        self.packet_count_label.setObjectName("SBMetric")
-        self.packet_count_label.setToolTip("Total Packets Received")
-        
-        # RX Bytes
-        self.rx_bytes_label = QLabel("RX: 0 B")
-        self.rx_bytes_label.setObjectName("SBMetric")
-        self.rx_bytes_label.setToolTip("Total Data Received")
-        
-        # Active Parameters
-        self.active_params_label = QLabel("Parameters: 0")
-        self.active_params_label.setObjectName("SBMetric")
-        self.active_params_label.setToolTip("Active Parameters")
-        
-        # Widget Count
-        self.widget_count_label = QLabel("Widgets: 0")
-        self.widget_count_label.setObjectName("SBMetric")
-        self.widget_count_label.setToolTip("Widgets in Current Tab")
-        
-        # FPS Counter
-        self.fps_label = QLabel("FPS: 0")
-        self.fps_label.setObjectName("SBMetric")
-        self.fps_label.setToolTip("UI Update Rate")
-        self.fps_counter = 0
-        self.fps_last_time = time.time()
-        
-        # Metrics
-        self.rate_label = QLabel("")
-        self.rate_label.setObjectName("SBValue")
-        self.rate_label.setToolTip("Data Rate")
+        sb.addPermanentWidget(self.session_time_label)
+
+        # Clock
+        self.clock_label = QLabel()
+        self.clock_label.setObjectName("SBRight")
+        self.clock_label.setToolTip("Current Time")
+        sb.addPermanentWidget(self.clock_label)
         
         # Raw Telemetry Viewer button
         self.telemetry_viewer_btn = QPushButton("Raw Telemetry")
@@ -3799,108 +3681,24 @@ class MainWindow(QMainWindow):
         self.telemetry_viewer_btn.setToolTip("Open standalone telemetry monitor")
         self.telemetry_viewer_btn.clicked.connect(self.open_standalone_telemetry_viewer)
         self.telemetry_viewer_btn.setCursor(Qt.CursorShape.PointingHandCursor)
-        
-        # Separators
-        self.sep1 = QLabel("|")
-        self.sep1.setObjectName("Separator")
-        self.sep2 = QLabel("|")
-        self.sep2.setObjectName("Separator")
-        self.sep3 = QLabel("|")
-        self.sep3.setObjectName("Separator")
-        self.sep4 = QLabel("|")
-        self.sep4.setObjectName("Separator")
-        self.sep5 = QLabel("|")
-        self.sep5.setObjectName("Separator")
-        self.sep6 = QLabel("|")
-        self.sep6.setObjectName("Separator")
-        
-        # Layout - Left side (only clock on welcome screen)
-        sb.addWidget(self.clock_label)
-        sb.addWidget(self.sep1)
-        sb.addWidget(self.conn_label)
-        sb.addWidget(self.sep2)
-        sb.addWidget(self.status_label)
-        sb.addWidget(self.logging_btn)
-        sb.addWidget(self.log_size_label)
-        
-        # Middle - Metrics (hidden on welcome screen)
-        sb.addWidget(self.sep3)
-        sb.addWidget(self.packet_count_label)
-        sb.addWidget(self.rx_bytes_label)
-        sb.addWidget(self.sep4)
-        sb.addWidget(self.active_params_label)
-        sb.addWidget(self.widget_count_label)
-        
-        # Right side
-        sb.addPermanentWidget(self.fps_label)
-        sb.addPermanentWidget(self.sep5)
         sb.addPermanentWidget(self.telemetry_viewer_btn)
-        sb.addPermanentWidget(self.sep6)
-        sb.addPermanentWidget(self.rate_label)
         
-        # Timer for clock and session updates
+        # Update Timer
         self.status_timer = QTimer(self)
-        self.status_timer.timeout.connect(self._update_status_bar_periodic)
+        self.status_timer.timeout.connect(self._update_status_bar)
         self.status_timer.start(1000)
         
-        self.session_start_time = None
-        self.total_packets = 0
-        self.total_rx_bytes = 0
+        # FPS Counter
+        self.fps_counter = 0
+        self.fps_last_time = time.time()
+        
+        self._update_status_bar()
 
-
-    def _update_status_bar_periodic(self):
-        # Update Clock
-        self.clock_label.setText(datetime.now().strftime('%H:%M:%S'))
+    def _update_status_bar(self):
+        # Clock
+        self.clock_label.setText(datetime.now().strftime("%H:%M:%S"))
         
-        # Update Session Time
-        if self.session_start_time:
-            duration = datetime.now() - self.session_start_time
-            hours, remainder = divmod(duration.seconds, 3600)
-            minutes, seconds = divmod(remainder, 60)
-            self.session_time_label.setText(f"{hours:02}:{minutes:02}:{seconds:02}")
-            self.session_time_label.setVisible(True)
-        else:
-            self.session_time_label.setVisible(False)
-            
-        # Update Log Size
-        if self.data_logger.is_logging and self.data_logger.current_file:
-            try:
-                size_bytes = os.path.getsize(self.data_logger.current_file)
-                # Convert to readable format
-                for unit in ['B', 'KB', 'MB', 'GB']:
-                    if size_bytes < 1024:
-                        break
-                    size_bytes /= 1024
-                self.log_size_label.setText(f"{size_bytes:.1f} {unit}")
-                self.log_size_label.setVisible(True)
-            except:
-                self.log_size_label.setText("Error")
-        else:
-            self.log_size_label.setVisible(False)
-        
-        # Update Packet Counter
-        self.packet_count_label.setText(f"Packets: {self.total_packets}")
-        
-        # Update RX Bytes
-        rx_bytes = self.total_rx_bytes
-        for unit in ['B', 'KB', 'MB', 'GB']:
-            if rx_bytes < 1024:
-                break
-            rx_bytes /= 1024
-        self.rx_bytes_label.setText(f"RX: {rx_bytes:.1f} {unit}")
-        
-        # Update Active Parameters
-        active_count = len(self.parameters)
-        self.active_params_label.setText(f"Parameters: {active_count}")
-        
-        # Update Widget Count for current tab
-        current_idx = self.tab_widget.currentIndex()
-        widget_count = 0
-        if current_idx in self.tab_data:
-            widget_count = len(self.tab_data[current_idx].get('docks', {}))
-        self.widget_count_label.setText(f"Widgets: {widget_count}")
-        
-        # Update FPS
+        # FPS
         self.fps_counter += 1
         current_time = time.time()
         elapsed = current_time - self.fps_last_time
@@ -3909,6 +3707,109 @@ class MainWindow(QMainWindow):
             self.fps_label.setText(f"FPS: {int(fps)}")
             self.fps_counter = 0
             self.fps_last_time = current_time
+            
+        # Session Time
+        if hasattr(self, 'session_start_time') and self.session_start_time:
+            duration = datetime.now() - self.session_start_time
+            hours, remainder = divmod(duration.seconds, 3600)
+            minutes, seconds = divmod(remainder, 60)
+            self.session_time_label.setText(f"{hours:02}:{minutes:02}:{seconds:02}")
+            self.session_time_label.setVisible(True)
+        else:
+            self.session_time_label.setVisible(False)
+            
+        # Log Size
+        if hasattr(self, 'data_logger') and self.data_logger.is_logging and self.data_logger.current_file:
+            try:
+                size_bytes = os.path.getsize(self.data_logger.current_file)
+                for unit in ['B', 'KB', 'MB', 'GB']:
+                    if size_bytes < 1024: break
+                    size_bytes /= 1024
+                self.log_size_label.setText(f"{size_bytes:.1f} {unit}")
+                self.log_size_label.setVisible(True)
+            except:
+                self.log_size_label.setText("Error")
+        else:
+            self.log_size_label.setVisible(False)
+            
+        # Packet Rate (Simplified estimation)
+        # Assuming total_packets is incremented elsewhere
+        # Ideally we'd track packets per second, but for now we can just show total or implement a rate counter
+        # Let's just show total packets for now if rate isn't tracked
+        if hasattr(self, 'total_packets'):
+             self.rate_label.setText(f"{self.total_packets} pkts")
+
+    def update_connection_status(self):
+        """Update connection status display (both header and status bar)"""
+        if not self.simulator:
+            # Not connected
+            if hasattr(self, 'connection_status_label'):
+                self.connection_status_label.setText("Not Connected")
+                self.connection_status_label.setStyleSheet("color: #ff3131; font-weight: 500;")
+            
+            if hasattr(self, 'sb_connection_label'):
+                self.sb_connection_label.setText("○ Disconnected")
+                self.sb_connection_label.setStyleSheet("color: #ff3131;")
+            return
+        
+        mode = self.connection_settings.get('mode', 'dummy')
+        is_connected = False
+        
+        if mode == 'dummy':
+            is_connected = True
+            conn_text = "Connected (Dummy)"
+            sb_text = "● Connected (Dummy)"
+        else:
+            # Check actual connection
+            if mode == 'serial':
+                try:
+                    is_connected = (hasattr(self.simulator.reader, 'ser') and 
+                                self.simulator.reader.ser and 
+                                self.simulator.reader.ser.is_open)
+                except: is_connected = False
+                port = self.connection_settings.get('serial_port', 'N/A')
+                conn_text = f"Connected (Serial: {port})"
+                sb_text = f"● Serial: {port}"
+                    
+            elif mode == 'tcp':
+                try:
+                    is_connected = (hasattr(self.simulator.reader, 'sock') and 
+                                self.simulator.reader.sock is not None)
+                    if is_connected:
+                        import socket
+                        error = self.simulator.reader.sock.getsockopt(socket.SOL_SOCKET, socket.SO_ERROR)
+                        is_connected = (error == 0)
+                except: is_connected = False
+                host = self.connection_settings.get('tcp_host', 'N/A')
+                port = self.connection_settings.get('tcp_port', 'N/A')
+                conn_text = f"Connected (TCP: {host}:{port})"
+                sb_text = f"● TCP: {host}:{port}"
+                    
+            elif mode == 'udp':
+                try:
+                    is_connected = (hasattr(self.simulator.reader, 'sock') and 
+                                self.simulator.reader.sock is not None)
+                except: is_connected = False
+                host = self.connection_settings.get('udp_host', 'N/A')
+                port = self.connection_settings.get('udp_port', 'N/A')
+                conn_text = f"Connected (UDP: {host}:{port})"
+                sb_text = f"● UDP: {port}"
+
+        # Update Labels
+        if is_connected:
+            if hasattr(self, 'connection_status_label'):
+                self.connection_status_label.setText(conn_text)
+                self.connection_status_label.setStyleSheet("color: #30d158; font-weight: 500;")
+            if hasattr(self, 'sb_connection_label'):
+                self.sb_connection_label.setText(sb_text)
+                self.sb_connection_label.setStyleSheet("color: #30d158;")
+        else:
+            if hasattr(self, 'connection_status_label'):
+                self.connection_status_label.setText("Disconnected")
+                self.connection_status_label.setStyleSheet("color: #ff453a; font-weight: 500;")
+            if hasattr(self, 'sb_connection_label'):
+                self.sb_connection_label.setText("○ Disconnected")
+                self.sb_connection_label.setStyleSheet("color: #ff453a;")
 
     def toggle_logging_from_statusbar(self):
         """Toggle data logging from status bar button"""
@@ -3967,164 +3868,206 @@ class MainWindow(QMainWindow):
     def update_status_bar_visibility(self, phase):
         """Show/hide status bar elements based on current phase"""
         is_dashboard = (phase == "dashboard")
-        is_splash = (phase == "splash")
         
         # Always show status bar
         self.statusBar().setVisible(True)
         
-        # On welcome screen, show only clock and telemetry button
-        if not is_dashboard:
-            # Hide all dashboard-specific elements
-            self.conn_label.setVisible(False)
-            self.status_label.setVisible(False)
-            self.logging_btn.setVisible(False)
-            self.log_size_label.setVisible(False)
-            self.session_time_label.setVisible(False)
-            self.rate_label.setVisible(False)
+        # Dashboard-specific elements
+        if hasattr(self, 'sb_connection_label'):
+            self.sb_connection_label.setVisible(is_dashboard)
+        if hasattr(self, 'fps_label'):
+            self.fps_label.setVisible(is_dashboard)
+        if hasattr(self, 'rate_label'):
+            self.rate_label.setVisible(is_dashboard)
+        if hasattr(self, 'log_size_label'):
+            self.log_size_label.setVisible(is_dashboard)
+        if hasattr(self, 'session_time_label'):
+            self.session_time_label.setVisible(is_dashboard)
             
-            # Hide metrics
-            self.packet_count_label.setVisible(False)
-            self.rx_bytes_label.setVisible(False)
-            self.active_params_label.setVisible(False)
-            self.widget_count_label.setVisible(False)
-            self.fps_label.setVisible(False)
-            
-            # Hide separators
-            self.sep1.setVisible(False)
-            self.sep2.setVisible(False)
-            self.sep3.setVisible(False)
-            self.sep4.setVisible(False)
-            self.sep5.setVisible(False)
-            self.sep6.setVisible(False)
-            
-            # Show only clock and telemetry button
+        # Always visible elements
+        if hasattr(self, 'clock_label'):
             self.clock_label.setVisible(True)
+        if hasattr(self, 'telemetry_viewer_btn'):
             self.telemetry_viewer_btn.setVisible(True)
-        else:
-            # Dashboard - show all elements
-            self.clock_label.setVisible(True)
-            self.conn_label.setVisible(True)
-            self.status_label.setVisible(True)
-            self.logging_btn.setVisible(True)
-            self.telemetry_viewer_btn.setVisible(True)
-            self.rate_label.setVisible(True)
-            
-            # Show metrics
-            self.packet_count_label.setVisible(True)
-            self.rx_bytes_label.setVisible(True)
-            self.active_params_label.setVisible(True)
-            self.widget_count_label.setVisible(True)
-            self.fps_label.setVisible(True)
-            
-            # Show separators
-            self.sep1.setVisible(True)
-            self.sep2.setVisible(True)
-            self.sep3.setVisible(True)
-            self.sep4.setVisible(True)
-            self.sep5.setVisible(True)
-            self.sep6.setVisible(True)
 
 
 
     def _build_welcome_page(self):
         self.welcome_page = QWidget()
+        self.welcome_page.setObjectName("welcomePage")
         
-        # Apply gradient background from bottom
+        # Apple-like Dark Theme Background
         self.welcome_page.setStyleSheet("""
             QWidget#welcomePage {
                 background: qradialgradient(
-                    cx: 0.5, cy: 1.0,
-                    fx: 0.5, fy: 1.0,
-                    radius: 1.2,
-                    stop: 0 #212124,
-                    stop: 0.6 #111111,
-                    stop: 1 #111111
+                    cx: 0.5, cy: 0,
+                    fx: 0.5, fy: 0,
+                    radius: 1.5,
+                    stop: 0 #2c2c2e,
+                    stop: 1 #000000
                 );
             }
         """)
-        self.welcome_page.setObjectName("welcomePage")
         
-        v = QVBoxLayout(self.welcome_page)
-        v.setContentsMargins(60, 40, 60, 40)
-        v.setSpacing(24)
+        # Main Layout
+        main_layout = QVBoxLayout(self.welcome_page)
+        main_layout.setContentsMargins(0, 0, 0, 0)
+        main_layout.setSpacing(0)
         
-        # Logo section
-        logo_container = QWidget()
-        logo_container.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
-        logo_layout = QVBoxLayout(logo_container)
-        logo_layout.setContentsMargins(0, 0, 0, 0)
+        # Center Container
+        center_widget = QWidget()
+        center_widget.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
+        center_layout = QVBoxLayout(center_widget)
+        center_layout.setContentsMargins(40, 60, 40, 60)
+        center_layout.setSpacing(40)
+        center_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        
+        # --- Logo & Title Section ---
+        header_container = QWidget()
+        header_container.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
+        header_layout = QVBoxLayout(header_container)
+        header_layout.setSpacing(16)
+        header_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        
+        # Logo (if available)
         try:
             from PySide6.QtGui import QPixmap
-            logo = QLabel("")
+            logo = QLabel()
             base_path = getattr(sys, '_MEIPASS', os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
             image_path = os.path.join(base_path, "docs", "public", "Glance_nobg.png")
             pix = QPixmap(image_path)
-
             if not pix.isNull():
-                logo.setPixmap(pix.scaledToWidth(300, Qt.TransformationMode.SmoothTransformation))
+                logo.setPixmap(pix.scaledToHeight(120, Qt.TransformationMode.SmoothTransformation))
                 logo.setAlignment(Qt.AlignmentFlag.AlignCenter)
                 logo.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
-                logo_layout.addWidget(logo)
+                header_layout.addWidget(logo)
         except Exception:
             pass
-        
-        # Title and subtitle
-        subtitle = QLabel("<p style='color: #cccccc; font-size: 14px; margin: 8px 0;'>Professional industrial data visualization and monitoring</p>")
-        subtitle.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        subtitle.setWordWrap(True)
-        subtitle.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
-        
-        # Feature highlights
-        features = QWidget()
-        features.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
-        features_layout = QHBoxLayout(features)
-        features_layout.setSpacing(30)
-        
-        feature1 = QLabel("<div style='text-align: center;'><b>Real-time Data</b><br><small>Live streaming from serial, TCP, UDP</small></div>")
-        feature2 = QLabel("<div style='text-align: center;'><b>Multiple Widgets</b><br><small>Graphs, gauges, tables, maps</small></div>")
-        feature3 = QLabel("<div style='text-align: center;'><b>Professional UI</b><br><small>Industry-ready interface</small></div>")
-        
-        for f in [feature1, feature2, feature3]:
-            f.setStyleSheet("color: #aaaaaa; padding: 8px;")
-            f.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
-            features_layout.addWidget(f)
-        
-        # Action buttons
-        btn_container = QWidget()
-        btn_container.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
-        btn_layout = QHBoxLayout(btn_container)
-        btn_layout.setSpacing(16)
-        
-        create_btn = QPushButton("Create New Dashboard")
-        load_btn = QPushButton("Load Project...")
-        
-        create_btn.setObjectName("PrimaryCTA")
-        load_btn.setObjectName("SecondaryCTA")
-        create_btn.setMinimumSize(200, 45)
-        load_btn.setMinimumSize(180, 45)
-        
-        btn_layout.addStretch()
-        btn_layout.addWidget(create_btn)
-        btn_layout.addWidget(load_btn)
-        btn_layout.addStretch()
-        
-        # Assemble layout
-        v.addStretch()
-        v.addWidget(logo_container)
-        v.addSpacing(16)
-        v.addWidget(subtitle)
-        v.addSpacing(24)
-        v.addWidget(features)
-        v.addSpacing(32)
-        v.addWidget(btn_container)
-        v.addStretch()
-        
-        self.stack.addWidget(self.welcome_page)
-        create_btn.clicked.connect(lambda: self.show_phase("setup"))
-        def _load_and_go():
-            self.load_project(); self.show_phase("dashboard")
-        load_btn.clicked.connect(_load_and_go)
 
+        # Title
+        title = QLabel("Welcome to Glance")
+        title.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        title.setFont(QFont("SF Pro Display", 42, QFont.Weight.Bold))
+        title.setStyleSheet("color: #ffffff; background: transparent;")
+        header_layout.addWidget(title)
+        
+        # Subtitle
+        subtitle = QLabel("Professional Industrial Data Visualization")
+        subtitle.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        subtitle.setFont(QFont("SF Pro Text", 18, QFont.Weight.Medium))
+        subtitle.setStyleSheet("color: rgba(255, 255, 255, 0.6); background: transparent;")
+        header_layout.addWidget(subtitle)
+        
+        center_layout.addWidget(header_container)
+        
+        # --- Action Cards Section ---
+        cards_container = QWidget()
+        cards_container.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
+        cards_layout = QHBoxLayout(cards_container)
+        cards_layout.setSpacing(30)
+        cards_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        
+        def create_card(title_text, desc_text, icon_name, callback):
+            card = QPushButton()
+            card.setFixedSize(280, 180)
+            card.setCursor(Qt.CursorShape.PointingHandCursor)
+            
+            # Card Layout
+            card_layout = QVBoxLayout(card)
+            card_layout.setContentsMargins(24, 24, 24, 24)
+            card_layout.setSpacing(12)
+            
+            # Icon
+            icon_lbl = QLabel()
+            icon = QIcon.fromTheme(icon_name)
+            if icon.isNull():
+                # Fallback if theme icon not found (though unlikely on Linux)
+                icon_lbl.setText(icon_name[0].upper()) 
+                icon_lbl.setFont(QFont("SF Pro Display", 32))
+                icon_lbl.setStyleSheet("color: #0a84ff; background: transparent; border: none;")
+            else:
+                pixmap = icon.pixmap(48, 48)
+                # Tint the icon blue if possible, or just use as is. 
+                # For simplicity, we'll use the icon as is, but we could apply a ColorOverlay if needed.
+                # Let's try to colorize it to #0a84ff for consistency if it's a monochrome mask, 
+                # but standard icons are usually colored.
+                icon_lbl.setPixmap(pixmap)
+                
+            icon_lbl.setAlignment(Qt.AlignmentFlag.AlignLeft)
+            icon_lbl.setStyleSheet("background: transparent; border: none;")
+            
+            # Text
+            title_lbl = QLabel(title_text)
+            title_lbl.setFont(QFont("SF Pro Display", 20, QFont.Weight.Bold))
+            title_lbl.setStyleSheet("color: #ffffff; background: transparent; border: none;")
+            title_lbl.setAlignment(Qt.AlignmentFlag.AlignLeft)
+            
+            desc_lbl = QLabel(desc_text)
+            desc_lbl.setFont(QFont("SF Pro Text", 14))
+            desc_lbl.setStyleSheet("color: rgba(255, 255, 255, 0.5); background: transparent; border: none;")
+            desc_lbl.setWordWrap(True)
+            desc_lbl.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignTop)
+            
+            card_layout.addWidget(icon_lbl)
+            card_layout.addWidget(title_lbl)
+            card_layout.addWidget(desc_lbl)
+            card_layout.addStretch()
+            
+            # Card Styling
+            card.setStyleSheet("""
+                QPushButton {
+                    background-color: rgba(255, 255, 255, 0.05);
+                    border: 1px solid rgba(255, 255, 255, 0.1);
+                    border-radius: 20px;
+                    text-align: left;
+                }
+                QPushButton:hover {
+                    background-color: rgba(255, 255, 255, 0.1);
+                    border: 1px solid rgba(255, 255, 255, 0.2);
+                }
+                QPushButton:pressed {
+                    background-color: rgba(255, 255, 255, 0.08);
+                }
+            """)
+            
+            card.clicked.connect(callback)
+            return card
+
+        # New Project Card
+        new_project_card = create_card(
+            "New Project", 
+            "Configure a new dashboard with serial or network data sources.", 
+            "document-new", 
+            lambda: self.show_phase("setup")
+        )
+        
+        # Open Project Card
+        def _load_and_go():
+            if self.load_project():
+                self.show_phase("dashboard")
+                
+        open_project_card = create_card(
+            "Open Project", 
+            "Load an existing .glance dashboard configuration file.", 
+            "document-open", 
+            _load_and_go
+        )
+        
+        cards_layout.addWidget(new_project_card)
+        cards_layout.addWidget(open_project_card)
+        
+        center_layout.addWidget(cards_container)
+        
+        # Footer
+        footer = QLabel("v1.0.0 • Ignition Software")
+        footer.setFont(QFont("SF Pro Text", 12))
+        footer.setStyleSheet("color: rgba(255, 255, 255, 0.3); background: transparent;")
+        footer.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        center_layout.addStretch()
+        center_layout.addWidget(footer)
+        
+        main_layout.addWidget(center_widget)
+        self.stack.addWidget(self.welcome_page)
     def _build_setup_page(self):
         self.setup_page = QWidget()
         self.setup_page.setObjectName("setupPage")
@@ -4514,6 +4457,83 @@ class MainWindow(QMainWindow):
         if self.configured_widgets:
             QMessageBox.information(self, "Dashboard Created", 
                                   f"Dashboard created successfully with {len(self.configured_widgets)} widget(s)!")
+
+    def save_dashboard_state(self):
+        """Save the current dashboard configuration to a .glance file"""
+        if not self.configured_widgets:
+            QMessageBox.warning(self, "Empty Dashboard", "No widgets to save.")
+            return
+
+        file_path, _ = QFileDialog.getSaveFileName(self, "Save Dashboard", "", "Glance Dashboard (*.glance)")
+        if not file_path:
+            return
+
+        if not file_path.endswith('.glance'):
+            file_path += '.glance'
+
+        # Capture current layout positions
+        tab_info = self.tab_data.get(0) # Assuming single tab for now
+        current_positions = tab_info.get('layout_positions', {}) if tab_info else {}
+        
+        # Update configured_widgets with current positions
+        widgets_to_save = []
+        for w in self.configured_widgets:
+            w_copy = w.copy()
+            wid = w['id']
+            if wid in current_positions:
+                w_copy['layout_position'] = current_positions[wid]
+            widgets_to_save.append(w_copy)
+
+        state = {
+            "version": "1.0",
+            "timestamp": datetime.now().isoformat(),
+            "widgets": widgets_to_save
+        }
+
+        try:
+            with open(file_path, 'w') as f:
+                json.dump(state, f, separators=(',', ':')) # Minified
+            QMessageBox.information(self, "Success", "Dashboard saved successfully!")
+        except Exception as e:
+            QMessageBox.critical(self, "Error", f"Failed to save dashboard: {e}")
+
+    def load_dashboard_state(self):
+        """Load a dashboard configuration from a .glance file"""
+        file_path, _ = QFileDialog.getOpenFileName(self, "Load Dashboard", "", "Glance Dashboard (*.glance)")
+        if not file_path:
+            return
+
+        try:
+            with open(file_path, 'r') as f:
+                state = json.load(f)
+
+            if "widgets" not in state:
+                raise ValueError("Invalid file format")
+
+            # Clear existing
+            self.clear_all_widgets()
+            
+            # Load new
+            self.configured_widgets = state["widgets"]
+            self.refresh_widgets_list()
+            self.create_dashboard_with_widgets()
+            
+            # Restore layout positions
+            tab_info = self.tab_data.get(0)
+            if tab_info:
+                positions = tab_info.setdefault('layout_positions', {})
+                has_positions = False
+                for w in self.configured_widgets:
+                    if 'layout_position' in w:
+                        positions[w['id']] = tuple(w['layout_position'])
+                        has_positions = True
+                
+                if has_positions:
+                    self._retile_positions(0)
+            
+            QMessageBox.information(self, "Success", "Dashboard loaded successfully!")
+        except Exception as e:
+            QMessageBox.critical(self, "Error", f"Failed to load dashboard: {e}")
 
     def create_default_parameters(self):
         """Create default parameters for demonstration"""
@@ -5069,113 +5089,60 @@ class MainWindow(QMainWindow):
         doc.build(story)
 
             
-    def update_connection_status(self):
-        """Update connection status display (both header and status bar)"""
-        if not self.simulator:
-            # Not connected
-            self.connection_status_label.setText("Not Connected")
-            self.connection_status_label.setStyleSheet("color: #ff3131; font-weight: bold;")
-            # Update status bar too
-            if hasattr(self, 'status_conn_label'):
-                self.status_conn_label.setText("● Disconnected")
-                self.status_conn_label.setStyleSheet("color: #ff3131;")
-            return
-        
-        mode = self.connection_settings.get('mode', 'dummy')
-        
-        if mode == 'dummy':
-            self.connection_status_label.setText("Connected (Dummy Data)")
-            self.connection_status_label.setStyleSheet("color: #21b35a; font-weight: bold;")
-            if hasattr(self, 'status_conn_label'):
-                self.status_conn_label.setText("● Connected (Dummy)")
-                self.status_conn_label.setStyleSheet("color: #21b35a;")
-        else:
-            # Check if backend connection is actually alive
-            is_connected = False
-            
-            if hasattr(self.simulator, 'reader') and self.simulator.reader:
-                if mode == 'serial':
-                    try:
-                        is_connected = (hasattr(self.simulator.reader, 'ser') and 
-                                    self.simulator.reader.ser and 
-                                    self.simulator.reader.ser.is_open)
-                    except:
-                        is_connected = False
-                        
-                elif mode == 'tcp':
-                    try:
-                        is_connected = (hasattr(self.simulator.reader, 'sock') and 
-                                    self.simulator.reader.sock is not None)
-                        # Additional check: try to get socket error state
-                        if is_connected:
-                            try:
-                                # Check if socket is still connected using getsockopt
-                                import socket
-                                error = self.simulator.reader.sock.getsockopt(socket.SOL_SOCKET, socket.SO_ERROR)
-                                is_connected = (error == 0)
-                            except:
-                                is_connected = False
-                    except:
-                        is_connected = False
-                        
-                elif mode == 'udp':
-                    try:
-                        is_connected = (hasattr(self.simulator.reader, 'sock') and 
-                                    self.simulator.reader.sock is not None)
-                    except:
-                        is_connected = False
-            
-            # Update UI based on actual connection state
-            if is_connected:
-                if mode == 'serial':
-                    port = self.connection_settings.get('serial_port', 'N/A')
-                    self.connection_status_label.setText(f"Connected (Serial: {port})")
-                    if hasattr(self, 'status_conn_label'):
-                        self.status_conn_label.setText(f"● Serial: {port}")
-                        self.status_conn_label.setStyleSheet("color: #21b35a;")
-                elif mode == 'tcp':
-                    host = self.connection_settings.get('tcp_host', 'N/A')
-                    port = self.connection_settings.get('tcp_port', 'N/A')
-                    self.connection_status_label.setText(f"Connected (TCP: {host}:{port})")
-                    if hasattr(self, 'status_conn_label'):
-                        self.status_conn_label.setText(f"● TCP: {host}:{port}")
-                        self.status_conn_label.setStyleSheet("color: #21b35a;")
-                elif mode == 'udp':
-                    host = self.connection_settings.get('udp_host', 'N/A')
-                    port = self.connection_settings.get('udp_port', 'N/A')
-                    self.connection_status_label.setText(f"Connected (UDP: {host}:{port})")
-                    if hasattr(self, 'status_conn_label'):
-                        self.status_conn_label.setText(f"● UDP: {port}")
-                        self.status_conn_label.setStyleSheet("color: #21b35a;")
-                
-                self.connection_status_label.setStyleSheet("color: #21b35a; font-weight: bold;")
-            else:
-                # Not connected - show attempting
-                if mode == 'serial':
-                    port = self.connection_settings.get('serial_port', 'N/A')
-                    self.connection_status_label.setText(f"Disconnected (Serial: {port})")
-                    if hasattr(self, 'status_conn_label'):
-                        self.status_conn_label.setText(f"● Disconnected")
-                        self.status_conn_label.setStyleSheet("color: #ff9800;")
-                elif mode == 'tcp':
-                    host = self.connection_settings.get('tcp_host', 'N/A')
-                    port = self.connection_settings.get('tcp_port', 'N/A')
-                    self.connection_status_label.setText(f"Connecting (TCP: {host}:{port})...")
-                    if hasattr(self, 'status_conn_label'):
-                        self.status_conn_label.setText(f"● Connecting...")
-                        self.status_conn_label.setStyleSheet("color: #ff9800;")
-                elif mode == 'udp':
-                    port = self.connection_settings.get('udp_port', 'N/A')
-                    self.connection_status_label.setText(f"Listening (UDP: {port})")
-                    if hasattr(self, 'status_conn_label'):
-                        self.status_conn_label.setText(f"● Listening")
-                        self.status_conn_label.setStyleSheet("color: #ff9800;")
-                
-                self.connection_status_label.setStyleSheet("color: #ff9800; font-weight: bold;")
+    # Duplicate update_connection_status removed
 
     def _build_dashboard_page(self):
         self.dashboard_page = QWidget(); layout = QVBoxLayout(self.dashboard_page)
         layout.setContentsMargins(0,0,0,0)
+        layout.setSpacing(0)
+        
+        # --- Floating Header ---
+        self.dashboard_header = QWidget()
+        self.dashboard_header.setObjectName("DashboardHeader")
+        header_layout = QHBoxLayout(self.dashboard_header)
+        header_layout.setContentsMargins(20, 10, 20, 10)
+        header_layout.setSpacing(15)
+        
+        # Title
+        self.dashboard_title.setStyleSheet("font-size: 20px; font-weight: 700; color: #ffffff;")
+        header_layout.addWidget(self.dashboard_title)
+        
+        header_layout.addStretch()
+        
+        # Status Indicators
+        status_container = QWidget()
+        status_container.setObjectName("StatusContainer")
+        status_layout = QHBoxLayout(status_container)
+        status_layout.setContentsMargins(10, 5, 10, 5)
+        status_layout.setSpacing(15)
+        
+        self.connection_status_label.setStyleSheet("font-weight: 500;")
+        status_layout.addWidget(self.connection_status_label)
+        
+        # Separator
+        sep1 = QLabel("|"); sep1.setStyleSheet("color: rgba(255,255,255,0.2);")
+        status_layout.addWidget(sep1)
+        
+        self.stream_status_label.setStyleSheet("color: #8e8e93;")
+        status_layout.addWidget(self.stream_status_label)
+        
+        # Separator
+        sep2 = QLabel("|"); sep2.setStyleSheet("color: rgba(255,255,255,0.2);")
+        status_layout.addWidget(sep2)
+        
+        self.logging_status_label.setStyleSheet("color: #8e8e93;")
+        status_layout.addWidget(self.logging_status_label)
+        
+        header_layout.addWidget(status_container)
+        
+        # Controls
+        self.pause_button.setFixedSize(120, 32)
+        self.pause_button.setCursor(Qt.CursorShape.PointingHandCursor)
+        header_layout.addWidget(self.pause_button)
+        
+        layout.addWidget(self.dashboard_header)
+        
+        # Tab Widget
         layout.addWidget(self.tab_widget)
         self.stack.addWidget(self.dashboard_page)
         # start with a default tab only when entering dashboard the first time
@@ -5189,8 +5156,8 @@ class MainWindow(QMainWindow):
         is_dashboard = (which == "dashboard")
         if hasattr(self, 'control_dock') and self.control_dock:
             self.control_dock.setVisible(is_dashboard)
-        if hasattr(self, 'header_dock') and self.header_dock:
-            self.header_dock.setVisible(is_dashboard and not self.is_fullscreen)
+        if hasattr(self, 'dashboard_header') and self.dashboard_header:
+            self.dashboard_header.setVisible(is_dashboard and not self.is_fullscreen)
         
         # NEW: Customize menu bar based on phase
         is_welcome = (which == "welcome")
@@ -5268,29 +5235,297 @@ class MainWindow(QMainWindow):
             QTimer.singleShot(500, self.update_connection_status)
     def apply_stylesheet(self):
         self.setStyleSheet("""
-            QMainWindow, QDialog { background-color: #1e1e1e; color: #d4d4d4; }
-            QWidget { font-size: 13px; }
-            QDockWidget { background-color: #252526; }
-            QDockWidget::title { background-color: #2c2c2c; padding: 6px; border-radius: 4px; font-weight: bold; }
-            QGroupBox { border: 1px solid #3a3a3a; margin-top: 1em; padding: 0.75em; border-radius: 6px; }
-            QGroupBox::title { subcontrol-origin: margin; subcontrol-position: top left; padding: 0 6px; background-color: transparent; }
-            QPushButton { background-color: #0a84ff; border: none; padding: 9px 14px; border-radius: 6px; color: #fff; }
-            QPushButton:hover { background-color: #1a8fff; }
-            QPushButton:pressed { background-color: #0969c3; }
-            QPushButton#PrimaryCTA { background-color: #1c9c4f; }
-            QPushButton#PrimaryCTA:hover { background-color: #21b35a; }
-            QPushButton#SecondaryCTA { background-color: #3c3c3c; }
-            QPushButton#SecondaryCTA:hover { background-color: #4a4a4a; }
-            QComboBox, QLineEdit, QSpinBox, QDoubleSpinBox { background-color: #2b2b2b; border: 1px solid #4a4a4a; border-radius: 6px; padding: 6px; }
-            QTableWidget { background-color: #202020; gridline-color: #444444; }
-            QHeaderView::section { background-color: #2a2a2a; border: 1px solid #444444; padding: 6px; }
-            QListWidget { background-color: #202020; border: 1px solid #333; border-radius: 6px; }
-            QTabWidget::pane { border: 1px solid #333; }
-            QTabBar::tab { background: #252526; border: 1px solid #333; padding: 8px 14px; border-bottom: none; }
-            QTabBar::tab:selected { background: #343434; }
-            QStatusBar QLabel#SBClock { color: #9cdcfe; padding-left: 10px; }
-            QStatusBar QLabel#SBConn { color: #ce9178; padding-right: 10px; }
-            QStatusBar QLabel#SBRx { color: #b5cea8; padding-right: 10px; }
+            /* Global Window & Dialogs */
+            QMainWindow, QDialog { 
+                background-color: #1c1c1e; 
+                color: #ffffff; 
+                font-family: 'SF Pro Text', 'Segoe UI', sans-serif;
+            }
+            QWidget { 
+                font-size: 13px; 
+                color: #ffffff;
+            }
+
+            /* Menu Bar */
+            QMenuBar {
+                background-color: transparent;
+                color: #ffffff;
+                border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+                padding: 4px;
+            }
+            QMenuBar::item {
+                background: transparent;
+                padding: 6px 12px;
+                border-radius: 6px;
+                color: #ffffff;
+            }
+            QMenuBar::item:selected {
+                background-color: rgba(255, 255, 255, 0.1);
+            }
+            QMenuBar::item:pressed {
+                background-color: rgba(255, 255, 255, 0.15);
+            }
+
+            /* Menus */
+            QMenu {
+                background-color: rgba(30, 30, 32, 0.95);
+                border: 1px solid rgba(255, 255, 255, 0.1);
+                border-radius: 10px;
+                padding: 6px;
+                color: #ffffff;
+            }
+            QMenu::item {
+                padding: 6px 24px 6px 12px;
+                border-radius: 6px;
+                margin: 2px;
+            }
+            QMenu::item:selected {
+                background-color: #0a84ff;
+                color: #ffffff;
+            }
+            QMenu::separator {
+                height: 1px;
+                background-color: rgba(255, 255, 255, 0.1);
+                margin: 6px 0;
+            }
+
+            /* Dock Widgets */
+            QDockWidget { 
+                background-color: #1c1c1e; 
+                border: none;
+                titlebar-close-icon: url(resources/icons/close.png);
+                titlebar-normal-icon: url(resources/icons/float.png);
+            }
+            QDockWidget::title { 
+                background-color: #2c2c2e; 
+                padding: 8px; 
+                border-radius: 8px; 
+                font-weight: 600; 
+                text-align: center;
+            }
+
+            /* Group Boxes */
+            QGroupBox { 
+                border: 1px solid rgba(255, 255, 255, 0.1); 
+                margin-top: 1.2em; 
+                padding: 12px; 
+                border-radius: 10px; 
+                background-color: rgba(255, 255, 255, 0.03);
+            }
+            QGroupBox::title { 
+                subcontrol-origin: margin; 
+                subcontrol-position: top left; 
+                padding: 0 8px; 
+                background-color: transparent; 
+                color: #8e8e93;
+                font-weight: 600;
+            }
+
+            /* Buttons */
+            QPushButton { 
+                background-color: rgba(255, 255, 255, 0.1); 
+                border: none; 
+                padding: 8px 16px; 
+                border-radius: 8px; 
+                color: #ffffff; 
+                font-weight: 500;
+            }
+            QPushButton:hover { 
+                background-color: rgba(255, 255, 255, 0.15); 
+            }
+            QPushButton:pressed { 
+                background-color: rgba(255, 255, 255, 0.2); 
+            }
+            QPushButton#PrimaryCTA { 
+                background-color: #0a84ff; 
+                color: #ffffff;
+            }
+            QPushButton#PrimaryCTA:hover { 
+                background-color: #0077ed; 
+            }
+            QPushButton#PrimaryCTA:pressed { 
+                background-color: #0062c4; 
+            }
+            QPushButton#SecondaryCTA { 
+                background-color: rgba(255, 255, 255, 0.1); 
+            }
+
+            /* Inputs */
+            QLineEdit, QSpinBox, QDoubleSpinBox, QComboBox { 
+                background-color: rgba(255, 255, 255, 0.05); 
+                border: 1px solid rgba(255, 255, 255, 0.1); 
+                border-radius: 8px; 
+                padding: 8px; 
+                color: #ffffff;
+                selection-background-color: #0a84ff;
+            }
+            QLineEdit:focus, QSpinBox:focus, QDoubleSpinBox:focus, QComboBox:focus {
+                border: 1px solid #0a84ff;
+                background-color: rgba(10, 132, 255, 0.1);
+            }
+            QComboBox::drop-down {
+                border: none;
+                width: 20px;
+            }
+
+            /* Tables & Lists */
+            QTableWidget, QListWidget { 
+                background-color: rgba(255, 255, 255, 0.03); 
+                border: 1px solid rgba(255, 255, 255, 0.1); 
+                border-radius: 10px; 
+                gridline-color: rgba(255, 255, 255, 0.1);
+                outline: none;
+            }
+            QHeaderView::section { 
+                background-color: #2c2c2e; 
+                border: none;
+                border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+                padding: 8px; 
+                font-weight: 600;
+                color: #8e8e93;
+            }
+            QTableWidget::item:selected, QListWidget::item:selected {
+                background-color: #0a84ff;
+                color: #ffffff;
+                border-radius: 4px;
+            }
+
+            /* Tabs */
+            QTabWidget::pane { 
+                border: 1px solid rgba(255, 255, 255, 0.1); 
+                border-radius: 10px;
+                background-color: #1c1c1e;
+            }
+            QTabBar::tab { 
+                background: transparent; 
+                color: #8e8e93;
+                padding: 8px 16px; 
+                border-bottom: 2px solid transparent;
+                margin-right: 4px;
+            }
+            QTabBar::tab:selected { 
+                color: #0a84ff;
+                border-bottom: 2px solid #0a84ff;
+            }
+            QTabBar::tab:hover {
+                color: #ffffff;
+            }
+
+            /* Status Bar (VS Code-like) */
+            QStatusBar {
+                background-color: #007acc; /* VS Code Blue */
+                color: #ffffff;
+                border-top: 1px solid #007acc;
+            }
+            QStatusBar::item {
+                border: none;
+            }
+            
+            /* Left Side Items */
+            QWidget#SBLeft {
+                background-color: #007acc;
+                color: #ffffff;
+                padding: 4px 10px;
+                border: none;
+                font-size: 12px;
+                font-weight: 500;
+            }
+            QPushButton#SBLeft:hover {
+                background-color: rgba(255, 255, 255, 0.1);
+            }
+            
+            /* Right Side Items */
+            QWidget#SBRight {
+                background-color: #007acc;
+                color: #ffffff;
+                padding: 4px 10px;
+                font-size: 12px;
+            }
+            QWidget#SBRight:hover {
+                background-color: rgba(255, 255, 255, 0.1);
+            }
+            
+            /* Telemetry Button */
+            QPushButton#TelemetryBtn {
+                background-color: transparent;
+                color: #ffffff;
+                padding: 4px 10px;
+                border: none;
+                font-weight: 500;
+            }
+            QPushButton#TelemetryBtn:hover {
+                background-color: rgba(255, 255, 255, 0.1);
+            }
+            
+            /* Message Box */
+            QMessageBox {
+                background-color: #1c1c1e;
+                border: 1px solid rgba(255, 255, 255, 0.1);
+            }
+            QMessageBox QLabel {
+                color: #ffffff;
+                font-size: 13px;
+            }
+            QMessageBox QPushButton {
+                min-width: 80px;
+            }
+
+            /* Dashboard Header */
+            QWidget#DashboardHeader {
+                background-color: rgba(28, 28, 30, 0.8);
+                border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+                border-radius: 0px; 
+            }
+            QWidget#StatusContainer {
+                background-color: rgba(0, 0, 0, 0.2);
+                border-radius: 8px;
+                border: 1px solid rgba(255, 255, 255, 0.05);
+            }
+
+            /* Tabs */
+            QTabWidget::pane { 
+                border: none;
+                background-color: transparent;
+            }
+            QTabBar::tab {
+                background: transparent;
+                color: #8e8e93;
+                padding: 8px 16px;
+                margin: 4px;
+                border-radius: 6px;
+                font-weight: 500;
+            }
+            QTabBar::tab:selected {
+                background-color: rgba(255, 255, 255, 0.1);
+                color: #ffffff;
+            }
+            QTabBar::tab:hover {
+                background-color: rgba(255, 255, 255, 0.05);
+                color: #ffffff;
+            }
+
+            /* Dock Windows */
+            QDockWidget {
+                titlebar-close-icon: url(resources/icons/close.png);
+                titlebar-normal-icon: url(resources/icons/float.png);
+            }
+            QDockWidget::title {
+                text-align: left;
+                background: transparent;
+                padding: 8px;
+                color: #8e8e93;
+                font-size: 12px;
+                font-weight: 600;
+            }
+            QDockWidget::close-button, QDockWidget::float-button {
+                border: none;
+                background: transparent;
+                padding: 0px;
+            }
+            QDockWidget::close-button:hover, QDockWidget::float-button:hover {
+                background: rgba(255, 255, 255, 0.1);
+                border-radius: 4px;
+            }
         """)
 
     def closeEvent(self, event):

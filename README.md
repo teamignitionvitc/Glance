@@ -265,10 +265,11 @@ With multi-source connectivity, advanced signal filtering, powerful data logging
 - Screenshot capture
 - Save to file
 
-**Status Bar Metrics**
+**VS Code-like Status Bar**
+- Segmented layout for clear information hierarchy
 - Live clock display
-- Connection status with details
-- Packet count and data received
+- Connection status with interactive button
+- Packet count and data received metrics
 - Active parameters and widget count
 - UI update rate (FPS)
 - Data logging indicator
@@ -307,16 +308,16 @@ With multi-source connectivity, advanced signal filtering, powerful data logging
 <td width="50%">
 
 **Modern Design**
-- Professional dark theme
-- High-contrast elements
-- Custom styled widgets
-- Smooth animations
-- Gradient accents
-- Responsive layout
+- Professional "Apple-like" dark theme
+- High-contrast elements with SF Pro typography
+- Custom styled widgets with glassmorphism effects
+- Smooth animations and transitions
+- Gradient accents and refined color palettes
+- Responsive layout with segmented controls
 
 **Dashboard Management**
 - 4-phase creation wizard
-- Welcome screen with quick actions
+- Professional Welcome Screen with system icons
 - Setup wizard with validation
 - Widget pre-configuration
 - Live dashboard phase

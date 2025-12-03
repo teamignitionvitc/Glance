@@ -76,7 +76,7 @@ class TestWidgets:
     def test_gauge_widget_instantiation(self, qapp, param_config):
         widget = GaugeWidget(param_config)
         assert widget is not None
-        assert widget.param == param_config
+        assert widget.param_config == param_config
 
     def test_time_graph_instantiation(self, qapp, param_config):
         # TimeGraph expects a list of configs

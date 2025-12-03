@@ -54,6 +54,7 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 # 004  MOD      09-10-2025  MuhammadRamzy        Formatting
 # 005  MOD      11-10-2025  oslowtech            Fixed Dialogs.py logging os and datetime import error
 # 006  MOD      29-11-2025  MuhammadRamzy        feat: Redesign AddWidgetDialog with side-by-side layout and QStackedWidget
+# 007  MOD      04-12-2025  MuhammadRamzy        feat: Professional widget-specific parameter selection
 ####################################################################################################
 
 ####################################################################################################
@@ -67,7 +68,7 @@ from PySide6.QtWidgets import (
     QListWidget, QAbstractItemView, QPushButton, QVBoxLayout, QLabel,
     QTableWidget, QTableWidgetItem, QHeaderView, QHBoxLayout, QDoubleSpinBox,
     QMessageBox, QGroupBox, QFileDialog, QListWidgetItem, QToolBar, QGridLayout,
-    QWidget, QStackedWidget
+    QWidget, QStackedWidget, QScrollArea
 )
 from PySide6.QtGui import QIcon, QAction
 from PySide6.QtCore import Qt, QSize
@@ -295,488 +296,568 @@ class ConnectionSettingsDialog(QDialog):
 class AddWidgetDialog(QDialog):
     """
     @brief Dialog for adding a new widget to the dashboard.
-    @details Allows user to select parameters, widget type, and configure specific options.
-             Uses QStackedWidget to manage option panels safely.
+    @details Implements a 2-step workflow:
+             1. Select Widget Type (Grid of cards)
+             2. Configure Parameters & Options (Widget-specific)
     """
     def __init__(self, parameters, parent=None, edit_mode=False, existing_config=None):
         super().__init__(parent)
-        self.parameters = parameters
+        self.parameters = sorted(parameters, key=lambda x: x['name'])
         self.edit_mode = edit_mode
         self.existing_config = existing_config or {}
         self.setWindowTitle("Edit Widget" if edit_mode else "Add Widget")
-        self.setMinimumSize(900, 600)
+        self.setMinimumSize(900, 650)
         
-        # Main layout - Side by Side
-        main_layout = QHBoxLayout(self)
-        main_layout.setContentsMargins(0, 0, 0, 0)
-        main_layout.setSpacing(0)
+        # Main layout
+        self.main_layout = QVBoxLayout(self)
+        self.main_layout.setContentsMargins(0, 0, 0, 0)
+        self.main_layout.setSpacing(0)
         
-        # --- Left Panel: Parameters ---
-        left_panel = QWidget()
-        left_panel.setStyleSheet("background-color: #252525; border-right: 1px solid #333;")
-        left_layout = QVBoxLayout(left_panel)
-        left_layout.setContentsMargins(16, 16, 16, 16)
+        # Stacked Widget for 2-step flow
+        self.stack = QStackedWidget()
+        self.main_layout.addWidget(self.stack)
         
-        left_layout.addWidget(QLabel("<b>1. Select Parameters</b>"))
+        # Step 1: Widget Type Selection
+        self.type_page = QWidget()
+        self._build_type_selection_page()
+        self.stack.addWidget(self.type_page)
         
-        # Filter
-        filter_layout = QHBoxLayout()
-        filter_layout.addWidget(QLabel("Group:"))
-        self.sensor_group_combo = QComboBox()
-        groups = sorted(list(set([p.get('sensor_group', 'Default') for p in parameters])))
-        self.sensor_group_combo.addItem("All")
-        self.sensor_group_combo.addItems(groups)
-        filter_layout.addWidget(self.sensor_group_combo)
-        left_layout.addLayout(filter_layout)
+        # Step 2: Configuration (Parameters + Options)
+        self.config_page = QWidget()
+        self._build_configuration_page()
+        self.stack.addWidget(self.config_page)
         
-        # Parameter List
-        self.param_list = QListWidget()
-        self.param_list.setSelectionMode(QAbstractItemView.SelectionMode.ExtendedSelection)
-        self.param_list.setAlternatingRowColors(True)
-        left_layout.addWidget(self.param_list)
+        # Initialize
+        if self.edit_mode and self.existing_config:
+            self._populate_from_config()
+            self.stack.setCurrentWidget(self.config_page)
+        else:
+            self.stack.setCurrentWidget(self.type_page)
+
+    def _build_type_selection_page(self):
+        layout = QVBoxLayout(self.type_page)
+        layout.setContentsMargins(40, 40, 40, 40)
+        layout.setSpacing(30)
         
-        main_layout.addWidget(left_panel, stretch=1)
+        # Header
+        header = QLabel("Select Widget Type")
+        header.setStyleSheet("font-size: 24px; font-weight: 600; margin-bottom: 20px;")
+        header.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        layout.addWidget(header)
         
-        # --- Right Panel: Configuration ---
-        right_panel = QWidget()
-        right_panel.setStyleSheet("background-color: #1e1e1e;")
-        right_layout = QVBoxLayout(right_panel)
-        right_layout.setContentsMargins(24, 24, 24, 24)
-        right_layout.setSpacing(20)
+        # Grid of Widget Types
+        grid_widget = QWidget()
+        grid = QGridLayout(grid_widget)
+        grid.setSpacing(20)
         
-        right_layout.addWidget(QLabel("<b>2. Configure Widget</b>"))
+        self.widget_types = [
+            ("Time Graph", "Plot values over time with history."),
+            ("Log Table", "Tabular log of data points."),
+            ("Instant Value", "Large display of current value."),
+            ("Gauge", "Linear or circular gauge display."),
+            ("Histogram", "Distribution of values."),
+            ("LED Indicator", "Status indicator with thresholds."),
+            ("Map (GPS)", "GPS position on map.")
+        ]
         
-        # Widget Type
-        type_layout = QFormLayout()
-        self.type_combo = QComboBox()
-        self.type_combo.addItems([
-            "Time Graph", 
-            "Log Table", 
-            "Instant Value", 
-            "Gauge", 
-            "Histogram", 
-            "LED Indicator", 
-            "Map (GPS)"
-        ])
-        type_layout.addRow("Widget Type:", self.type_combo)
+        self.type_buttons = {}
         
-        self.priority_combo = QComboBox()
-        self.priority_combo.addItems(["Normal", "High", "Critical"])
-        type_layout.addRow("Priority:", self.priority_combo)
+        for i, (name, desc) in enumerate(self.widget_types):
+            row = i // 3
+            col = i % 3
+            
+            btn = QPushButton()
+            btn.setCheckable(True)
+            btn.setFixedSize(240, 140)
+            btn.setCursor(Qt.CursorShape.PointingHandCursor)
+            
+            # Button Layout
+            btn_layout = QVBoxLayout(btn)
+            btn_layout.setContentsMargins(20, 20, 20, 20)
+            btn_layout.setSpacing(8)
+            
+            name_lbl = QLabel(name)
+            name_lbl.setStyleSheet("font-size: 16px; font-weight: 600; color: #fff; background: transparent;")
+            name_lbl.setAlignment(Qt.AlignmentFlag.AlignLeft)
+            
+            desc_lbl = QLabel(desc)
+            desc_lbl.setStyleSheet("font-size: 13px; color: #8e8e93; background: transparent;")
+            desc_lbl.setWordWrap(True)
+            desc_lbl.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignTop)
+            
+            btn_layout.addWidget(name_lbl)
+            btn_layout.addWidget(desc_lbl)
+            btn_layout.addStretch()
+            
+            # Styling - Apple-like Card
+            btn.setStyleSheet("""
+                QPushButton {
+                    background-color: rgba(28, 28, 30, 0.8);
+                    border: 1px solid rgba(255, 255, 255, 0.1);
+                    border-radius: 12px;
+                    text-align: left;
+                }
+                QPushButton:checked {
+                    background-color: rgba(10, 132, 255, 0.15);
+                    border: 1px solid #0a84ff;
+                }
+                QPushButton:hover {
+                    background-color: rgba(44, 44, 46, 0.8);
+                    border: 1px solid rgba(255, 255, 255, 0.2);
+                }
+            """)
+            
+            btn.clicked.connect(lambda checked, n=name: self._on_type_selected(n))
+            self.type_buttons[name] = btn
+            grid.addWidget(btn, row, col)
+            
+        layout.addWidget(grid_widget)
+        layout.addStretch()
         
-        right_layout.addLayout(type_layout)
+        # Next Button
+        # Next Button
+        self.next_btn = QPushButton("Next")
+        self.next_btn.setIcon(QIcon.fromTheme("go-next-symbolic"))
+        self.next_btn.setLayoutDirection(Qt.LayoutDirection.RightToLeft) # Icon on right
+        self.next_btn.setObjectName("PrimaryCTA")
+        self.next_btn.setFixedSize(120, 40)
+        self.next_btn.setEnabled(False)
+        self.next_btn.clicked.connect(self.go_to_config)
         
-        # Options Group with StackedWidget
-        self.options_group = QGroupBox("Widget Options")
-        self.options_layout = QVBoxLayout(self.options_group)
+        btn_container = QHBoxLayout()
+        btn_container.addStretch()
+        btn_container.addWidget(self.next_btn)
+        layout.addLayout(btn_container)
+
+    def _on_type_selected(self, selected_name):
+        # Uncheck others
+        for name, btn in self.type_buttons.items():
+            if name != selected_name:
+                btn.setChecked(False)
+        
+        self.selected_type = selected_name
+        self.next_btn.setEnabled(True)
+
+    def _build_configuration_page(self):
+        layout = QVBoxLayout(self.config_page)
+        layout.setContentsMargins(30, 30, 30, 30)
+        layout.setSpacing(20)
+        
+        # Header with Back Button
+        header_layout = QHBoxLayout()
+        back_btn = QPushButton("Back")
+        back_btn.setIcon(QIcon.fromTheme("go-previous-symbolic"))
+        back_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        back_btn.setObjectName("SecondaryCTA") # Use global style
+        back_btn.setFixedWidth(80)
+        back_btn.clicked.connect(self.go_back)
+        
+        self.config_title = QLabel("Configure Widget")
+        self.config_title.setStyleSheet("font-size: 18px; font-weight: 600;")
+        
+        header_layout.addWidget(back_btn)
+        header_layout.addStretch()
+        header_layout.addWidget(self.config_title)
+        header_layout.addStretch()
+        # Dummy widget to balance layout
+        dummy = QWidget()
+        dummy.setFixedWidth(back_btn.sizeHint().width())
+        header_layout.addWidget(dummy)
+        
+        layout.addLayout(header_layout)
+        
+        # Options Stack
         self.options_stack = QStackedWidget()
-        self.options_layout.addWidget(self.options_stack)
-        right_layout.addWidget(self.options_group)
+        layout.addWidget(self.options_stack)
         
-        # --- Create Pages for Stack ---
+        # --- Create Option Pages ---
         self.pages = {}
+        self._create_option_pages()
         
+        # Footer Buttons
+        btn_layout = QHBoxLayout()
+        btn_layout.addStretch()
+        cancel_btn = QPushButton("Cancel")
+        cancel_btn.clicked.connect(self.reject)
+        self.create_btn = QPushButton("Create Widget")
+        self.create_btn.setObjectName("PrimaryCTA")
+        self.create_btn.clicked.connect(self.validate_and_accept)
+        
+        btn_layout.addWidget(cancel_btn)
+        btn_layout.addWidget(self.create_btn)
+        layout.addLayout(btn_layout)
+
+    def _create_param_combo(self):
+        """Helper to create a populated parameter combobox"""
+        combo = QComboBox()
+        for p in self.parameters:
+            combo.addItem(f"{p['name']} ({p.get('unit', '')})", p['id'])
+        return combo
+
+    def _create_option_pages(self):
         # 1. Graph Page
         graph_page = QWidget()
-        graph_layout = QFormLayout(graph_page)
+        graph_layout = QVBoxLayout(graph_page)
         
-        self.graph_time_range = QSpinBox()
-        self.graph_time_range.setRange(10, 3600)
-        self.graph_time_range.setValue(300)
-        self.graph_time_range.setSuffix(" seconds")
-        graph_layout.addRow("Time Range:", self.graph_time_range)
+        # Graph Settings
+        settings_group = QGroupBox("Graph Settings")
+        settings_form = QFormLayout(settings_group)
+        self.graph_time_range = QSpinBox(); self.graph_time_range.setRange(10, 3600); self.graph_time_range.setValue(300); self.graph_time_range.setSuffix(" seconds")
+        self.graph_line_width = QDoubleSpinBox(); self.graph_line_width.setRange(0.5, 5.0); self.graph_line_width.setValue(2.0); self.graph_line_width.setSingleStep(0.5)
+        self.graph_line_style = QComboBox(); self.graph_line_style.addItems(["Solid", "Dashed", "Dotted"])
+        self.graph_y_auto = QComboBox(); self.graph_y_auto.addItems(["Auto Range", "Fixed Range"])
         
-        # Line styling
-        graph_layout.addRow(QLabel(""))  # Spacer
-        graph_layout.addRow(QLabel("<b>Line Styling:</b>"))
+        settings_form.addRow("Time Range:", self.graph_time_range)
+        settings_form.addRow("Line Width:", self.graph_line_width)
+        settings_form.addRow("Line Style:", self.graph_line_style)
+        settings_form.addRow("Y-Axis Mode:", self.graph_y_auto)
+        graph_layout.addWidget(settings_group)
         
-        self.graph_line_width = QDoubleSpinBox()
-        self.graph_line_width.setRange(0.5, 5.0)
-        self.graph_line_width.setValue(2.0)
-        self.graph_line_width.setSingleStep(0.5)
-        graph_layout.addRow("Line Width:", self.graph_line_width)
+        # Data Series
+        series_group = QGroupBox("Data Series")
+        series_layout = QVBoxLayout(series_group)
+        self.graph_series_list = QListWidget()
+        self.graph_series_list.setSelectionMode(QAbstractItemView.SelectionMode.NoSelection)
+        series_layout.addWidget(self.graph_series_list)
         
-        self.graph_line_style = QComboBox()
-        self.graph_line_style.addItems(["Solid", "Dashed", "Dotted"])
-        graph_layout.addRow("Line Style:", self.graph_line_style)
+        add_series_btn = QPushButton("+ Add Data Series")
+        add_series_btn.clicked.connect(lambda: self._add_series_row(self.graph_series_list))
+        series_layout.addWidget(add_series_btn)
+        graph_layout.addWidget(series_group)
         
-        # Y-axis
-        graph_layout.addRow(QLabel(""))  # Spacer
-        graph_layout.addRow(QLabel("<b>Y-Axis:</b>"))
+        self.pages["Time Graph"] = graph_page; self.options_stack.addWidget(graph_page)
         
-        self.graph_y_auto = QComboBox()
-        self.graph_y_auto.addItems(["Auto Range", "Fixed Range"])
-        graph_layout.addRow("Y-Axis Mode:", self.graph_y_auto)
-        
-        self.pages["Time Graph"] = graph_page
-        self.options_stack.addWidget(graph_page)
-        
-        # 2. Log Table Page (Empty options)
+        # 2. Log Table Page
         log_page = QWidget()
-        QVBoxLayout(log_page) # Just to have a layout
-        self.pages["Log Table"] = log_page
-        self.options_stack.addWidget(log_page)
+        log_layout = QVBoxLayout(log_page)
+        log_series_group = QGroupBox("Columns")
+        log_series_layout = QVBoxLayout(log_series_group)
+        self.log_series_list = QListWidget()
+        self.log_series_list.setSelectionMode(QAbstractItemView.SelectionMode.NoSelection)
+        log_series_layout.addWidget(self.log_series_list)
+        add_log_btn = QPushButton("+ Add Column")
+        add_log_btn.clicked.connect(lambda: self._add_series_row(self.log_series_list))
+        log_series_layout.addWidget(add_log_btn)
+        log_layout.addWidget(log_series_group)
+        self.pages["Log Table"] = log_page; self.options_stack.addWidget(log_page)
         
-        # 3. Instant Value Page (Empty options, uses priority)
+        # 3. Instant Value Page
         instant_page = QWidget()
-        QVBoxLayout(instant_page)
-        self.pages["Instant Value"] = instant_page
-        self.options_stack.addWidget(instant_page)
+        instant_layout = QVBoxLayout(instant_page)
+        
+        inst_settings = QGroupBox("Display Settings")
+        inst_form = QFormLayout(inst_settings)
+        self.priority_combo = QComboBox(); self.priority_combo.addItems(["Normal", "High", "Critical"])
+        inst_form.addRow("Priority:", self.priority_combo)
+        instant_layout.addWidget(inst_settings)
+        
+        inst_series_group = QGroupBox("Values to Display")
+        inst_series_layout = QVBoxLayout(inst_series_group)
+        self.instant_series_list = QListWidget()
+        self.instant_series_list.setSelectionMode(QAbstractItemView.SelectionMode.NoSelection)
+        inst_series_layout.addWidget(self.instant_series_list)
+        add_inst_btn = QPushButton("+ Add Value")
+        add_inst_btn.clicked.connect(lambda: self._add_series_row(self.instant_series_list))
+        inst_series_layout.addWidget(add_inst_btn)
+        instant_layout.addWidget(inst_series_group)
+        
+        self.pages["Instant Value"] = instant_page; self.options_stack.addWidget(instant_page)
         
         # 4. Gauge Page
         gauge_page = QWidget()
-        gauge_layout = QFormLayout(gauge_page)
+        gauge_layout = QVBoxLayout(gauge_page)
         
-        self.gauge_min = QDoubleSpinBox()
-        self.gauge_min.setRange(-100000, 100000)
-        self.gauge_min.setValue(0)
+        gauge_settings = QGroupBox("Gauge Settings")
+        gauge_form = QFormLayout(gauge_settings)
         
-        self.gauge_max = QDoubleSpinBox()
-        self.gauge_max.setRange(-100000, 100000)
-        self.gauge_max.setValue(100)
+        self.gauge_source = self._create_param_combo()
+        gauge_form.addRow("Data Source:", self.gauge_source)
         
-        gauge_layout.addRow("Minimum Value:", self.gauge_min)
-        gauge_layout.addRow("Maximum Value:", self.gauge_max)
+        self.gauge_min = QDoubleSpinBox(); self.gauge_min.setRange(-1e5, 1e5); self.gauge_min.setValue(0)
+        self.gauge_max = QDoubleSpinBox(); self.gauge_max.setRange(-1e5, 1e5); self.gauge_max.setValue(100)
+        gauge_form.addRow("Min Value:", self.gauge_min); gauge_form.addRow("Max Value:", self.gauge_max)
         
-        # Color zones
-        gauge_layout.addRow(QLabel(""))  # Spacer
-        gauge_layout.addRow(QLabel("<b>Color Zones:</b>"))
+        self.gauge_style = QComboBox(); self.gauge_style.addItems(["Linear", "Circular"])
+        gauge_form.addRow("Style:", self.gauge_style)
         
-        self.gauge_use_zones = QComboBox()
-        self.gauge_use_zones.addItems(["No Zones", "3 Zones (Safe/Warning/Critical)"])
-        gauge_layout.addRow("Zone Mode:", self.gauge_use_zones)
+        self.gauge_use_zones = QComboBox(); self.gauge_use_zones.addItems(["No Zones", "3 Zones (Safe/Warning/Critical)"])
+        gauge_form.addRow("Zones:", self.gauge_use_zones)
         
-        self.pages["Gauge"] = gauge_page
-        self.options_stack.addWidget(gauge_page)
+        # Zone Limits
+        self.zone_limits_widget = QWidget()
+        zone_layout = QFormLayout(self.zone_limits_widget)
+        zone_layout.setContentsMargins(0, 0, 0, 0)
+        self.gauge_safe_limit = QDoubleSpinBox(); self.gauge_safe_limit.setRange(-1e5, 1e5); self.gauge_safe_limit.setValue(70)
+        self.gauge_warning_limit = QDoubleSpinBox(); self.gauge_warning_limit.setRange(-1e5, 1e5); self.gauge_warning_limit.setValue(90)
+        zone_layout.addRow("Safe Limit (Green <):", self.gauge_safe_limit)
+        zone_layout.addRow("Warning Limit (Yellow <):", self.gauge_warning_limit)
+        gauge_form.addRow(self.zone_limits_widget)
+        self.zone_limits_widget.setVisible(False)
+        self.gauge_use_zones.currentTextChanged.connect(lambda t: self.zone_limits_widget.setVisible(t != "No Zones"))
+        
+        gauge_layout.addWidget(gauge_settings)
+        gauge_layout.addStretch()
+        self.pages["Gauge"] = gauge_page; self.options_stack.addWidget(gauge_page)
         
         # 5. Histogram Page
-        hist_page = QWidget()
-        hist_layout = QFormLayout(hist_page)
-        self.hist_bins = QSpinBox()
-        self.hist_bins.setRange(5, 100)
-        self.hist_bins.setValue(20)
-        hist_layout.addRow("Number of Bins:", self.hist_bins)
-        self.pages["Histogram"] = hist_page
-        self.options_stack.addWidget(hist_page)
+        hist_page = QWidget(); hist_layout = QVBoxLayout(hist_page)
+        hist_group = QGroupBox("Histogram Settings")
+        hist_form = QFormLayout(hist_group)
+        self.hist_source = self._create_param_combo()
+        hist_form.addRow("Data Source:", self.hist_source)
+        self.hist_bins = QSpinBox(); self.hist_bins.setRange(5, 100); self.hist_bins.setValue(20)
+        hist_form.addRow("Bins:", self.hist_bins)
+        hist_layout.addWidget(hist_group)
+        hist_layout.addStretch()
+        self.pages["Histogram"] = hist_page; self.options_stack.addWidget(hist_page)
         
         # 6. LED Page
-        led_page = QWidget()
-        led_layout = QVBoxLayout(led_page)
+        led_page = QWidget(); led_layout = QVBoxLayout(led_page)
+        led_group = QGroupBox("Indicators")
+        led_group_layout = QVBoxLayout(led_group)
         
-        # Instructions
-        instructions = QLabel("Configure LED thresholds and colors for each parameter:")
-        instructions.setStyleSheet("color: #aaa; font-style: italic;")
-        led_layout.addWidget(instructions)
-        
-        # LED configuration table with color support
-        self.led_table = QTableWidget()
-        self.led_table.setColumnCount(5)
+        self.led_table = QTableWidget(); self.led_table.setColumnCount(5)
         self.led_table.setHorizontalHeaderLabels(["Parameter", "Threshold", "Condition", "Color", "Actions"])
+        self.led_table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.ResizeToContents)
         self.led_table.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)
-        self.led_table.horizontalHeader().setSectionResizeMode(1, QHeaderView.ResizeMode.ResizeToContents)
-        self.led_table.horizontalHeader().setSectionResizeMode(2, QHeaderView.ResizeMode.ResizeToContents)
-        self.led_table.horizontalHeader().setSectionResizeMode(3, QHeaderView.ResizeMode.ResizeToContents)
-        self.led_table.horizontalHeader().setSectionResizeMode(4, QHeaderView.ResizeMode.ResizeToContents)
         self.led_table.verticalHeader().setVisible(False)
-        self.led_table.setMinimumHeight(200)
+        led_group_layout.addWidget(self.led_table)
         
-        led_layout.addWidget(self.led_table)
+        add_led_btn = QPushButton("+ Add Indicator")
+        add_led_btn.clicked.connect(self.add_led_threshold_row)
+        led_group_layout.addWidget(add_led_btn)
         
-        # Add threshold button
-        add_threshold_btn = QPushButton("+ Add Threshold")
-        add_threshold_btn.setObjectName("SecondaryCTA")
-        add_threshold_btn.clicked.connect(self.add_led_threshold_row)
-        led_layout.addWidget(add_threshold_btn)
-        
-        self.pages["LED Indicator"] = led_page
-        self.options_stack.addWidget(led_page)
+        led_layout.addWidget(led_group)
+        self.pages["LED Indicator"] = led_page; self.options_stack.addWidget(led_page)
         
         # 7. Map Page
-        map_page = QWidget()
-        map_layout = QFormLayout(map_page)
-        self.map_zoom = QSpinBox()
-        self.map_zoom.setRange(1, 18)
-        self.map_zoom.setValue(10)
-        map_layout.addRow("Initial Zoom:", self.map_zoom)
-        self.pages["Map (GPS)"] = map_page
-        self.options_stack.addWidget(map_page)
+        map_page = QWidget(); map_layout = QVBoxLayout(map_page)
+        map_group = QGroupBox("Map Settings")
+        map_form = QFormLayout(map_group)
         
-        right_layout.addStretch()
+        self.map_lat = self._create_param_combo()
+        self.map_lon = self._create_param_combo()
+        map_form.addRow("Latitude Source:", self.map_lat)
+        map_form.addRow("Longitude Source:", self.map_lon)
         
-        # Buttons
-        buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel)
-        buttons.button(QDialogButtonBox.StandardButton.Ok).setText("Create Widget")
-        buttons.button(QDialogButtonBox.StandardButton.Cancel).setText("Cancel")
-        right_layout.addWidget(buttons)
+        self.map_zoom = QSpinBox(); self.map_zoom.setRange(1, 18); self.map_zoom.setValue(10)
+        map_form.addRow("Initial Zoom:", self.map_zoom)
         
-        main_layout.addWidget(right_panel, stretch=2)
-        
-        # Connect signals
-        buttons.accepted.connect(self.validate_and_accept)
-        buttons.rejected.connect(self.reject)
-        self.type_combo.currentTextChanged.connect(self.on_type_changed)
-        self.sensor_group_combo.currentTextChanged.connect(self.filter_parameters)
-        self.param_list.itemSelectionChanged.connect(self.on_selection_changed)
-        
-        # Initialize
-        self.filter_parameters()
-        self.on_type_changed(self.type_combo.currentText())
-        
-        # If in edit mode, pre-fill values
-        if self.edit_mode and self.existing_config:
-            self._populate_from_config()
-    
-    def _populate_from_config(self):
-        """Pre-fill dialog with existing widget configuration"""
-        config = self.existing_config
-        
-        # Set widget type
-        widget_type = config.get('displayType', '')
-        index = self.type_combo.findText(widget_type)
-        if index >= 0:
-            self.type_combo.setCurrentIndex(index)
-        
-        # Select parameters
-        param_ids = config.get('param_ids', [])
-        for i in range(self.param_list.count()):
-            item = self.param_list.item(i)
-            pid = item.data(Qt.ItemDataRole.UserRole)
-            if pid in param_ids:
-                item.setSelected(True)
-        
-        # Populate LED thresholds if LED widget
-        if "LED" in widget_type:
-            led_configs = config.get('options', {}).get('led_configs', {})
-            for pid, led_config in led_configs.items():
-                thresholds = led_config.get('thresholds', [])
-                for threshold in thresholds:
-                    # Find parameter name
-                    param_name = next((p['name'] for p in self.parameters if p['id'] == pid), str(pid))
-                    
-                    # Add row
-                    from app.ui.color_picker import ColorPickerButton
-                    row = self.led_table.rowCount()
-                    self.led_table.insertRow(row)
-                    
-                    # Parameter name
-                    name_item = QTableWidgetItem(param_name)
-                    name_item.setFlags(name_item.flags() & ~Qt.ItemFlag.ItemIsEditable)
-                    name_item.setData(Qt.ItemDataRole.UserRole, pid)
-                    self.led_table.setItem(row, 0, name_item)
-                    
-                    # Threshold value
-                    threshold_spin = QDoubleSpinBox()
-                    threshold_spin.setRange(-100000, 100000)
-                    threshold_spin.setValue(threshold.get('value', 50))
-                    threshold_spin.setDecimals(2)
-                    self.led_table.setCellWidget(row, 1, threshold_spin)
-                    
-                    # Condition
-                    condition_combo = QComboBox()
-                    condition_combo.addItems(["≥", "≤", ">", "<", "=="])
-                    condition_combo.setCurrentText(threshold.get('condition', '≥'))
-                    self.led_table.setCellWidget(row, 2, condition_combo)
-                    
-                    # Color picker
-                    color_btn = ColorPickerButton(threshold.get('color', '#00ff00'))
-                    self.led_table.setCellWidget(row, 3, color_btn)
-                    
-                    # Remove button
-                    remove_btn = QPushButton("Remove")
-                    remove_btn.setObjectName("SecondaryCTA")
-                    remove_btn.clicked.connect(lambda checked, r=row: self.led_table.removeRow(r))
-                    self.led_table.setCellWidget(row, 4, remove_btn)
-    
-    def filter_parameters(self):
-        self.param_list.clear()
-        group = self.sensor_group_combo.currentText()
-        for p in sorted(self.parameters, key=lambda x: x['name']):
-            if group == "All" or p.get('sensor_group', 'Default') == group:
-                item = QListWidgetItem(f"{p['name']} ({p.get('unit', 'N/A')})")
-                item.setData(Qt.ItemDataRole.UserRole, p['id'])
-                item.setToolTip(f"ID: {p['id']}\nGroup: {p.get('sensor_group', 'Default')}\nDescription: {p.get('description', 'No description')}")
-                self.param_list.addItem(item)
-    
-    def on_selection_changed(self):
-        # No longer need to update LED table automatically
-        pass
-    
-    def add_led_threshold_row(self):
-        """Add a new threshold row to LED configuration table"""
-        from app.ui.color_picker import ColorPickerButton
-        
-        selected_items = self.param_list.selectedItems()
-        if not selected_items:
-            QMessageBox.warning(self, "No Parameter Selected", "Please select at least one parameter first.")
-            return
-        
-        # Use first selected parameter
-        item = selected_items[0]
-        param_name = item.text()
-        param_id = item.data(Qt.ItemDataRole.UserRole)
-        
-        row = self.led_table.rowCount()
-        self.led_table.insertRow(row)
-        
-        # Parameter name (read-only)
-        name_item = QTableWidgetItem(param_name)
-        name_item.setFlags(name_item.flags() & ~Qt.ItemFlag.ItemIsEditable)
-        name_item.setData(Qt.ItemDataRole.UserRole, param_id)
-        self.led_table.setItem(row, 0, name_item)
-        
-        # Threshold value
-        threshold_spin = QDoubleSpinBox()
-        threshold_spin.setRange(-100000, 100000)
-        threshold_spin.setValue(50)
-        threshold_spin.setDecimals(2)
-        self.led_table.setCellWidget(row, 1, threshold_spin)
-        
-        # Condition
-        condition_combo = QComboBox()
-        condition_combo.addItems(["≥", "≤", ">", "<", "=="])
-        self.led_table.setCellWidget(row, 2, condition_combo)
-        
-        # Color picker
-        color_btn = ColorPickerButton('#00ff00')
-        self.led_table.setCellWidget(row, 3, color_btn)
-        
-        # Remove button
-        remove_btn = QPushButton("Remove")
-        remove_btn.setObjectName("SecondaryCTA")
-        remove_btn.clicked.connect(lambda: self.led_table.removeRow(row))
-        self.led_table.setCellWidget(row, 4, remove_btn)
+        map_layout.addWidget(map_group)
+        map_layout.addStretch()
+        self.pages["Map (GPS)"] = map_page; self.options_stack.addWidget(map_page)
 
-    def on_type_changed(self, text):
-        # Switch stack page
+    def _add_series_row(self, list_widget, param_id=None):
+        """Adds a row with a combobox and remove button to a list widget"""
+        item = QListWidgetItem()
+        item.setSizeHint(QSize(0, 50))
+        list_widget.addItem(item)
+        
+        widget = QWidget()
+        layout = QHBoxLayout(widget)
+        layout.setContentsMargins(5, 5, 5, 5)
+        
+        combo = self._create_param_combo()
+        if param_id:
+            index = combo.findData(param_id)
+            if index >= 0: combo.setCurrentIndex(index)
+            
+        remove_btn = QPushButton()
+        remove_btn.setIcon(QIcon.fromTheme("list-remove"))
+        remove_btn.setFixedSize(30, 30)
+        remove_btn.clicked.connect(lambda: list_widget.takeItem(list_widget.row(item)))
+        
+        layout.addWidget(combo)
+        layout.addWidget(remove_btn)
+        
+        list_widget.setItemWidget(item, widget)
+
+    def go_to_config(self):
+        if not hasattr(self, 'selected_type'):
+            return
+            
+        text = self.selected_type
+        self.config_title.setText(f"Configure {text}")
+        
         if text in self.pages:
             self.options_stack.setCurrentWidget(self.pages[text])
             
-        # Update selection mode and priority
-        if "Graph" in text:
-            self.param_list.setSelectionMode(QAbstractItemView.SelectionMode.ExtendedSelection)
-            self.priority_combo.setEnabled(False)
-        elif "Instant" in text:
-            self.param_list.setSelectionMode(QAbstractItemView.SelectionMode.ExtendedSelection)
-            self.priority_combo.setEnabled(True)
-        elif "Gauge" in text:
-            self.param_list.setSelectionMode(QAbstractItemView.SelectionMode.SingleSelection)
-            self.priority_combo.setEnabled(False)
-        elif "LED" in text:
-            self.param_list.setSelectionMode(QAbstractItemView.SelectionMode.ExtendedSelection)
-            self.priority_combo.setEnabled(False)
-        elif "Map" in text:
-            self.param_list.setSelectionMode(QAbstractItemView.SelectionMode.MultiSelection)
-            self.priority_combo.setEnabled(False)
-        elif "Histogram" in text:
-            self.param_list.setSelectionMode(QAbstractItemView.SelectionMode.SingleSelection)
-            self.priority_combo.setEnabled(False)
-        else:  # Log Table
-            self.param_list.setSelectionMode(QAbstractItemView.SelectionMode.ExtendedSelection)
-            self.priority_combo.setEnabled(False)
-    
+        self.stack.setCurrentWidget(self.config_page)
+
+    def go_back(self):
+        self.stack.setCurrentWidget(self.type_page)
+
+    def add_led_threshold_row(self, param_id=None, threshold_data=None):
+        from app.ui.color_picker import ColorPickerButton
+        row = self.led_table.rowCount(); self.led_table.insertRow(row)
+        
+        # Parameter Combo
+        param_combo = self._create_param_combo()
+        if param_id:
+            idx = param_combo.findData(param_id)
+            if idx >= 0: param_combo.setCurrentIndex(idx)
+        self.led_table.setCellWidget(row, 0, param_combo)
+        
+        # Threshold
+        spin = QDoubleSpinBox(); spin.setRange(-1e5, 1e5); spin.setValue(threshold_data.get('value', 50) if threshold_data else 50)
+        self.led_table.setCellWidget(row, 1, spin)
+        
+        # Condition
+        combo = QComboBox(); combo.addItems([">=", "<=", ">", "<", "=="])
+        if threshold_data: combo.setCurrentText(threshold_data.get('condition', '>='))
+        self.led_table.setCellWidget(row, 2, combo)
+        
+        # Color
+        color = ColorPickerButton(threshold_data.get('color', '#00ff00') if threshold_data else '#00ff00')
+        self.led_table.setCellWidget(row, 3, color)
+        
+        # Remove
+        rem = QPushButton("Remove"); rem.clicked.connect(lambda: self.led_table.removeRow(row))
+        self.led_table.setCellWidget(row, 4, rem)
+
     def validate_and_accept(self):
-        if not self.param_list.selectedItems():
-            QMessageBox.warning(self, "Selection Error", "You must select at least one parameter.")
-            return
+        widget_type = self.selected_type
         
-        widget_type = self.type_combo.currentText()
-        selected_count = len(self.param_list.selectedItems())
-        
-        # Validate parameter count based on widget type
-        if "Instant" in widget_type and selected_count < 1:
-            QMessageBox.warning(self, "Selection Error", "Instant Value display requires at least one parameter.")
-            return
-        elif "Gauge" in widget_type and selected_count > 1:
-            QMessageBox.warning(self, "Selection Error", "Gauge display supports only one parameter.")
-            return
-        elif "LED" in widget_type and selected_count < 1:
-            QMessageBox.warning(self, "Selection Error", "LED Indicator display requires at least one parameter.")
-            return
-        elif "Histogram" in widget_type and selected_count > 1:
-            QMessageBox.warning(self, "Selection Error", "Histogram display supports only one parameter.")
-            return
-        elif "Map" in widget_type and selected_count != 2:
-            QMessageBox.warning(self, "Selection Error", "Map display requires exactly two parameters (Latitude and Longitude).")
-            return
+        if widget_type in ["Time Graph", "Log Table", "Instant Value"]:
+            # Check if at least one series added
+            list_widget = {
+                "Time Graph": self.graph_series_list,
+                "Log Table": self.log_series_list,
+                "Instant Value": self.instant_series_list
+            }[widget_type]
+            if list_widget.count() == 0:
+                QMessageBox.warning(self, "Error", "Please add at least one data series.")
+                return
+                
+        elif widget_type == "LED Indicator":
+             if self.led_table.rowCount() == 0:
+                QMessageBox.warning(self, "Error", "Please add at least one indicator.")
+                return
         
         self.accept()
-    
+
     def get_selection(self):
-        selected_items = self.param_list.selectedItems()
-        param_ids = [item.data(Qt.ItemDataRole.UserRole) for item in selected_items]
-        
-        # Get widget options
+        widget_type = self.selected_type
+        param_ids = []
         options = {}
-        widget_type = self.type_combo.currentText()
         
-        if "Graph" in widget_type:
-            options['time_range'] = self.graph_time_range.value()
-            options['line_width'] = self.graph_line_width.value()
-            options['line_style'] = self.graph_line_style.currentText()
-            options['y_axis_mode'] = self.graph_y_auto.currentText()
-        elif "Gauge" in widget_type:
-            options['min_value'] = self.gauge_min.value()
-            options['max_value'] = self.gauge_max.value()
-            options['use_zones'] = self.gauge_use_zones.currentText() != "No Zones"
-        elif "LED" in widget_type:
-            # Gather multi-threshold configurations with colors
-            led_configs = {}
-            for row in range(self.led_table.rowCount()):
-                item = self.led_table.item(row, 0)
-                if not item:
-                    continue
-                    
-                pid = item.data(Qt.ItemDataRole.UserRole)
-                threshold_widget = self.led_table.cellWidget(row, 1)
-                condition_widget = self.led_table.cellWidget(row, 2)
-                color_widget = self.led_table.cellWidget(row, 3)
-                
-                if not all([threshold_widget, condition_widget, color_widget]):
-                    continue
-                
-                # Initialize threshold list for this parameter if needed
-                if pid not in led_configs:
-                    led_configs[pid] = {'thresholds': []}
-                
-                # Add threshold configuration
-                led_configs[pid]['thresholds'].append({
-                    'value': threshold_widget.value(),
-                    'condition': condition_widget.currentText(),
-                    'color': color_widget.get_color()
-                })
+        if widget_type in ["Time Graph", "Log Table", "Instant Value"]:
+            list_widget = {
+                "Time Graph": self.graph_series_list,
+                "Log Table": self.log_series_list,
+                "Instant Value": self.instant_series_list
+            }[widget_type]
             
+            for i in range(list_widget.count()):
+                item = list_widget.item(i)
+                widget = list_widget.itemWidget(item)
+                combo = widget.findChild(QComboBox)
+                if combo: param_ids.append(combo.currentData())
+                
+            if widget_type == "Time Graph":
+                options.update({'time_range': self.graph_time_range.value(), 'line_width': self.graph_line_width.value(), 'line_style': self.graph_line_style.currentText(), 'y_axis_mode': self.graph_y_auto.currentText()})
+            elif widget_type == "Instant Value":
+                options['priority'] = self.priority_combo.currentText()
+                
+        elif widget_type == "Gauge":
+            param_ids.append(self.gauge_source.currentData())
+            options.update({
+                'min_value': self.gauge_min.value(), 
+                'max_value': self.gauge_max.value(), 
+                'style': self.gauge_style.currentText(), 
+                'use_zones': self.gauge_use_zones.currentText() != "No Zones",
+                'safe_limit': self.gauge_safe_limit.value(),
+                'warning_limit': self.gauge_warning_limit.value()
+            })
+            
+        elif widget_type == "Histogram":
+            param_ids.append(self.hist_source.currentData())
+            options['bins'] = self.hist_bins.value()
+            
+        elif widget_type == "Map (GPS)":
+            param_ids = [self.map_lat.currentData(), self.map_lon.currentData()]
+            options['zoom'] = self.map_zoom.value()
+            
+        elif widget_type == "LED Indicator":
+            led_configs = {}
+            for r in range(self.led_table.rowCount()):
+                param_combo = self.led_table.cellWidget(r, 0)
+                if not param_combo: continue
+                pid = param_combo.currentData()
+                if pid not in param_ids: param_ids.append(pid)
+                
+                if pid not in led_configs: led_configs[pid] = {'thresholds': []}
+                led_configs[pid]['thresholds'].append({
+                    'value': self.led_table.cellWidget(r, 1).value(),
+                    'condition': self.led_table.cellWidget(r, 2).currentText(),
+                    'color': self.led_table.cellWidget(r, 3).get_color()
+                })
             options['led_configs'] = led_configs
             
-        elif "Map" in widget_type:
-            options['zoom'] = self.map_zoom.value()
-        elif "Histogram" in widget_type:
-            options['bins'] = self.hist_bins.value()
-        
         return {
-            'param_ids': param_ids, 
-            'displayType': widget_type, 
-            'priority': self.priority_combo.currentText(),
+            'param_ids': param_ids,
+            'displayType': widget_type,
+            'priority': options.get('priority', "Normal"),
             'options': options
         }
+
+    def _populate_from_config(self):
+        if not self.existing_config: return
+        w_type = self.existing_config.get('displayType')
+        if not w_type: return
+        
+        self._on_type_selected(w_type)
+        p_ids = self.existing_config.get('param_ids', [])
+        
+        if w_type in ["Time Graph", "Log Table", "Instant Value"]:
+            list_widget = {
+                "Time Graph": self.graph_series_list,
+                "Log Table": self.log_series_list,
+                "Instant Value": self.instant_series_list
+            }[w_type]
+            for pid in p_ids:
+                self._add_series_row(list_widget, pid)
+                
+        elif w_type == "Gauge" and p_ids:
+            idx = self.gauge_source.findData(p_ids[0])
+            if idx >= 0: self.gauge_source.setCurrentIndex(idx)
+            
+        elif w_type == "Histogram" and p_ids:
+            idx = self.hist_source.findData(p_ids[0])
+            if idx >= 0: self.hist_source.setCurrentIndex(idx)
+            
+        elif w_type == "Map (GPS)" and len(p_ids) >= 2:
+            idx1 = self.map_lat.findData(p_ids[0])
+            if idx1 >= 0: self.map_lat.setCurrentIndex(idx1)
+            idx2 = self.map_lon.findData(p_ids[1])
+            if idx2 >= 0: self.map_lon.setCurrentIndex(idx2)
+            
+        elif w_type == "LED Indicator":
+            led_configs = self.existing_config.get('options', {}).get('led_configs', {})
+            for pid, config in led_configs.items():
+                for thresh in config.get('thresholds', []):
+                    self.add_led_threshold_row(pid, thresh)
 
 
 class DataLoggingDialog(QDialog):
     """
     @brief Dialog for configuring data logging.
     @details Allows user to select format (CSV/JSON), file path, buffer size, and parameters to log.
+             Features a searchable table for parameter selection.
     """
     def __init__(self, parameters, current_settings=None, parent=None):
         super().__init__(parent)
         self.setWindowTitle("Configure Data Logging")
         self.parameters = parameters
-        self.setMinimumSize(500, 400)
+        self.setMinimumSize(700, 600)
         
         # Main layout
         main_layout = QVBoxLayout(self)
         main_layout.setSpacing(16)
         
         # Title
-        title = QLabel("<h2 style='color: #ffffff; margin: 0 0 16px 0;'>Data Logging Configuration</h2>")
+        title = QLabel("Data Logging Configuration")
+        title.setStyleSheet("font-size: 18px; font-weight: 600; margin-bottom: 10px;")
         main_layout.addWidget(title)
         
         # Logging settings
@@ -794,7 +875,6 @@ class DataLoggingDialog(QDialog):
         if current_settings and current_settings.get('file_path'):
             self.file_path_edit.setText(current_settings['file_path'])
         else:
-            # Show default location hint
             self.file_path_edit.setPlaceholderText("Leave empty for auto-generated file in logs/ folder")
 
         browse_btn = QPushButton("Browse...")
@@ -810,21 +890,38 @@ class DataLoggingDialog(QDialog):
         self.buffer_spin.setToolTip("Number of entries to buffer before writing to file")
         settings_layout.addRow("Buffer Size:", self.buffer_spin)
         
+        main_layout.addWidget(settings_group)
+        
         # Parameter selection
         param_group = QGroupBox("Parameters to Log")
         param_layout = QVBoxLayout(param_group)
         
-        self.param_list = QListWidget()
-        self.param_list.setSelectionMode(QAbstractItemView.SelectionMode.MultiSelection)
-        self.param_list.setMinimumHeight(150)
+        # Search Bar
+        search_layout = QHBoxLayout()
+        search_icon = QLabel()
+        search_icon.setPixmap(QIcon.fromTheme("system-search-symbolic").pixmap(16, 16))
+        self.search_input = QLineEdit()
+        self.search_input.setPlaceholderText("Search parameters...")
+        self.search_input.textChanged.connect(self.filter_parameters)
+        search_layout.addWidget(search_icon)
+        search_layout.addWidget(self.search_input)
+        param_layout.addLayout(search_layout)
         
-        for param in self.parameters:
-            item = QListWidgetItem(f"{param['name']} ({param.get('unit', 'N/A')}) - {param['id']}")
-            item.setData(Qt.ItemDataRole.UserRole, param['id'])
-            item.setCheckState(Qt.CheckState.Checked)  # All selected by default
-            self.param_list.addItem(item)
+        # Table
+        self.param_table = QTableWidget()
+        self.param_table.setColumnCount(4)
+        self.param_table.setHorizontalHeaderLabels(["", "ID", "Name", "Unit"])
+        self.param_table.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeMode.ResizeToContents)
+        self.param_table.horizontalHeader().setSectionResizeMode(1, QHeaderView.ResizeMode.ResizeToContents)
+        self.param_table.horizontalHeader().setSectionResizeMode(2, QHeaderView.ResizeMode.Stretch)
+        self.param_table.horizontalHeader().setSectionResizeMode(3, QHeaderView.ResizeMode.ResizeToContents)
+        self.param_table.verticalHeader().setVisible(False)
+        self.param_table.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
+        self.param_table.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
+        self.param_table.setAlternatingRowColors(True)
         
-        param_layout.addWidget(self.param_list)
+        self.populate_table()
+        param_layout.addWidget(self.param_table)
         
         # Buttons for parameter selection
         param_btn_layout = QHBoxLayout()
@@ -835,32 +932,59 @@ class DataLoggingDialog(QDialog):
         param_btn_layout.addWidget(select_all_btn)
         param_btn_layout.addWidget(select_none_btn)
         param_btn_layout.addStretch()
-        param_layout.addLayout(param_btn_layout)
         
-        main_layout.addWidget(settings_group)
+        # Summary Label
+        self.summary_label = QLabel("0 parameters selected")
+        self.summary_label.setStyleSheet("color: #8e8e93;")
+        param_btn_layout.addWidget(self.summary_label)
+        
+        param_layout.addLayout(param_btn_layout)
         main_layout.addWidget(param_group)
         
         # Buttons
         buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel)
         buttons.button(QDialogButtonBox.StandardButton.Ok).setText("Configure Logging")
+        buttons.button(QDialogButtonBox.StandardButton.Ok).setObjectName("PrimaryCTA")
         buttons.button(QDialogButtonBox.StandardButton.Cancel).setText("Cancel")
         main_layout.addWidget(buttons)
         
         # Connect signals
         buttons.accepted.connect(self.validate_and_accept)
         buttons.rejected.connect(self.reject)
+        self.param_table.itemChanged.connect(self.update_summary)
         
         # Load current settings if provided
         if current_settings:
             self.load_settings(current_settings)
+        else:
+            self.update_summary() # Initial update
     
+    def populate_table(self):
+        self.param_table.setRowCount(len(self.parameters))
+        for i, param in enumerate(self.parameters):
+            # Checkbox item
+            check_item = QTableWidgetItem()
+            check_item.setFlags(Qt.ItemFlag.ItemIsUserCheckable | Qt.ItemFlag.ItemIsEnabled)
+            check_item.setCheckState(Qt.CheckState.Checked) # Default checked
+            check_item.setData(Qt.ItemDataRole.UserRole, param['id']) # Store ID
+            
+            self.param_table.setItem(i, 0, check_item)
+            self.param_table.setItem(i, 1, QTableWidgetItem(param['id']))
+            self.param_table.setItem(i, 2, QTableWidgetItem(param['name']))
+            self.param_table.setItem(i, 3, QTableWidgetItem(param.get('unit', '')))
+
+    def filter_parameters(self, text):
+        text = text.lower()
+        for i in range(self.param_table.rowCount()):
+            match = False
+            if text in self.param_table.item(i, 1).text().lower(): match = True # ID
+            if text in self.param_table.item(i, 2).text().lower(): match = True # Name
+            self.param_table.setRowHidden(i, not match)
+
     def browse_file(self):
-        # Ensure logs directory exists
         logs_dir = "logs"
-        if not os.path.exists(logs_dir):
-            os.makedirs(logs_dir)
+        if not os.path.exists(logs_dir): os.makedirs(logs_dir)
         
-        # Start file dialog in logs directory
         default_name = f"dashboard_data_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
         if self.format_combo.currentText().lower() == 'csv':
             default_name += ".csv"
@@ -869,27 +993,27 @@ class DataLoggingDialog(QDialog):
             default_name += ".json"
             file_filter = "JSON Files (*.json);;All Files (*)"
         
-        path, _ = QFileDialog.getSaveFileName(
-            self,
-            "Select Log File Location",
-            os.path.join(logs_dir, default_name),
-            file_filter
-        )
-        if path:
-            self.file_path_edit.setText(path)
+        path, _ = QFileDialog.getSaveFileName(self, "Select Log File Location", os.path.join(logs_dir, default_name), file_filter)
+        if path: self.file_path_edit.setText(path)
     
     def select_all_params(self):
-        """Select all parameters"""
-        for i in range(self.param_list.count()):
-            self.param_list.item(i).setCheckState(Qt.CheckState.Checked)
+        for i in range(self.param_table.rowCount()):
+            if not self.param_table.isRowHidden(i):
+                self.param_table.item(i, 0).setCheckState(Qt.CheckState.Checked)
     
     def select_none_params(self):
-        """Deselect all parameters"""
-        for i in range(self.param_list.count()):
-            self.param_list.item(i).setCheckState(Qt.CheckState.Unchecked)
+        for i in range(self.param_table.rowCount()):
+            if not self.param_table.isRowHidden(i):
+                self.param_table.item(i, 0).setCheckState(Qt.CheckState.Unchecked)
     
+    def update_summary(self):
+        count = 0
+        for i in range(self.param_table.rowCount()):
+            if self.param_table.item(i, 0).checkState() == Qt.CheckState.Checked:
+                count += 1
+        self.summary_label.setText(f"{count} parameters selected")
+
     def load_settings(self, settings):
-        """Load existing settings"""
         if 'format' in settings:
             format_map = {'csv': 'CSV', 'json': 'JSON'}
             self.format_combo.setCurrentText(format_map.get(settings['format'], 'CSV'))
@@ -898,36 +1022,29 @@ class DataLoggingDialog(QDialog):
         if 'buffer_size' in settings:
             self.buffer_spin.setValue(settings['buffer_size'])
         if 'selected_params' in settings:
-            for i in range(self.param_list.count()):
-                item = self.param_list.item(i)
-                param_id = item.data(Qt.ItemDataRole.UserRole)
-                if param_id in settings['selected_params']:
-                    item.setCheckState(Qt.CheckState.Checked)
-                else:
-                    item.setCheckState(Qt.CheckState.Unchecked)
+            selected = set(settings['selected_params'])
+            for i in range(self.param_table.rowCount()):
+                pid = self.param_table.item(i, 0).data(Qt.ItemDataRole.UserRole)
+                state = Qt.CheckState.Checked if pid in selected else Qt.CheckState.Unchecked
+                self.param_table.item(i, 0).setCheckState(state)
+        self.update_summary()
     
     def validate_and_accept(self):
-        """Validate settings and accept"""
-        # Check if at least one parameter is selected
-        selected_params = []
-        for i in range(self.param_list.count()):
-            item = self.param_list.item(i)
-            if item.checkState() == Qt.CheckState.Checked:
-                selected_params.append(item.data(Qt.ItemDataRole.UserRole))
+        count = 0
+        for i in range(self.param_table.rowCount()):
+            if self.param_table.item(i, 0).checkState() == Qt.CheckState.Checked:
+                count += 1
         
-        if not selected_params:
+        if count == 0:
             QMessageBox.warning(self, "No Parameters Selected", "Please select at least one parameter to log.")
             return
-        
         self.accept()
     
     def get_settings(self):
-        """Get the logging configuration"""
         selected_params = []
-        for i in range(self.param_list.count()):
-            item = self.param_list.item(i)
-            if item.checkState() == Qt.CheckState.Checked:
-                selected_params.append(item.data(Qt.ItemDataRole.UserRole))
+        for i in range(self.param_table.rowCount()):
+            if self.param_table.item(i, 0).checkState() == Qt.CheckState.Checked:
+                selected_params.append(self.param_table.item(i, 0).data(Qt.ItemDataRole.UserRole))
         
         return {
             'format': self.format_combo.currentText().lower(),
@@ -1067,11 +1184,11 @@ class ManageParametersDialog(QDialog):
         toolbar = QHBoxLayout()
         
         self.undo_btn = QPushButton("Undo")
-        self.undo_btn.setIcon(QIcon.fromTheme("edit-undo"))
+        self.undo_btn.setIcon(QIcon.fromTheme("edit-undo-symbolic"))
         self.undo_btn.clicked.connect(self.undo)
         
         self.redo_btn = QPushButton("Redo")
-        self.redo_btn.setIcon(QIcon.fromTheme("edit-redo"))
+        self.redo_btn.setIcon(QIcon.fromTheme("edit-redo-symbolic"))
         self.redo_btn.clicked.connect(self.redo)
         
         toolbar.addWidget(self.undo_btn)
@@ -1090,16 +1207,16 @@ class ManageParametersDialog(QDialog):
         
         btn_layout = QHBoxLayout()
         add_btn = QPushButton("Add Parameter")
-        add_btn.setIcon(QIcon.fromTheme("list-add"))
+        add_btn.setIcon(QIcon.fromTheme("list-add-symbolic"))
         edit_btn = QPushButton("Edit Parameter")
-        edit_btn.setIcon(QIcon.fromTheme("document-edit"))
+        edit_btn.setIcon(QIcon.fromTheme("document-edit-symbolic"))
         remove_btn = QPushButton("Remove Parameter")
-        remove_btn.setIcon(QIcon.fromTheme("list-remove"))
+        remove_btn.setIcon(QIcon.fromTheme("list-remove-symbolic"))
         
         up_btn = QPushButton("Move Up")
-        up_btn.setIcon(QIcon.fromTheme("go-up"))
+        up_btn.setIcon(QIcon.fromTheme("go-up-symbolic"))
         down_btn = QPushButton("Move Down")
-        down_btn.setIcon(QIcon.fromTheme("go-down"))
+        down_btn.setIcon(QIcon.fromTheme("go-down-symbolic"))
         
         add_btn.clicked.connect(self.add_parameter)
         edit_btn.clicked.connect(self.edit_parameter)

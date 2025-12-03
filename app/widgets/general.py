@@ -62,10 +62,10 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 
 
-from PySide6.QtWidgets import QWidget, QVBoxLayout, QFrame, QLabel, QTableWidget, QHeaderView, QAbstractItemView, QGroupBox, QHBoxLayout, QTableWidgetItem, QComboBox, QPushButton, QApplication, QMessageBox, QDoubleSpinBox, QDockWidget, QGridLayout
-from PySide6.QtGui import QFont, QColor, QBrush
+from PySide6.QtWidgets import QWidget, QVBoxLayout, QFrame, QLabel, QTableWidget, QHeaderView, QAbstractItemView, QGroupBox, QHBoxLayout, QTableWidgetItem, QComboBox, QPushButton, QApplication, QMessageBox, QDoubleSpinBox, QDockWidget, QGridLayout, QGraphicsDropShadowEffect
+from PySide6.QtGui import QFont, QColor, QBrush, QLinearGradient, QPainter, QPen, QPainterPath
 from PySide6.QtNetwork import QNetworkAccessManager, QNetworkRequest, QNetworkReply
-from PySide6.QtCore import Qt, Signal, QUrl,QTimer
+from PySide6.QtCore import Qt, Signal, QUrl, QTimer, QRectF
 import time
 import math
 import numpy as np
@@ -77,10 +77,73 @@ try:
 except Exception:
     QWebEngineView = None
 
+class CustomTitleBar(QWidget):
+    """
+    @brief Custom title bar for ClosableDock.
+    """
+    def __init__(self, title, parent=None):
+        super().__init__(parent)
+        self.dock = parent
+        self.layout = QHBoxLayout(self)
+        self.layout.setContentsMargins(8, 4, 8, 4)
+        self.layout.setSpacing(8)
+        
+        # Title
+        self.title_label = QLabel(title)
+        self.title_label.setFont(QFont("SF Pro Text", 10, QFont.Weight.Bold))
+        self.title_label.setStyleSheet("color: #cccccc;")
+        
+        # Close Button
+        self.close_btn = QPushButton("×")
+        self.close_btn.setFixedSize(20, 20)
+        self.close_btn.setStyleSheet("""
+            QPushButton {
+                background-color: transparent;
+                color: #aaaaaa;
+                border: none;
+                font-size: 16px;
+                font-weight: bold;
+                border-radius: 10px;
+            }
+            QPushButton:hover {
+                background-color: rgba(255, 59, 48, 0.8); /* Apple Red */
+                color: white;
+            }
+        """)
+        self.close_btn.clicked.connect(self._on_close_clicked)
+        
+        self.layout.addWidget(self.title_label)
+        self.layout.addStretch()
+        self.layout.addWidget(self.close_btn)
+        
+        # Transparent background initially
+        self.setStyleSheet("background: transparent;")
+        self.setFixedHeight(32) # Ensure it has height to be grabbed
+        
+        # Initial state: hidden content
+        self.title_label.hide()
+        self.close_btn.hide()
+        
+    def set_active(self, active):
+        """Toggle visibility of title bar content"""
+        if active:
+            self.title_label.show()
+            self.close_btn.show()
+            self.setStyleSheet("background-color: rgba(30, 30, 30, 0.9); border-bottom: 1px solid rgba(255,255,255,0.1);")
+        else:
+            self.title_label.hide()
+            self.close_btn.hide()
+            self.setStyleSheet("background: transparent;")
+        
+    def _on_close_clicked(self):
+        if self.dock:
+            self.dock.closeEvent(None) # Trigger close logic
+
 class ClosableDock(QDockWidget):
     """
     @brief Custom QDockWidget that emits a signal only when the close button is clicked.
     @details Used for widgets that can be closed/hidden from the dashboard layout.
+             Implements hover-only header visibility.
     """
     closed = Signal(str)  # will emit the widget_id when closed
     edit_requested = Signal(str)  # will emit the widget_id when edit is requested
@@ -90,6 +153,24 @@ class ClosableDock(QDockWidget):
         self.widget_id = widget_id
         self.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self.customContextMenuRequested.connect(self.show_context_menu)
+        
+        # Custom Title Bar
+        self.custom_title_bar = CustomTitleBar(title, self)
+        self.setTitleBarWidget(self.custom_title_bar)
+        
+        # Enable mouse tracking for hover
+        self.setMouseTracking(True)
+        
+    def enterEvent(self, event):
+        """Show title bar content on hover"""
+        self.custom_title_bar.set_active(True)
+        super().enterEvent(event)
+        
+    def leaveEvent(self, event):
+        """Hide title bar content when mouse leaves"""
+        # Only hide if not interacting with the title bar (optional refinement)
+        self.custom_title_bar.set_active(False)
+        super().leaveEvent(event)
 
     def show_context_menu(self, pos):
         """Show context menu for widget"""
@@ -118,7 +199,8 @@ class ClosableDock(QDockWidget):
         #Emit the closed signal only when the dock's X button is clicked.
         if self.widget_id is not None:
             self.closed.emit(self.widget_id)
-        event.accept()
+        if event:
+            event.accept()
 
 
 class ValueCard(QFrame):
@@ -149,46 +231,46 @@ class ValueCard(QFrame):
             row = i // cols
             col = i % cols
             
-            # Container for each value
+            # Container for each value - Apple-like Card Style
             container = QFrame()
-            container.setStyleSheet("background-color: #252525; border-radius: 6px;")
+            # Container for each value - Clean, Minimalist
+            container = QFrame()
+            # Remove the inner box background/border for a cleaner look
+            container.setStyleSheet("background: transparent; border: none;")
+            
             v_layout = QVBoxLayout(container)
-            v_layout.setContentsMargins(12, 12, 12, 12)
+            v_layout.setContentsMargins(20, 20, 20, 20)
             v_layout.setSpacing(4)
             
-            # Name
-            name_label = QLabel(p_config['name'])
-            name_label.setFont(QFont("Arial", 10))
-            name_label.setStyleSheet("color: #aaaaaa;")
-            name_label.setAlignment(Qt.AlignmentFlag.AlignLeft)
+            # Top: Label (Small, Uppercase)
+            name_label = QLabel(p_config['name'].upper())
+            name_label.setFont(QFont("SF Pro Text", 10, QFont.Weight.Bold))
+            name_label.setStyleSheet("color: rgba(255, 255, 255, 0.5); letter-spacing: 1px;")
+            name_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
             
-            # Value
-            value_label = QLabel("---")
-            value_font = QFont("Arial", 24, QFont.Weight.Bold)
-            value_label.setFont(value_font)
-            value_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            # Center: Value (Large, Bold)
+            value_label = QLabel("--")
+            value_label.setFont(QFont("SF Pro Display", 48, QFont.Weight.Bold)) # Changed to Bold as requested
             value_label.setStyleSheet("color: #ffffff;")
+            value_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
             self.value_labels[p_config['id']] = value_label
             
-            # Unit
-            unit_label = QLabel(p_config['unit'])
-            unit_label.setFont(QFont("Arial", 10))
-            unit_label.setAlignment(Qt.AlignmentFlag.AlignRight)
-            unit_label.setStyleSheet("color: #666666;")
+            # Bottom: Unit (Medium)
+            unit_label = QLabel(p_config.get('unit', ''))
+            unit_label.setFont(QFont("SF Pro Text", 13, QFont.Weight.Medium))
+            unit_label.setStyleSheet("color: rgba(255, 255, 255, 0.7);")
+            unit_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
             
             v_layout.addWidget(name_label)
+            v_layout.addStretch()
             v_layout.addWidget(value_label)
             v_layout.addWidget(unit_label)
+            v_layout.addStretch()
             
             self.main_layout.addWidget(container, row, col)
         
-        # Set base style
-        self.setStyleSheet("""
-            QFrame {
-                background-color: #1e1e1e;
-                border-radius: 8px;
-            }
-        """)
+        # Set base style for the widget itself
+        self.setStyleSheet("background: transparent;")
         
         # Minimum size
         self.setMinimumSize(240, 200)
@@ -210,93 +292,151 @@ class ValueCard(QFrame):
                     else:
                         display_value = f"{val:.3f}"
                     lbl.setText(display_value)
-                    lbl.setStyleSheet("color: #ffffff;")
+                    # Dynamic color based on value? For now keep white.
+                    lbl.setStyleSheet("color: #ffffff; border: none; background: transparent;")
                 else:
                     lbl.setText("--")
-                    lbl.setStyleSheet("color: #555555;")
+                    lbl.setStyleSheet("color: rgba(255, 255, 255, 0.3); border: none; background: transparent;")
+
+class CircularGauge(QWidget):
+    def __init__(self, min_val, max_val, parent=None):
+        super().__init__(parent)
+        self.min_val = min_val
+        self.max_val = max_val
+        self.value = min_val
+        self.setMinimumSize(150, 150)
+        
+    def set_value(self, val):
+        self.value = max(self.min_val, min(self.max_val, val))
+        self.update()
+        
+    def paintEvent(self, event):
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+        
+        width = self.width()
+        height = self.height()
+        side = min(width, height)
+        rect = QRectF((width - side) / 2 + 10, (height - side) / 2 + 10, side - 20, side - 20)
+        
+        # Draw background arc
+        painter.setPen(QPen(QColor(60, 60, 60), 12, Qt.PenStyle.SolidLine, Qt.PenCapStyle.RoundCap))
+        painter.drawArc(rect, 135 * 16, 270 * 16)
+        
+        # Calculate angle
+        span = 270
+        start_angle = 225
+        pct = (self.value - self.min_val) / (self.max_val - self.min_val) if (self.max_val - self.min_val) > 0 else 0
+        angle = -pct * span
+        
+        # Dynamic color
+        if pct > 0.9: color = QColor('#ff453a')
+        elif pct > 0.7: color = QColor('#ff9f0a')
+        else: color = QColor('#30d158')
+        
+        # Draw active arc
+        pen = QPen(color, 12, Qt.PenStyle.SolidLine, Qt.PenCapStyle.RoundCap)
+        painter.setPen(pen)
+        painter.drawArc(rect, 135 * 16, int(angle * 16))
+        
+        # Draw Value Text
+        painter.setPen(QColor(255, 255, 255))
+        font = QFont("SF Pro Display", 24, QFont.Weight.Bold)
+        painter.setFont(font)
+        painter.drawText(rect, Qt.AlignmentFlag.AlignCenter, f"{self.value:.2f}")
+
 
 class GaugeWidget(QFrame):
     """
-    @brief Widget for displaying a value on a linear gauge.
-    @details Visualizes the value relative to defined thresholds (low/high warning/critical).
+    @brief Gauge widget (Linear or Circular).
     """
     def __init__(self, param_config, options=None):
         super().__init__()
-        self.param = param_config
         self.options = options or {}
+        self.param_config = param_config
+        self.style = self.options.get('style', 'Linear')
+        
         layout = QVBoxLayout(self)
         layout.setContentsMargins(16, 16, 16, 16)
-        layout.setSpacing(8)
         
-        # Clean parameter name
-        clean_name = param_config['name'].replace('GPS(', '').replace(')', '') if param_config['name'].startswith('GPS(') else param_config['name']
+        # Header
+        header_layout = QHBoxLayout()
+        name_lbl = QLabel(param_config['name'])
+        name_lbl.setFont(QFont("SF Pro Text", 10, QFont.Weight.Medium))
+        name_lbl.setStyleSheet("color: #aaaaaa;")
         
-        # Title with icon
-        title_layout = QHBoxLayout()
-        icon_label = QLabel("Target")
-        icon_label.setFont(QFont("Arial", 14))
-        title = QLabel(f"{clean_name}")
-        title.setFont(QFont("Arial", 12, QFont.Weight.Bold))
-        title.setStyleSheet("color: #ffffff;")
-        if param_config.get('unit'):
-            unit_label = QLabel(f"({param_config['unit']})")
-            unit_label.setFont(QFont("Arial", 10))
-            unit_label.setStyleSheet("color: #aaaaaa;")
-            title_layout.addWidget(icon_label)
-            title_layout.addWidget(title)
-            title_layout.addWidget(unit_label)
-            title_layout.addStretch()
-        else:
-            title_layout.addWidget(icon_label)
-            title_layout.addWidget(title)
-            title_layout.addStretch()
+        unit_lbl = QLabel(param_config.get('unit', ''))
+        unit_lbl.setFont(QFont("SF Pro Text", 10, QFont.Weight.Normal))
+        unit_lbl.setStyleSheet("color: #666666;")
         
-        # Value display
-        self.value_lbl = QLabel("--")
-        value_font = QFont("Monospace", 32, QFont.Weight.Bold)
-        value_font.setStyleStrategy(QFont.PreferAntialias)
-        self.value_lbl.setFont(value_font)
-        self.value_lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.value_lbl.setStyleSheet("color: #00ff88; padding: 8px;")
+        header_layout.addWidget(name_lbl)
+        header_layout.addStretch()
+        header_layout.addWidget(unit_lbl)
         
-        # Gauge bar
-        self.bar = pg.PlotWidget()
-        self.bar.setFixedHeight(140)
-        self.bar.setBackground(QColor(20, 20, 20))
-        self.bar.hideAxis('left')
-        self.bar.hideAxis('bottom')
-        self.bar.setMenuEnabled(False)
+        layout.addLayout(header_layout)
         
         self.min_val = float(self.options.get('min_value', 0))
         self.max_val = float(self.options.get('max_value', 100))
-        self.bar.setYRange(0, 100, padding=0)
-        self.bar.setXRange(0, 100, padding=0)
         
-        # Indicator line
-        self.indicator = pg.InfiniteLine(pos=0, angle=90, pen=pg.mkPen('#00BFFF', width=4))
-        self.bar.addItem(self.indicator)
+        if self.style == 'Circular':
+            self.gauge = CircularGauge(self.min_val, self.max_val)
+            layout.addWidget(self.gauge, alignment=Qt.AlignmentFlag.AlignCenter)
+        else:
+            # Linear Capsule Style
+            self.value_lbl = QLabel("--")
+            self.value_lbl.setAlignment(Qt.AlignmentFlag.AlignLeft)
+            self.value_lbl.setFont(QFont("SF Pro Display", 28, QFont.Weight.Bold))
+            self.value_lbl.setStyleSheet("color: #ffffff;")
+            layout.addWidget(self.value_lbl)
+            
+            self.bar = pg.PlotWidget()
+            self.bar.setFixedHeight(32)
+            self.bar.setBackground(None)
+            self.bar.hideAxis('left')
+            self.bar.hideAxis('bottom')
+            self.bar.setMenuEnabled(False)
+            self.bar.setMouseEnabled(x=False, y=False)
+            self.bar.setYRange(0, 1, padding=0)
+            self.bar.setXRange(self.min_val, self.max_val, padding=0)
+            
+            bg_bar = pg.BarGraphItem(x=[(self.min_val + self.max_val)/2], height=[1], width=self.max_val-self.min_val, brush=pg.mkBrush(40, 40, 40, 255))
+            self.bar.addItem(bg_bar)
+            
+            self.fill_bar = pg.BarGraphItem(x=[self.min_val], height=[1], width=0, brush=pg.mkBrush('#0a84ff'))
+            self.bar.addItem(self.fill_bar)
+            layout.addWidget(self.bar)
+            
+        layout.addStretch()
         
-        layout.addLayout(title_layout)
-        layout.addWidget(self.value_lbl)
-        layout.addWidget(self.bar)
-        
-        # Set frame style
         self.setStyleSheet("""
-            background-color: #1a1a1a;
-            border-radius: 12px;
-            border: 2px solid #333;
+            QFrame {
+                background-color: rgba(30, 30, 30, 0.8);
+                border-radius: 20px;
+                border: 1px solid rgba(255, 255, 255, 0.05);
+            }
         """)
-    
+
     def update_value(self, value):
-        try:
-            self.value_lbl.setText(f"{float(value):.2f}")
-        except Exception:
-            self.value_lbl.setText("--")
-        
         val = float(value) if value is not None else self.min_val
-        span = max(1e-6, self.max_val - self.min_val)
-        x = max(0.0, min(1.0, (val - self.min_val) / span)) * 100.0
-        self.indicator.setPos(x)
+        
+        if self.style == 'Circular':
+            self.gauge.set_value(val)
+        else:
+            try:
+                self.value_lbl.setText(f"{val:.2f}")
+            except:
+                self.value_lbl.setText("--")
+                
+            val = max(self.min_val, min(self.max_val, val))
+            width = val - self.min_val
+            center = self.min_val + (width / 2.0)
+            self.fill_bar.setOpts(x=[center], height=[1], width=width)
+            
+            pct = (val - self.min_val) / (self.max_val - self.min_val) if (self.max_val - self.min_val) > 0 else 0
+            if pct > 0.9: color = '#ff453a'
+            elif pct > 0.7: color = '#ff9f0a'
+            else: color = '#30d158'
+            self.fill_bar.setOpts(brush=pg.mkBrush(color))
         
 class TimeGraph(QWidget):
     """
@@ -321,21 +461,46 @@ class TimeGraph(QWidget):
         container = QVBoxLayout(self)
         container.setContentsMargins(0, 0, 0, 0)
         toolbar = QHBoxLayout()
-        toolbar.setContentsMargins(0, 0, 0, 0)
+        toolbar.setContentsMargins(8, 8, 8, 0)
         reset_btn = QPushButton("Reset View")
         reset_btn.setObjectName("SecondaryCTA")
+        # Modern button style
+        reset_btn.setStyleSheet("""
+            QPushButton {
+                background-color: rgba(255, 255, 255, 0.1);
+                border: none;
+                border-radius: 12px;
+                color: #fff;
+                padding: 6px 12px;
+                font-family: "SF Pro Text";
+                font-size: 12px;
+            }
+            QPushButton:hover {
+                background-color: rgba(255, 255, 255, 0.2);
+            }
+        """)
         toolbar.addStretch()
         toolbar.addWidget(reset_btn)
 
         # Plot
         self.plot_widget = pg.PlotWidget()
-        self.plot_widget.setBackground(QColor(12, 12, 12))
-        self.plot_widget.showGrid(x=True, y=True, alpha=0.25)
+        self.plot_widget.setBackground(None) # Transparent background
+        self.plot_widget.showGrid(x=True, y=True, alpha=0.1) # Very subtle grid
         self.plot_widget.setAntialiasing(True)
         self.plot_widget.setDownsampling(mode='peak')
         self.plot_widget.setClipToView(True)
-        self.plot_widget.setLabel('bottom', 'Time (s)', color='#FFFFFF')
-        self.plot_widget.addLegend(offset=(10, 10))
+        
+        # Axis styling
+        axis_pen = pg.mkPen(color=QColor(255, 255, 255, 80), width=1)
+        self.plot_widget.getAxis('bottom').setPen(axis_pen)
+        self.plot_widget.getAxis('bottom').setTextPen(QColor(255, 255, 255, 150))
+        self.plot_widget.getAxis('bottom').setLabel('Time (s)', color='#aaaaaa', **{'font-family': 'SF Pro Text', 'font-size': '10pt'})
+        
+        self.plot_widget.getAxis('left').setPen(axis_pen)
+        self.plot_widget.getAxis('left').setTextPen(QColor(255, 255, 255, 150))
+        
+        # Remove legend for cleaner look
+        # self.plot_widget.addLegend(offset=(10, 10))
         
         # Disable AutoRange for Y so our Threshold logic takes control
         self.plot_widget.plotItem.vb.enableAutoRange(axis=pg.ViewBox.YAxis, enable=False) 
@@ -344,21 +509,48 @@ class TimeGraph(QWidget):
         title = ", ".join([p['name'] for p in self.param_configs])
         units = list(set([p['unit'] for p in self.param_configs]))
         unit_label = units[0] if len(units) == 1 else "Multiple Units"
-        self.plot_widget.setTitle(title, color='w', size='12pt')
-        self.plot_widget.setLabel('left', unit_label, color='#FFFFFF')
-
-        axis_pen = pg.mkPen(color='#FFFFFF', width=1)
-        self.plot_widget.getAxis('left').setPen(axis_pen)
-        self.plot_widget.getAxis('bottom').setPen(axis_pen)
+        
+        # Title styling
+        self.plot_widget.setTitle(title, color='#ffffff', size='11pt')
+        self.plot_widget.setLabel('left', unit_label, color='#aaaaaa', **{'font-family': 'SF Pro Text', 'font-size': '10pt'})
 
         for p_config in self.param_configs:
-            pen = pg.mkPen(p_config['color'], width=2.5)
+            # Use a nice gradient fill
+            # We need to define a brush that has a gradient
+            color = QColor(p_config['color'])
+            pen = pg.mkPen(color, width=2.5)
+            
             curve = self.plot_widget.plot(pen=pen, name=p_config['name'])
+            
+            # Gradient fill
+            # Create a gradient from the line color (semi-transparent) to transparent
+            # QLinearGradient(0, 0, 0, 1) goes from top (0) to bottom (1) in ObjectBoundingMode
+            # We want the top (near the line) to be opaque and bottom to be transparent.
+            grad = QLinearGradient(0, 0, 0, 1)
+            grad.setCoordinateMode(QLinearGradient.ObjectBoundingMode)
+            grad.setColorAt(0, QColor(color.red(), color.green(), color.blue(), 100)) # Top: More opaque
+            grad.setColorAt(1, QColor(color.red(), color.green(), color.blue(), 0))   # Bottom: Transparent
+            brush = QBrush(grad)
+            
+            curve.setFillLevel(0)
+            curve.setBrush(brush)
+            
+            # Optimization for jitter
+            curve.setDownsampling(auto=True, method='peak', ds=5) # Downsample
+            self.plot_widget.setClipToView(True) # Only draw what's visible
+            
             self.curves[p_config['id']] = curve
 
         container.addLayout(toolbar)
         container.addWidget(self.plot_widget)
-        self.setLayout(container)
+        
+        self.setStyleSheet("""
+            QWidget {
+                background-color: rgba(20, 20, 20, 0.9); /* Darker background */
+                border-radius: 16px;
+                border: 1px solid rgba(255, 255, 255, 0.05);
+            }
+        """)
 
         def _reset():
             try:
@@ -445,19 +637,52 @@ class TimeGraph(QWidget):
         pos = evt[0]
         if self.plot_widget.sceneBoundingRect().contains(pos):
             mousePoint = self.plot_widget.getPlotItem().vb.mapSceneToView(pos)
+            
+            # Check if mouse is within the X range of the data
+            x_min, x_max = self.plot_widget.viewRange()[0]
+            if mousePoint.x() < x_min or mousePoint.x() > x_max:
+                self.vLine.hide()
+                self.hLine.hide()
+                self.label.hide()
+                return
+                
+            self.vLine.show()
+            self.hLine.show()
+            self.label.show()
+            
             self.vLine.setPos(mousePoint.x())
             self.hLine.setPos(mousePoint.y())
             text = f"Time: {mousePoint.x():.2f}s\n"
             for pid, curve in self.curves.items():
                 x_data, y_data = curve.getData()
                 if x_data is not None and len(x_data) > 0:
+                    # Find nearest point
                     idx = np.searchsorted(x_data, mousePoint.x())
                     if 0 < idx < len(x_data):
-                        y_val = y_data[idx]
+                        # Interpolate or just take nearest? Nearest is safer for raw data
+                        val_left = y_data[idx-1]
+                        val_right = y_data[idx]
+                        # Simple nearest logic
+                        if abs(x_data[idx] - mousePoint.x()) < abs(x_data[idx-1] - mousePoint.x()):
+                            y_val = val_right
+                        else:
+                            y_val = val_left
+                            
                         p_name = next(p['name'] for p in self.param_configs if p['id'] == pid)
                         text += f"{p_name}: {y_val:.2f}\n"
             self.label.setText(text.strip())
             self.label.setPos(mousePoint)
+        else:
+            self.vLine.hide()
+            self.hLine.hide()
+            self.label.hide()
+            
+    def leaveEvent(self, event):
+        """Hide crosshair when mouse leaves the widget"""
+        self.vLine.hide()
+        self.hLine.hide()
+        self.label.hide()
+        super().leaveEvent(event)
 
     def mouse_clicked(self, evt):
         if evt.double():
@@ -493,12 +718,30 @@ class HistogramWidget(QWidget):
     """
     def __init__(self, param_config):
         super().__init__(); self.param = param_config
-        layout = QVBoxLayout(self); layout.setContentsMargins(0,0,0,0)
-        self.plot = pg.PlotWidget(); self.plot.setBackground(QColor(12,12,12)); self.plot.setMenuEnabled(False)
-        self.plot.showGrid(x=True, y=True, alpha=0.2)
-        self.plot.setLabel('bottom', f"{param_config['name']} ({param_config['unit']})", color='#FFFFFF')
-        self.bar_item = pg.BarGraphItem(x=[], height=[], width=0.9, brush='#39CCCC'); self.plot.addItem(self.bar_item)
+        layout = QVBoxLayout(self); layout.setContentsMargins(16,16,16,16)
+        
+        # Title
+        title = QLabel(f"{param_config['name']}")
+        title.setFont(QFont("SF Pro Text", 11, QFont.Weight.Bold))
+        title.setStyleSheet("color: #ffffff;")
+        layout.addWidget(title)
+        
+        self.plot = pg.PlotWidget(); self.plot.setBackground(None); self.plot.setMenuEnabled(False)
+        self.plot.showGrid(x=True, y=True, alpha=0.1)
+        self.plot.getAxis('bottom').setPen(pg.mkPen(color='#888888'))
+        self.plot.getAxis('left').setPen(pg.mkPen(color='#888888'))
+        
+        self.bar_item = pg.BarGraphItem(x=[], height=[], width=0.9, brush=pg.mkBrush('#0a84ff'))
+        self.plot.addItem(self.bar_item)
         layout.addWidget(self.plot)
+        
+        self.setStyleSheet("""
+            QWidget {
+                background-color: rgba(30, 30, 30, 0.8);
+                border-radius: 16px;
+                border: 1px solid rgba(255, 255, 255, 0.05);
+            }
+        """)
     def update_histogram(self, values):
         if not values: return
         try:
@@ -518,6 +761,7 @@ class LEDWidget(QFrame):
         super().__init__()
         self.param_configs = param_configs
         self.options = options or {}
+        self.led_configs = self.options.get('led_configs', {})
         
         # Main layout
         self.main_layout = QGridLayout(self)
@@ -537,9 +781,15 @@ class LEDWidget(QFrame):
             
             # Container
             container = QFrame()
-            container.setStyleSheet("background-color: #252525; border-radius: 6px;")
+            container.setStyleSheet("""
+                QFrame {
+                    background-color: rgba(50, 50, 50, 0.6);
+                    border-radius: 20px;
+                    border: 1px solid rgba(255, 255, 255, 0.05);
+                }
+            """)
             v_layout = QVBoxLayout(container)
-            v_layout.setContentsMargins(8, 8, 8, 8)
+            v_layout.setContentsMargins(16, 16, 16, 16)
             v_layout.setSpacing(8)
             
             # Clean parameter name
@@ -547,79 +797,130 @@ class LEDWidget(QFrame):
             
             # Title
             title = QLabel(f"{clean_name}")
-            title.setFont(QFont("Arial", 10, QFont.Weight.Bold))
-            title.setStyleSheet("color: #ffffff;")
+            title.setFont(QFont("SF Pro Text", 11, QFont.Weight.Bold))
+            title.setStyleSheet("color: rgba(255, 255, 255, 0.9);")
             title.setAlignment(Qt.AlignmentFlag.AlignCenter)
             
-            # LED indicator
-            led = QLabel("")
-            led.setFixedSize(32, 32)
-            led.setStyleSheet("""
-                border-radius: 16px; 
-                background: #555; 
-                border: 2px solid #333;
-            """)
-            self.leds[p_config['id']] = led
+            # LED indicator (now contains value)
+            led = QLabel("--")
+            led.setFixedSize(60, 60) # Larger to hold text
+            led.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            led.setFont(QFont("SF Pro Display", 14, QFont.Weight.Bold))
             
-            # Value display
-            value_lbl = QLabel("--")
-            value_lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
-            value_lbl.setFont(QFont("Monospace", 10))
-            value_lbl.setStyleSheet("color: #aaaaaa;")
-            self.value_labels[p_config['id']] = value_lbl
+            # Default inactive style
+            led.setStyleSheet("""
+                border-radius: 30px; 
+                background: #2a2a2a; 
+                border: 2px solid #444;
+                color: #666;
+            """)
+            
+            self.leds[p_config['id']] = led
             
             v_layout.addWidget(title)
             v_layout.addWidget(led, alignment=Qt.AlignmentFlag.AlignCenter)
-            v_layout.addWidget(value_lbl)
             
             self.main_layout.addWidget(container, row, col)
         
         # Set frame style
-        self.setStyleSheet("""
-            background-color: #1a1a1a;
-            border-radius: 12px;
-            border: 2px solid #333;
-        """)
+        self.setStyleSheet("background: transparent;")
 
     
-    def update_values(self, values_dict):
-        """Update LED colors based on multi-threshold configuration"""
-        led_configs = self.options.get('led_configs', {})
-        
-        for pid, val in values_dict.items():
-            if pid not in self.leds:
-                continue
+    def update_values(self, data):
+        for pid, led in self.leds.items():
+            if pid in data:
+                val = data[pid]
                 
-            led = self.leds[pid]
-            lbl = self.value_labels[pid]
-            
-            # Parse value
-            try:
-                v = float(val) if val is not None else None
-                if v is not None:
-                    lbl.setText(f"{v:.2f}")
+                # Handle None values
+                if val is None:
+                    led.setText("--")
+                    led.setStyleSheet("""
+                        border-radius: 30px; 
+                        background: #2a2a2a; 
+                        border: 2px solid #444;
+                        color: #666;
+                    """)
+                    led.setGraphicsEffect(None)
+                    continue
+
+                led.setText(f"{val:.1f}") # Show value inside
+                
+                # Check thresholds
+                active_color = None
+                if pid in self.led_configs:
+                    config = self.led_configs[pid]
+                    # New format: multi-threshold with colors
+                    if 'thresholds' in config and config['thresholds']:
+                        thresholds = sorted(config['thresholds'], key=lambda x: x['value']) # Sort for priority
+                        for threshold in thresholds:
+                            t_val = float(threshold['value'])
+                            cond = threshold.get('condition', '≥')
+                            color = threshold['color']
+                            
+                            match = False
+                            if cond in ['≥', '>='] and val >= t_val: match = True
+                            elif cond in ['≤', '<='] and val <= t_val: match = True
+                            elif cond == '>' and val > t_val: match = True
+                            elif cond == '<' and val < t_val: match = True
+                            elif cond == '==' and abs(val - t_val) < 0.0001: match = True
+                            
+                            if match:
+                                active_color = color
+                                break # Priority to first match (after sorting)
+                    # Old format: single threshold (backward compatibility)
+                    elif 'threshold' in config:
+                        threshold = float(config.get('threshold', 0))
+                        condition = config.get('condition', '>')
+                        
+                        is_active = False
+                        if condition == '>': is_active = val > threshold
+                        elif condition == '<': is_active = val < threshold
+                        elif condition == '>=': is_active = val >= threshold
+                        elif condition == '<=': is_active = val <= threshold
+                        elif condition == '==': is_active = abs(val - threshold) < 0.0001
+                        
+                        if is_active:
+                            active_color = '#21b35a' # Default green for old format
+                
+                if active_color:
+                    # Active State with Glow
+                    # Determine text color based on brightness
+                    c = QColor(active_color)
+                    brightness = (c.red() * 299 + c.green() * 587 + c.blue() * 114) / 1000
+                    text_color = "#000000" if brightness > 128 else "#ffffff"
+                    
+                    led.setStyleSheet(f"""
+                        border-radius: 30px; 
+                        background-color: {active_color};
+                        border: 2px solid {active_color};
+                        color: {text_color};
+                    """)
+                    
+                    # Add glow effect if not present
+                    if not led.graphicsEffect():
+                        glow = QGraphicsDropShadowEffect()
+                        glow.setBlurRadius(20)
+                        glow.setColor(QColor(active_color))
+                        glow.setOffset(0, 0)
+                        led.setGraphicsEffect(glow)
+                    else:
+                        # Update existing glow color
+                        led.graphicsEffect().setColor(QColor(active_color))
                 else:
-                    lbl.setText("--")
-            except:
-                v = None
-                lbl.setText("--")
-            
-            # Get color based on multi-threshold configuration
-            color = self._get_led_color(v, led_configs.get(pid, {}))
-            
-            # Apply color to LED
-            if color:
-                led.setStyleSheet(f"""
-                    border-radius: 16px; 
-                    background: {color}; 
-                    border: 2px solid {self._adjust_brightness(color, 1.3)};
-                """)
+                    # Inactive State
+                    led.setStyleSheet("""
+                        border-radius: 30px; 
+                        background: #2a2a2a; 
+                        border: 2px solid #444;
+                        color: #666;
+                    """)
+                    led.setGraphicsEffect(None) # Remove glow
             else:
-                # Inactive - Gray
+                # If parameter ID is not in current data, set to inactive/default
+                led.setText("--")
                 led.setStyleSheet("""
-                    border-radius: 16px; 
-                    background: #555; 
-                    border: 2px solid #333;
+                    background: #3a3a3a; 
+                    border: 1px solid #555;
                 """)
     
     def _get_led_color(self, value, config):
@@ -714,8 +1015,20 @@ class MapWidget(QWidget):
         self.lat_id = param_configs[0]['id']
         self.lon_id = param_configs[1]['id']
         layout = QVBoxLayout(self)
-        layout.setContentsMargins(16, 16, 16, 16)
-        layout.setSpacing(8)
+        layout.setContentsMargins(0, 0, 0, 0) # Remove margins for map to fill
+        layout.setSpacing(0)
+        
+        self.setStyleSheet("""
+            MapWidget {
+                background-color: rgba(30, 30, 30, 0.8);
+                border-radius: 16px;
+                border: 1px solid rgba(255, 255, 255, 0.05);
+            }
+            QWebEngineView {
+                border-radius: 16px;
+                background: transparent;
+            }
+        """)
 
         # Clean parameter names (kept if you want to show them somewhere)
         lat_name = param_configs[0]['name'].replace('GPS(', '').replace(')', '') \
@@ -1019,9 +1332,44 @@ class LogTable(QWidget):
         layout = QVBoxLayout(self); layout.setContentsMargins(0, 0, 0, 0)
         self.table = QTableWidget()
         headers = ["Timestamp"] + [f"{p['name']} ({p['unit']})" for p in self.param_configs]
-        self.table.setColumnCount(len(headers)); self.table.setHorizontalHeaderLabels(headers)
+        self.table.setColumnCount(3)
+        self.table.setHorizontalHeaderLabels(["Timestamp", "Parameter", "Value"])
         self.table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
-        self.table.verticalHeader().setVisible(False); self.table.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
+        self.table.verticalHeader().setVisible(False)
+        self.table.setAlternatingRowColors(True)
+        self.table.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
+        self.table.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
+        
+        # Apple-like Table Styling
+        self.table.setStyleSheet("""
+            QTableWidget {
+                background-color: transparent;
+                gridline-color: transparent;
+                border: none;
+                color: #e0e0e0;
+                font-family: "SF Pro Text";
+                font-size: 13px;
+            }
+            QTableWidget::item {
+                padding: 4px;
+                border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            }
+            QTableWidget::item:selected {
+                background-color: rgba(10, 132, 255, 0.3);
+            }
+            QHeaderView::section {
+                background-color: rgba(40, 40, 40, 0.8);
+                color: #aaaaaa;
+                padding: 6px;
+                border: none;
+                font-weight: bold;
+                font-family: "SF Pro Text";
+                font-size: 12px;
+                text-transform: uppercase;
+            }
+        """)
+        
+        layout.addWidget(self.table)
         search_group = QGroupBox("Search and Highlight")
         search_layout = QHBoxLayout(search_group)
         self.search_param_combo = QComboBox(); self.search_param_combo.addItems([p['name'] for p in self.param_configs])
@@ -1031,7 +1379,7 @@ class LogTable(QWidget):
         search_layout.addWidget(QLabel("Find in:")); search_layout.addWidget(self.search_param_combo)
         search_layout.addWidget(self.search_cond_combo); search_layout.addWidget(self.search_value_spinbox)
         search_layout.addWidget(search_btn); search_layout.addWidget(clear_btn)
-        layout.addWidget(self.table); layout.addWidget(search_group)
+        layout.addWidget(search_group)
         search_btn.clicked.connect(self.search_and_highlight)
         clear_btn.clicked.connect(self.clear_highlights)
     def update_data(self, updated_param_id, history):
