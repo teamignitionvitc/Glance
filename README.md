@@ -347,6 +347,46 @@ With multi-source connectivity, advanced signal filtering, powerful data logging
 
 </details>
 
+<details>
+<summary><h3>⚙️ Technical Architecture</h3></summary>
+
+<table>
+<tr>
+<td width="50%">
+
+**Backend Core**
+- **Threaded Acquisition**: `DataSimulator` runs in a dedicated `QThread`, ensuring the UI remains responsive even at high data rates (100Hz+).
+- **Abstraction Layer**: `DataReader` provides a unified interface for Serial, TCP, and UDP sources, handling low-level socket/port management and error recovery.
+- **Binary Parsing**: Uses Python's `struct` module for high-performance parsing of binary packets. Supports mixed data types (int, float, double) and bit-fields defined via user configuration.
+
+**Data Flow**
+1. **Source**: Hardware/Network sends data packet.
+2. **Acquisition**: `DataReader` reads bytes/string.
+3. **Parsing**: Data is converted to a normalized `list[float]`.
+4. **Distribution**: `DataSimulator` emits `newData` Qt Signal.
+5. **Processing**: Main thread applies active filters (Kalman/MA).
+6. **Visualization**: Widgets update via optimized paint events.
+
+</td>
+<td width="50%">
+
+**Data Logging Internals**
+- **Buffered I/O**: `DataLogger` accumulates data in memory (default 100 samples) before performing a bulk write to disk. This minimizes filesystem overhead and prevents write-latency from affecting the acquisition loop.
+- **Formats**:
+  - **CSV**: Optimized for import into Excel/MATLAB.
+  - **JSON Lines**: Stream-friendly format for programmatic analysis.
+
+**Signal Processing**
+- **Filter Chain**: Filters are implemented as independent objects inheriting from `SignalFilter`.
+- **State Management**: Filters maintain their own internal state (buffers, covariance matrices) which persists across updates but can be reset dynamically.
+- **Real-time**: All filtering occurs in the main event loop, designed for low-latency (<1ms) processing per packet.
+
+</td>
+</tr>
+</table>
+
+</details>
+
 ---
 
 ## Screenshots
