@@ -792,12 +792,24 @@
             max-width: none;
         }
 
-        /* --- End of Updated Styles --- */
+        .workflow-image {
+            max-width: 100%;
+            width: auto;
+            height: auto;
+            max-height: 350px;
+            border-radius: 8px;
+            margin-top: 1rem;
+            border: 1px solid var(--border);
+            display: block;
+            margin-left: auto;
+            margin-right: auto;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+        }
 
         /* Screenshots */
         .screenshot-gallery {
             display: grid;
-            grid-template-columns: 1fr 1fr;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
             gap: 2rem;
             margin-top: 2rem;
         }
@@ -806,33 +818,54 @@
             text-align: center;
             background-color: var(--bg-darker);
             padding: 1rem;
-            border-radius: 8px;
+            border-radius: 12px;
             border: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            height: 100%;
+            /* Ensure equal height */
+        }
+
+        .screenshot-gallery figure:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            border-color: var(--primary);
         }
 
         .screenshot-gallery img {
             width: 100%;
-            border-radius: 6px;
-            margin-bottom: 0.75rem;
+            height: auto;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+            object-fit: contain;
+            max-height: 400px;
+            /* Reduced max-height for better fit */
         }
 
         .screenshot-gallery figcaption {
             font-style: italic;
             color: var(--text-secondary);
             font-size: 0.9rem;
+            margin-top: auto;
+            /* Push caption to bottom */
+            padding-top: 0.5rem;
         }
 
         .telemetry-images {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            display: flex;
+            flex-direction: column;
             gap: 1.5rem;
             margin-top: 2rem;
+            align-items: center;
         }
 
         .telemetry-images img {
-            width: 100%;
+            max-width: 100%;
+            height: auto;
             border-radius: 8px;
             border: 1px solid var(--border);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
         }
 
         /* Troubleshooting Section */
@@ -1150,6 +1183,11 @@
             .screenshot-gallery {
                 grid-template-columns: 1fr;
                 gap: 1.5rem;
+            }
+
+            .screenshot-gallery img {
+                max-height: 300px;
+                /* Smaller max-height on mobile */
             }
 
             .feature-grid {
@@ -1511,21 +1549,31 @@
                 </p>
                 <div class="screenshot-gallery">
                     <figure>
-                        <img src="public/Doc Images/HomeScreen.png" alt="Glance welcome screen" loading="lazy">
+                        <img src="public/Doc Images/welcome_screen_new.png" alt="Glance welcome screen" loading="lazy">
                         <figcaption>The Welcome Screen: Start a new project or load an existing one.</figcaption>
                     </figure>
                     <figure>
-                        <img src="public/Doc Images/Connection.png" alt="Connection settings dialog" loading="lazy">
-                        <figcaption>Connection Settings: Configure data sources like Serial, TCP, and UDP.</figcaption>
+                        <img src="public/Doc Images/dashboard_config.png" alt="Dashboard Configuration" loading="lazy">
+                        <figcaption>Dashboard & Connection Settings: Configure data sources and global preferences.
+                        </figcaption>
                     </figure>
                     <figure>
-                        <img src="public/Doc Images/parameters.png" alt="Parameter management window" loading="lazy">
+                        <img src="public/Doc Images/parameters_new.png" alt="Parameter management window"
+                            loading="lazy">
                         <figcaption>Parameter Management: Define your data channels and alarm thresholds.</figcaption>
                     </figure>
                     <figure>
-                        <img src="public/Doc Images/dashboard.png"
+                        <img src="public/Doc Images/dashboard_full_new.png"
                             alt="A fully configured dashboard with multiple widgets" loading="lazy">
                         <figcaption>The Live Dashboard: Monitor multiple data streams in real-time.</figcaption>
+                    </figure>
+                    <figure>
+                        <img src="public/Doc Images/logging_config.png" alt="Data Logging Configuration" loading="lazy">
+                        <figcaption>Data Logging: Configure output files and select parameters.</figcaption>
+                    </figure>
+                    <figure>
+                        <img src="public/Doc Images/raw_telemetry_new.png" alt="Raw Telemetry Monitor" loading="lazy">
+                        <figcaption>Raw Telemetry Monitor: Inspect incoming data packets in real-time.</figcaption>
                     </figure>
                 </div>
             </section>
@@ -1666,6 +1714,8 @@ cd Glance</code></pre>
                             <p>The initial screen provides two main paths: creating a new dashboard from scratch or
                                 loading a previously saved project configuration file (.json). This is your starting
                                 point for any session.</p>
+                            <img src="public/Doc Images/welcome_screen_new.png" alt="Welcome Screen"
+                                class="workflow-image">
                         </div>
                     </div>
                     <div class="workflow-step">
@@ -1677,6 +1727,8 @@ cd Glance</code></pre>
                             <p>Here, you tell Glance where your data is coming from and how it's formatted. You'll
                                 select a <a href="#data-sources">Data Source</a> (like Serial or TCP) and specify the
                                 structure of the incoming data packets. This is crucial for a successful connection.</p>
+                            <img src="public/Doc Images/dashboard_config.png" alt="Connection Setup"
+                                class="workflow-image">
                         </div>
                     </div>
                     <div class="workflow-step">
@@ -1689,6 +1741,8 @@ cd Glance</code></pre>
                                 Select a widget type, link it to one or more defined <a
                                     href="#parameters">Parameters</a>, and add it to the initial layout. You can also
                                 skip this and add widgets manually later.</p>
+                            <img src="public/Doc Images/dashboard_widget_config.png" alt="Widget Configuration"
+                                class="workflow-image">
                         </div>
                     </div>
                     <div class="workflow-step">
@@ -1700,6 +1754,8 @@ cd Glance</code></pre>
                             <p>This is the main interface where you monitor your data in real-time. It's a fully
                                 interactive environment where you can drag, drop, resize, and float widgets to create a
                                 layout that suits your needs.</p>
+                            <img src="public/Doc Images/dashboard_full_new.png" alt="Live Dashboard"
+                                class="workflow-image">
                         </div>
                     </div>
                 </div>
@@ -1855,6 +1911,14 @@ cd Glance</code></pre>
                 <p>Parameters are the heart of Glance. They act as translators, mapping raw incoming data (like a value
                     at a specific position in an array) to a meaningful, human-readable channel that widgets can
                     display. You can configure them via <strong>Edit → Manage Parameters</strong>.</p>
+
+                <div class="screenshot-gallery">
+                    <figure>
+                        <img src="public/Doc Images/add_parameter_new.png" alt="Add Parameter Dialog" loading="lazy">
+                        <figcaption>The Add Parameter Dialog: Define ID, Name, Unit, and Thresholds.</figcaption>
+                    </figure>
+                </div>
+
                 <div class="info-box danger">
                     <p><strong>The Array Index is Critical:</strong> This zero-based number tells Glance where to find
                         the data for this parameter in the incoming data packet. An incorrect index is the most common
@@ -1912,6 +1976,17 @@ cd Glance</code></pre>
                         Widget..."</strong> and linking them to one or more configured parameters. Each widget has
                     unique behaviors and customization options derived from the parameter settings.</p>
 
+                <div class="screenshot-gallery">
+                    <figure>
+                        <img src="public/Doc Images/add_widget_1.png" alt="Add Widget Step 1" loading="lazy">
+                        <figcaption>Step 1: Choose a widget type from the library.</figcaption>
+                    </figure>
+                    <figure>
+                        <img src="public/Doc Images/add_widget_2.png" alt="Add Widget Step 2" loading="lazy">
+                        <figcaption>Step 2: Link parameters and configure specific settings.</figcaption>
+                    </figure>
+                </div>
+
                 <h3>Value Card</h3>
                 <p>Displays a single parameter's value in a large, easy-to-read format. Its appearance is highly dynamic
                     based on parameter settings.</p>
@@ -1936,6 +2011,12 @@ cd Glance</code></pre>
                     <li><strong>Colors:</strong> Line colors are automatically assigned from a predefined palette to
                         ensure contrast.</li>
                 </ul>
+                <div class="screenshot-gallery">
+                    <figure>
+                        <img src="public/Doc Images/time_graph_widget.png" alt="Time Graph Widget" loading="lazy">
+                        <figcaption>The Time Graph Widget visualizing multiple data streams.</figcaption>
+                    </figure>
+                </div>
 
                 <h3>Gauge</h3>
                 <p>A classic circular gauge that shows a value within a defined range. The parameter's thresholds are
@@ -1980,57 +2061,54 @@ cd Glance</code></pre>
             </section>
 
             <section id="data-logging">
-                <h2>Data Logging & Summary Reports</h2>
-                <p>Glance provides powerful tools for recording and analyzing your telemetry sessions. You can access
-                    all logging features from the <strong>Data Logging</strong> menu.</p>
+                <h2>Data Logging & Reports</h2>
+                <p>Glance provides robust data logging capabilities to ensure no data is lost during your operations.
+                    Logs are saved in standard formats for easy post-processing.</p>
 
-                <h3>Configuring and Recording a Session</h3>
-                <p>To record a session, first go to <strong>Data Logging → Configure Logging...</strong>. Here you can
-                    select CSV or JSON as the output format, choose which specific parameters to log, and set a buffer
-                    size.</p>
-                <h4>Understanding the Buffer</h4>
-                <p>Data is temporarily stored in memory (the buffer) before being written to the disk. This improves
-                    performance by reducing constant disk access.</p>
+                <h3>Logging Configuration</h3>
+                <p>Before starting a session, you can configure:</p>
                 <ul>
-                    <li>A <strong>larger buffer</strong> means fewer disk writes, which is better for performance with
-                        high-frequency data, but risks more data loss if the application crashes.</li>
-                    <li>A <strong>smaller buffer</strong> writes to the disk more often, which is safer but can impact
-                        performance at very high data rates.</li>
+                    <li><strong>Output Directory:</strong> Choose where to save your log files.</li>
+                    <li><strong>Filename Pattern:</strong> Customize file naming (e.g., timestamp-based).</li>
+                    <li><strong>Format:</strong> Select between CSV (efficient, universal) or JSON (structured).</li>
+                    <li><strong>Parameters:</strong> Select exactly which data channels to record to save space.</li>
                 </ul>
-                <p>Once configured, you can start and stop logging at any time using the menu actions or the shortcuts
-                    <code>Ctrl+Shift+L</code> and <code>Ctrl+Alt+L</code>.
-                </p>
 
-                <h3 id="summary-reports">Generating a Summary Report</h3>
-                <p>After you have stopped a logging session, you can instantly generate a professional PDF summary of
-                    the collected data. This is an excellent tool for post-mission analysis, sharing results, and
-                    archiving session statistics.</p>
-                <ul>
-                    <li><strong>How to Access:</strong> Navigate to <strong>Data Logging → Generate Summary
-                            Report...</strong> or use the shortcut <code>Ctrl+Shift+R</code>.</li>
-                    <li><strong>Prerequisites:</strong> You must have a completed log file from the current session, and
-                        the <code>reportlab</code> Python library must be installed.</li>
-                </ul>
+                <div class="screenshot-gallery">
+                    <figure>
+                        <img src="public/Doc Images/logging_config.png" alt="Data Logging Configuration Dialog"
+                            loading="lazy">
+                        <figcaption>The Logging Configuration Dialog allows precise control over what gets recorded.
+                        </figcaption>
+                    </figure>
+                </div>
+
                 <div class="info-box accent">
-                    <p><strong>Installation:</strong> If you don't have it, install the reporting library with:
-                        <code>pip install reportlab</code>
-                    </p>
+                    <p><strong>Performance Tip:</strong> The logging system runs on a separate thread with a
+                        ring-buffer to ensure it never blocks the UI or data acquisition, even at high data rates.</p>
                 </div>
-                <h4>Report Contents</h4>
-                <p>The generated PDF is a multi-page document that includes:</p>
-                <ol>
-                    <li><strong>Report Information:</strong> Metadata about the session, including the source file,
-                        duration, total samples, and start/end times.</li>
-                    <li><strong>Parameter Statistics:</strong> A summary table showing the min, max, mean, and sample
-                        count for every parameter that was logged.</li>
-                    <li><strong>Detailed Parameter Analysis:</strong> A breakdown for each individual parameter with
-                        more detailed statistics like range and standard deviation.</li>
-                </ol>
-                <div class="readme-link">
-                    For more details, see the <a
-                        href="https://github.com/teamignitionvitc/Glance?tab=readme-ov-file#data-logging"
-                        target="_blank">Data Logging section in the README</a>.
+
+                <h3>PDF Summary Reports</h3>
+                <p>After a logging session, Glance can automatically generate a professional PDF report. This is ideal
+                    for quick post-flight analysis or sharing results with stakeholders.</p>
+
+                <div class="screenshot-gallery">
+                    <figure>
+                        <img src="public/Doc Images/report_page_1.png" alt="PDF Report Page 1" loading="lazy">
+                        <figcaption>Report Cover: Session metadata, duration, and key statistics.</figcaption>
+                    </figure>
+                    <figure>
+                        <img src="public/Doc Images/report_page_2.png" alt="PDF Report Page 2" loading="lazy">
+                        <figcaption>Data Plots: Visual trends of logged parameters over time.</figcaption>
+                    </figure>
                 </div>
+
+                <p>The report includes:</p>
+                <ul>
+                    <li><strong>Session Metadata:</strong> Date, time, duration, and file size.</li>
+                    <li><strong>Statistical Summary:</strong> Min, Max, and Average values for each parameter.</li>
+                    <li><strong>Visual Plots:</strong> Time-series graphs for critical data channels.</li>
+                </ul>
             </section>
 
             <section id="project-file">
@@ -2089,8 +2167,7 @@ cd Glance</code></pre>
                     <li>Pause, clear, and save the raw log for later analysis.</li>
                 </ul>
                 <div class="telemetry-images">
-                    <img src="public/Doc Images/RTV.png" alt="Raw Telemetry Monitor showing data stream" loading="lazy">
-                    <img src="public/Doc Images/Standalone_RTV.png" alt="Controls for the Raw Telemetry Monitor"
+                    <img src="public/Doc Images/raw_telemetry_new.png" alt="Raw Telemetry Monitor showing data stream"
                         loading="lazy">
                 </div>
                 <div class="readme-link">
@@ -2275,7 +2352,7 @@ cd Glance</code></pre>
                                 <th colspan="2">Data & Filters</th>
                             </tr>
                             <tr>
-                                <td>Configure Data Logging</td>
+                                <td>Toggle Data Logging</td>
                                 <td><code>Ctrl + L</code></td>
                             </tr>
                             <tr>
@@ -2299,7 +2376,7 @@ cd Glance</code></pre>
                                 <th colspan="2">Help</th>
                             </tr>
                             <tr>
-                                <td>Open Documentation</td>
+                                <td>Show Keyboard Shortcuts</td>
                                 <td><code>F1</code></td>
                             </tr>
                         </tbody>
