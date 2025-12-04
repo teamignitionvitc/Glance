@@ -62,10 +62,143 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 
 
-from PySide6.QtWidgets import QWidget, QVBoxLayout, QFrame, QLabel, QTableWidget, QHeaderView, QAbstractItemView, QGroupBox, QHBoxLayout, QTableWidgetItem, QComboBox, QPushButton, QApplication, QMessageBox, QDoubleSpinBox, QDockWidget, QGridLayout, QGraphicsDropShadowEffect
-from PySide6.QtGui import QFont, QColor, QBrush, QLinearGradient, QPainter, QPen, QPainterPath
+from PySide6.QtWidgets import QWidget, QVBoxLayout, QFrame, QLabel, QTableWidget, QHeaderView, QAbstractItemView, QGroupBox, QHBoxLayout, QTableWidgetItem, QComboBox, QPushButton, QApplication, QMessageBox, QDoubleSpinBox, QDockWidget, QGridLayout, QGraphicsDropShadowEffect, QLayout, QSizePolicy, QStyle
+from PySide6.QtGui import QFont, QColor, QBrush, QLinearGradient, QConicalGradient, QPainter, QPen, QPainterPath, QIcon
 from PySide6.QtNetwork import QNetworkAccessManager, QNetworkRequest, QNetworkReply
-from PySide6.QtCore import Qt, Signal, QUrl, QTimer, QRectF
+from PySide6.QtCore import Qt, Signal, QUrl, QTimer, QRectF, QPoint, QSize, QRect
+
+class FlowLayout(QLayout):
+    def __init__(self, parent=None, margin=0, hSpacing=-1, vSpacing=-1):
+        super(FlowLayout, self).__init__(parent)
+        if parent is not None:
+            self.setContentsMargins(margin, margin, margin, margin)
+        self._hSpace = hSpacing
+        self._vSpace = vSpacing
+        self._itemList = []
+
+    def __del__(self):
+        item = self.takeAt(0)
+        while item:
+            item = self.takeAt(0)
+
+    def addItem(self, item):
+        self._itemList.append(item)
+
+    def horizontalSpacing(self):
+        if self._hSpace >= 0:
+            return self._hSpace
+        else:
+            return self.smartSpacing(QStyle.PixelMetric.PM_LayoutHorizontalSpacing)
+
+    def verticalSpacing(self):
+        if self._vSpace >= 0:
+            return self._vSpace
+        else:
+            return self.smartSpacing(QStyle.PixelMetric.PM_LayoutVerticalSpacing)
+
+    def count(self):
+        return len(self._itemList)
+
+    def itemAt(self, index):
+        if 0 <= index < len(self._itemList):
+            return self._itemList[index]
+        return None
+
+    def takeAt(self, index):
+        if 0 <= index < len(self._itemList):
+            return self._itemList.pop(index)
+        return None
+
+    def expandingDirections(self):
+        return Qt.Orientation(0)
+
+    def hasHeightForWidth(self):
+        return True
+
+    def heightForWidth(self, width):
+        height = self.doLayout(QRect(0, 0, width, 0), True)
+        return height
+
+    def setGeometry(self, rect):
+        super(FlowLayout, self).setGeometry(rect)
+        self.doLayout(rect, False)
+
+    def sizeHint(self):
+        return self.minimumSize()
+
+    def minimumSize(self):
+        size = QSize()
+        for item in self._itemList:
+            size = size.expandedTo(item.minimumSize())
+        size += QSize(2 * self.contentsMargins().left(), 2 * self.contentsMargins().top())
+        return size
+
+    def doLayout(self, rect, testOnly):
+        left, top, right, bottom = self.getContentsMargins()
+        effectiveRect = rect.adjusted(+left, +top, -right, -bottom)
+        x = effectiveRect.x()
+        y = effectiveRect.y()
+        lineHeight = 0
+        
+        # Pass 1: Group items into lines
+        lines = []
+        current_line = []
+        current_line_width = 0
+        
+        for item in self._itemList:
+            wid = item.widget()
+            spaceX = self.horizontalSpacing()
+            if spaceX == -1:
+                spaceX = wid.style().layoutSpacing(QSizePolicy.ControlType.PushButton, QSizePolicy.ControlType.PushButton, Qt.Orientation.Horizontal)
+            
+            nextX = x + item.sizeHint().width() + spaceX
+            if nextX - spaceX > effectiveRect.right() and current_line:
+                # Finish current line
+                lines.append((current_line, current_line_width, lineHeight))
+                
+                # Start new line
+                x = effectiveRect.x()
+                lineHeight = 0
+                current_line = []
+                current_line_width = 0
+                nextX = x + item.sizeHint().width() + spaceX
+
+            current_line.append(item)
+            current_line_width += item.sizeHint().width() + spaceX
+            x = nextX
+            lineHeight = max(lineHeight, item.sizeHint().height())
+            
+        # Append last line
+        if current_line:
+            lines.append((current_line, current_line_width, lineHeight))
+
+        # Pass 2: Place items (Centered)
+        y = effectiveRect.y()
+        for line_items, line_width, line_height in lines:
+            # Calculate starting X to center the line
+            # Remove trailing spacing from line_width for accurate centering
+            actual_width = line_width - self.horizontalSpacing()
+            start_x = effectiveRect.x() + (effectiveRect.width() - actual_width) / 2
+            
+            x = start_x
+            for item in line_items:
+                if not testOnly:
+                    item.setGeometry(QRect(QPoint(x, y), item.sizeHint()))
+                
+                x += item.sizeHint().width() + self.horizontalSpacing()
+            
+            y += line_height + self.verticalSpacing()
+
+        return y - rect.y() + bottom
+    
+    def smartSpacing(self, pm):
+        parent = self.parent()
+        if parent is None:
+            return -1
+        elif parent.isWidgetType():
+            return parent.style().pixelMetric(pm, None, parent)
+        else:
+            return parent.spacing()
 import time
 import math
 import numpy as np
@@ -216,58 +349,49 @@ class ValueCard(QFrame):
         # Clean, frameless container
         self.setFrameShape(QFrame.Shape.NoFrame)
         
-        # Main layout
-        self.main_layout = QGridLayout(self)
-        self.main_layout.setContentsMargins(16, 16, 16, 16)
-        self.main_layout.setSpacing(16)
+        # Main layout - Responsive Flow
+        self.main_layout = FlowLayout(self, margin=16, hSpacing=16, vSpacing=16)
         
         self.value_labels = {}
         
-        # Calculate grid dimensions
-        n = len(param_configs)
-        cols = math.ceil(math.sqrt(n))
-        
-        for i, p_config in enumerate(param_configs):
-            row = i // cols
-            col = i % cols
-            
-            # Container for each value - Apple-like Card Style
-            container = QFrame()
+        for p_config in param_configs:
             # Container for each value - Clean, Minimalist
             container = QFrame()
+            # Fixed size to ensure consistent flow
+            container.setFixedSize(180, 120)
             # Remove the inner box background/border for a cleaner look
             container.setStyleSheet("background: transparent; border: none;")
             
             v_layout = QVBoxLayout(container)
-            v_layout.setContentsMargins(20, 20, 20, 20)
+            v_layout.setContentsMargins(0, 0, 0, 0)
             v_layout.setSpacing(4)
+            v_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
             
             # Top: Label (Small, Uppercase)
             name_label = QLabel(p_config['name'].upper())
-            name_label.setFont(QFont("SF Pro Text", 10, QFont.Weight.Bold))
-            name_label.setStyleSheet("color: rgba(255, 255, 255, 0.5); letter-spacing: 1px;")
+            name_label.setFont(QFont("SF Pro Text", 9, QFont.Weight.Medium))
+            name_label.setStyleSheet("color: rgba(255, 255, 255, 0.4); letter-spacing: 0.5px;")
             name_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
             
             # Center: Value (Large, Bold)
             value_label = QLabel("--")
-            value_label.setFont(QFont("SF Pro Display", 48, QFont.Weight.Bold)) # Changed to Bold as requested
+            value_label.setFont(QFont("SF Pro Display", 56, QFont.Weight.Bold)) 
             value_label.setStyleSheet("color: #ffffff;")
             value_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
             self.value_labels[p_config['id']] = value_label
             
             # Bottom: Unit (Medium)
             unit_label = QLabel(p_config.get('unit', ''))
-            unit_label.setFont(QFont("SF Pro Text", 13, QFont.Weight.Medium))
-            unit_label.setStyleSheet("color: rgba(255, 255, 255, 0.7);")
+            unit_label.setFont(QFont("SF Pro Text", 11, QFont.Weight.Normal))
+            unit_label.setStyleSheet("color: rgba(255, 255, 255, 0.6);")
             unit_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
             
             v_layout.addWidget(name_label)
-            v_layout.addStretch()
+            v_layout.addSpacing(4)
             v_layout.addWidget(value_label)
             v_layout.addWidget(unit_label)
-            v_layout.addStretch()
             
-            self.main_layout.addWidget(container, row, col)
+            self.main_layout.addWidget(container)
         
         # Set base style for the widget itself
         self.setStyleSheet("background: transparent;")
@@ -299,12 +423,14 @@ class ValueCard(QFrame):
                     lbl.setStyleSheet("color: rgba(255, 255, 255, 0.3); border: none; background: transparent;")
 
 class CircularGauge(QWidget):
-    def __init__(self, min_val, max_val, parent=None):
+    def __init__(self, min_val, max_val, safe_limit=None, warning_limit=None, parent=None):
         super().__init__(parent)
         self.min_val = min_val
         self.max_val = max_val
+        self.safe_limit = safe_limit
+        self.warning_limit = warning_limit
         self.value = min_val
-        self.setMinimumSize(150, 150)
+        self.setMinimumSize(100, 100)
         
     def set_value(self, val):
         self.value = max(self.min_val, min(self.max_val, val))
@@ -317,126 +443,306 @@ class CircularGauge(QWidget):
         width = self.width()
         height = self.height()
         side = min(width, height)
+        # Add padding to prevent clipping
         rect = QRectF((width - side) / 2 + 10, (height - side) / 2 + 10, side - 20, side - 20)
         
-        # Draw background arc
-        painter.setPen(QPen(QColor(60, 60, 60), 12, Qt.PenStyle.SolidLine, Qt.PenCapStyle.RoundCap))
+        # 1. Draw Track (Background)
+        track_pen = QPen(QColor(255, 255, 255, 20), 8, Qt.PenStyle.SolidLine, Qt.PenCapStyle.RoundCap)
+        painter.setPen(track_pen)
         painter.drawArc(rect, 135 * 16, 270 * 16)
         
         # Calculate angle
         span = 270
-        start_angle = 225
         pct = (self.value - self.min_val) / (self.max_val - self.min_val) if (self.max_val - self.min_val) > 0 else 0
+        pct = max(0, min(1, pct)) # Clamp
         angle = -pct * span
         
-        # Dynamic color
-        if pct > 0.9: color = QColor('#ff453a')
-        elif pct > 0.7: color = QColor('#ff9f0a')
-        else: color = QColor('#30d158')
+        # Dynamic color logic
+        if self.warning_limit is not None and self.value >= self.warning_limit:
+            color = QColor('#ff453a') # Red
+        elif self.safe_limit is not None and self.value >= self.safe_limit:
+            color = QColor('#ff9f0a') # Yellow
+        else:
+            # Fallback to percentage based if no limits set, or Green if safe
+            if self.safe_limit is None and self.warning_limit is None:
+                if pct > 0.9: color = QColor('#ff453a')
+                elif pct > 0.7: color = QColor('#ff9f0a')
+                else: color = QColor('#30d158')
+            else:
+                color = QColor('#30d158') # Green
         
-        # Draw active arc
-        pen = QPen(color, 12, Qt.PenStyle.SolidLine, Qt.PenCapStyle.RoundCap)
+        # 2. Draw Active Arc with Gradient
+        # Create a conical gradient for a premium look
+        grad = QConicalGradient(rect.center(), 225)
+        grad.setColorAt(0, color.darker(150))
+        grad.setColorAt(0.5, color)
+        grad.setColorAt(1, color.lighter(130))
+        
+        pen = QPen(QBrush(grad), 8, Qt.PenStyle.SolidLine, Qt.PenCapStyle.RoundCap)
         painter.setPen(pen)
         painter.drawArc(rect, 135 * 16, int(angle * 16))
         
-        # Draw Value Text
+        # 3. Draw Value Text
         painter.setPen(QColor(255, 255, 255))
-        font = QFont("SF Pro Display", 24, QFont.Weight.Bold)
+        # Reduced font size to prevent overlap
+        font = QFont("SF Pro Display", 20, QFont.Weight.Bold)
         painter.setFont(font)
         painter.drawText(rect, Qt.AlignmentFlag.AlignCenter, f"{self.value:.2f}")
 
 
+class LinearGauge(QWidget):
+    def __init__(self, min_val, max_val, safe_limit=None, warning_limit=None, parent=None):
+        super().__init__(parent)
+        self.min_val = min_val
+        self.max_val = max_val
+        self.safe_limit = safe_limit
+        self.warning_limit = warning_limit
+        self.value = min_val
+        self.setFixedHeight(32) # Fixed height for the bar
+        
+    def set_value(self, val):
+        self.value = max(self.min_val, min(self.max_val, val))
+        self.update()
+        
+    def paintEvent(self, event):
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+        
+        rect = self.rect()
+        # Padding
+        bar_rect = QRectF(rect.left(), rect.top() + 8, rect.width(), rect.height() - 16)
+        
+        # 1. Draw Track
+        path = QPainterPath()
+        path.addRoundedRect(bar_rect, bar_rect.height()/2, bar_rect.height()/2)
+        painter.fillPath(path, QColor(255, 255, 255, 20))
+        
+        # 2. Draw Active Bar
+        if self.max_val > self.min_val:
+            pct = (self.value - self.min_val) / (self.max_val - self.min_val)
+            pct = max(0, min(1, pct))
+            
+            active_width = bar_rect.width() * pct
+            if active_width > 0:
+                active_rect = QRectF(bar_rect.left(), bar_rect.top(), active_width, bar_rect.height())
+                
+                # Dynamic Color
+                if self.warning_limit is not None and self.value >= self.warning_limit:
+                    color = QColor('#ff453a')
+                elif self.safe_limit is not None and self.value >= self.safe_limit:
+                    color = QColor('#ff9f0a')
+                else:
+                    if self.safe_limit is None and self.warning_limit is None:
+                        if pct > 0.9: color = QColor('#ff453a')
+                        elif pct > 0.7: color = QColor('#ff9f0a')
+                        else: color = QColor('#30d158')
+                    else:
+                        color = QColor('#30d158')
+                
+                # Gradient
+                grad = QLinearGradient(active_rect.topLeft(), active_rect.bottomRight())
+                grad.setColorAt(0, color.lighter(120))
+                grad.setColorAt(1, color)
+                
+                active_path = QPainterPath()
+                active_path.addRoundedRect(active_rect, bar_rect.height()/2, bar_rect.height()/2)
+                painter.fillPath(active_path, QBrush(grad))
+
+
+class LEDWidget(QFrame):
+    def __init__(self, param_configs, options=None):
+        super().__init__()
+        self.param_configs = param_configs
+        self.options = options or {}
+        self.led_configs = self.options.get('led_configs', {})
+        
+        # Main layout - Responsive Flow
+        # Reduced margins and spacing for tighter packing
+        self.main_layout = FlowLayout(self, margin=8, hSpacing=8, vSpacing=8)
+        
+        self.leds = {}
+        self.value_labels = {}
+        
+        for p_config in param_configs:
+            # Container
+            container = QFrame()
+            # Reduced fixed size to allow narrower width
+            container.setFixedSize(80, 90) 
+            # Remove border/background
+            container.setStyleSheet("background: transparent; border: none;")
+            
+            v_layout = QVBoxLayout(container)
+            v_layout.setContentsMargins(0, 0, 0, 0)
+            v_layout.setSpacing(2)
+            v_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            
+            # Clean parameter name
+            clean_name = p_config['name'].replace('GPS(', '').replace(')', '') if p_config['name'].startswith('GPS(') else p_config['name']
+            
+            # Title
+            title = QLabel(f"{clean_name}")
+            title.setFont(QFont("SF Pro Text", 9, QFont.Weight.Medium))
+            title.setStyleSheet("color: rgba(255, 255, 255, 0.7);")
+            title.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            
+            # LED indicator (now contains value)
+            led = QLabel("--")
+            led.setFixedSize(40, 40) # Smaller LED
+            led.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            led.setFont(QFont("SF Pro Display", 10, QFont.Weight.Bold))
+            
+            # Default inactive style
+            led.setStyleSheet("""
+                border-radius: 20px; 
+                background: #2a2a2a; 
+                border: 2px solid #444;
+                color: #666;
+            """)
+            
+            self.leds[p_config['id']] = led
+            
+            v_layout.addWidget(title)
+            v_layout.addWidget(led, alignment=Qt.AlignmentFlag.AlignCenter)
+            
+            self.main_layout.addWidget(container)
+        
+        # Set frame style
+        self.setStyleSheet("background: transparent;")
+        self.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Preferred)
+            
+    def update_values(self, values_dict):
+        for pid, val in values_dict.items():
+            if pid in self.leds:
+                led = self.leds[pid]
+                led_conf = self.led_configs.get(pid, {})
+                
+                # Default colors
+                active_color = led_conf.get('active_color', '#30d158') # Green
+                inactive_color = led_conf.get('inactive_color', '#ff453a') # Red
+                
+                # Thresholds
+                threshold = led_conf.get('threshold', 0.5)
+                
+                if val is not None:
+                    led.setText(str(val)) # Display the actual value
+                    if val >= threshold:
+                        led.setStyleSheet(f"""
+                            border-radius: 20px; 
+                            background: {active_color}; 
+                            border: 2px solid {QColor(active_color).lighter(150).name()};
+                            color: #fff;
+                        """)
+                    else:
+                        led.setStyleSheet(f"""
+                            border-radius: 20px; 
+                            background: {inactive_color}; 
+                            border: 2px solid {QColor(inactive_color).lighter(150).name()};
+                            color: #fff;
+                        """)
+                else:
+                    led.setText("--")
+                    led.setStyleSheet("""
+                        border-radius: 20px; 
+                        background: #2a2a2a; 
+                        border: 2px solid #444;
+                        color: #666;
+                    """)
+
 class GaugeWidget(QFrame):
     """
-    @brief Gauge widget (Linear or Circular).
+    @brief Gauge widget (Linear or Circular) with Cluster Support.
     """
-    def __init__(self, param_config, options=None):
+    def __init__(self, param_configs, options=None):
         super().__init__()
+        # Ensure param_configs is a list
+        if isinstance(param_configs, dict):
+            param_configs = [param_configs]
+            
         self.options = options or {}
-        self.param_config = param_config
+        self.param_configs = param_configs
         self.style = self.options.get('style', 'Linear')
+        gauge_configs = self.options.get('gauge_configs', {})
         
-        layout = QVBoxLayout(self)
-        layout.setContentsMargins(16, 16, 16, 16)
+        # Main layout - Responsive Flow
+        self.main_layout = FlowLayout(self, margin=16, hSpacing=16, vSpacing=16)
         
-        # Header
-        header_layout = QHBoxLayout()
-        name_lbl = QLabel(param_config['name'])
-        name_lbl.setFont(QFont("SF Pro Text", 10, QFont.Weight.Medium))
-        name_lbl.setStyleSheet("color: #aaaaaa;")
+        self.gauges = {}
+        self.value_labels = {}
         
-        unit_lbl = QLabel(param_config.get('unit', ''))
-        unit_lbl.setFont(QFont("SF Pro Text", 10, QFont.Weight.Normal))
-        unit_lbl.setStyleSheet("color: #666666;")
-        
-        header_layout.addWidget(name_lbl)
-        header_layout.addStretch()
-        header_layout.addWidget(unit_lbl)
-        
-        layout.addLayout(header_layout)
-        
-        self.min_val = float(self.options.get('min_value', 0))
-        self.max_val = float(self.options.get('max_value', 100))
-        
-        if self.style == 'Circular':
-            self.gauge = CircularGauge(self.min_val, self.max_val)
-            layout.addWidget(self.gauge, alignment=Qt.AlignmentFlag.AlignCenter)
-        else:
-            # Linear Capsule Style
-            self.value_lbl = QLabel("--")
-            self.value_lbl.setAlignment(Qt.AlignmentFlag.AlignLeft)
-            self.value_lbl.setFont(QFont("SF Pro Display", 28, QFont.Weight.Bold))
-            self.value_lbl.setStyleSheet("color: #ffffff;")
-            layout.addWidget(self.value_lbl)
+        for p_config in param_configs:
+            pid = p_config['id']
+            # Get specific config or defaults
+            g_conf = gauge_configs.get(pid, {})
+            min_val = float(g_conf.get('min', self.options.get('min_value', 0)))
+            max_val = float(g_conf.get('max', self.options.get('max_value', 100)))
+            safe_lim = float(g_conf.get('safe', 70)) if 'safe' in g_conf else None
+            warn_lim = float(g_conf.get('warning', 90)) if 'warning' in g_conf else None
             
-            self.bar = pg.PlotWidget()
-            self.bar.setFixedHeight(32)
-            self.bar.setBackground(None)
-            self.bar.hideAxis('left')
-            self.bar.hideAxis('bottom')
-            self.bar.setMenuEnabled(False)
-            self.bar.setMouseEnabled(x=False, y=False)
-            self.bar.setYRange(0, 1, padding=0)
-            self.bar.setXRange(self.min_val, self.max_val, padding=0)
+            # Container
+            container = QFrame()
+            # Fixed size based on style
+            if self.style == 'Circular':
+                container.setFixedSize(160, 160)
+            else:
+                container.setFixedSize(200, 100)
+                
+            container.setStyleSheet("background: transparent; border: none;")
             
-            bg_bar = pg.BarGraphItem(x=[(self.min_val + self.max_val)/2], height=[1], width=self.max_val-self.min_val, brush=pg.mkBrush(40, 40, 40, 255))
-            self.bar.addItem(bg_bar)
+            v_layout = QVBoxLayout(container)
+            v_layout.setContentsMargins(0, 0, 0, 0)
+            v_layout.setSpacing(4)
             
-            self.fill_bar = pg.BarGraphItem(x=[self.min_val], height=[1], width=0, brush=pg.mkBrush('#0a84ff'))
-            self.bar.addItem(self.fill_bar)
-            layout.addWidget(self.bar)
+            # Header (Name + Unit)
+            header_layout = QHBoxLayout()
+            name_lbl = QLabel(p_config['name'])
+            name_lbl.setFont(QFont("SF Pro Text", 10, QFont.Weight.Medium))
+            name_lbl.setStyleSheet("color: #aaaaaa;")
             
-        layout.addStretch()
+            unit_lbl = QLabel(p_config.get('unit', ''))
+            unit_lbl.setFont(QFont("SF Pro Text", 10, QFont.Weight.Normal))
+            unit_lbl.setStyleSheet("color: #666666;")
+            
+            header_layout.addWidget(name_lbl)
+            header_layout.addStretch()
+            header_layout.addWidget(unit_lbl)
+            
+            v_layout.addLayout(header_layout)
+            
+            if self.style == 'Circular':
+                gauge = CircularGauge(min_val, max_val, safe_lim, warn_lim)
+                v_layout.addWidget(gauge, alignment=Qt.AlignmentFlag.AlignCenter)
+                self.gauges[pid] = gauge
+            else:
+                # Linear Capsule Style
+                value_lbl = QLabel("--")
+                value_lbl.setAlignment(Qt.AlignmentFlag.AlignLeft)
+                value_lbl.setFont(QFont("SF Pro Display", 28, QFont.Weight.Bold))
+                value_lbl.setStyleSheet("color: #ffffff;")
+                v_layout.addWidget(value_lbl)
+                self.value_labels[pid] = value_lbl
+                
+                gauge = LinearGauge(min_val, max_val, safe_lim, warn_lim)
+                v_layout.addWidget(gauge)
+                self.gauges[pid] = gauge
+                
+            self.main_layout.addWidget(container)
         
-        self.setStyleSheet("""
-            QFrame {
-                background-color: rgba(30, 30, 30, 0.8);
-                border-radius: 20px;
-                border: 1px solid rgba(255, 255, 255, 0.05);
-            }
-        """)
+        self.setStyleSheet("background: transparent;")
+
+    def update_values(self, values_dict):
+        for pid, val in values_dict.items():
+            if pid in self.gauges:
+                v = float(val) if val is not None else self.gauges[pid].min_val
+                self.gauges[pid].set_value(v)
+                
+                if pid in self.value_labels:
+                    self.value_labels[pid].setText(f"{v:.2f}")
 
     def update_value(self, value):
-        val = float(value) if value is not None else self.min_val
-        
-        if self.style == 'Circular':
-            self.gauge.set_value(val)
-        else:
-            try:
-                self.value_lbl.setText(f"{val:.2f}")
-            except:
-                self.value_lbl.setText("--")
-                
-            val = max(self.min_val, min(self.max_val, val))
-            width = val - self.min_val
-            center = self.min_val + (width / 2.0)
-            self.fill_bar.setOpts(x=[center], height=[1], width=width)
-            
-            pct = (val - self.min_val) / (self.max_val - self.min_val) if (self.max_val - self.min_val) > 0 else 0
-            if pct > 0.9: color = '#ff453a'
-            elif pct > 0.7: color = '#ff9f0a'
-            else: color = '#30d158'
-            self.fill_bar.setOpts(brush=pg.mkBrush(color))
+        # Legacy support / Single value update
+        if self.param_configs:
+            pid = self.param_configs[0]['id']
+            self.update_values({pid: value})
         
 class TimeGraph(QWidget):
     """
@@ -457,30 +763,9 @@ class TimeGraph(QWidget):
         self.update_timer.start(50) # Update UI every 50ms (20 FPS) to prevent crashing
         # -----------------------------------------
 
-        # Toolbar
+        # Main Layout
         container = QVBoxLayout(self)
         container.setContentsMargins(0, 0, 0, 0)
-        toolbar = QHBoxLayout()
-        toolbar.setContentsMargins(8, 8, 8, 0)
-        reset_btn = QPushButton("Reset View")
-        reset_btn.setObjectName("SecondaryCTA")
-        # Modern button style
-        reset_btn.setStyleSheet("""
-            QPushButton {
-                background-color: rgba(255, 255, 255, 0.1);
-                border: none;
-                border-radius: 12px;
-                color: #fff;
-                padding: 6px 12px;
-                font-family: "SF Pro Text";
-                font-size: 12px;
-            }
-            QPushButton:hover {
-                background-color: rgba(255, 255, 255, 0.2);
-            }
-        """)
-        toolbar.addStretch()
-        toolbar.addWidget(reset_btn)
 
         # Plot
         self.plot_widget = pg.PlotWidget()
@@ -514,6 +799,31 @@ class TimeGraph(QWidget):
         self.plot_widget.setTitle(title, color='#ffffff', size='11pt')
         self.plot_widget.setLabel('left', unit_label, color='#aaaaaa', **{'font-family': 'SF Pro Text', 'font-size': '10pt'})
 
+        # Reset Button (Overlay)
+        # Parent to self (TimeGraph) instead of plot_widget to avoid potential segfaults with PyQTGraph internals
+        self.reset_btn = QPushButton(self)
+        self.reset_btn.setIcon(QIcon.fromTheme("view-refresh"))
+        self.reset_btn.setToolTip("Reset View")
+        self.reset_btn.setFixedSize(32, 32)
+        self.reset_btn.setStyleSheet("""
+            QPushButton {
+                background-color: rgba(255, 255, 255, 0.1);
+                border: 1px solid rgba(255, 255, 255, 0.1);
+                border-radius: 6px;
+                color: #fff;
+            }
+            QPushButton:hover {
+                background-color: rgba(255, 255, 255, 0.2);
+            }
+            QPushButton:pressed {
+                background-color: rgba(255, 255, 255, 0.3);
+            }
+        """)
+        self.reset_btn.raise_() # Ensure it's on top of the plot
+        # Position in top-right corner
+        self.reset_btn.move(10, 10) # Initial position, will update in resizeEvent
+        self.reset_btn.clicked.connect(lambda: self.plot_widget.enableAutoRange())
+
         for p_config in self.param_configs:
             # Use a nice gradient fill
             # We need to define a brush that has a gradient
@@ -541,7 +851,6 @@ class TimeGraph(QWidget):
             
             self.curves[p_config['id']] = curve
 
-        container.addLayout(toolbar)
         container.addWidget(self.plot_widget)
         
         self.setStyleSheet("""
@@ -551,20 +860,13 @@ class TimeGraph(QWidget):
                 border: 1px solid rgba(255, 255, 255, 0.05);
             }
         """)
-
-        def _reset():
-            try:
-                self.plot_widget.enableAutoRange(axis=pg.ViewBox.XYAxes, enable=True)
-                # Reset our internal threshold tracker on manual reset
-                self.current_y_max = 0 
-            except Exception:
-                pass
-
-        reset_btn.clicked.connect(_reset)
-
+        
+        # Initialize start time for relative plotting
         self.start_time = time.time()
-        self.vLine = pg.InfiniteLine(angle=90, movable=False, pen=pg.mkPen('yellow', style=Qt.DashLine))
-        self.hLine = pg.InfiniteLine(angle=0, movable=False, pen=pg.mkPen('yellow', style=Qt.DashLine))
+        
+        # Crosshairs
+        self.vLine = pg.InfiniteLine(angle=90, movable=False, pen=pg.mkPen('yellow', style=Qt.PenStyle.DashLine))
+        self.hLine = pg.InfiniteLine(angle=0, movable=False, pen=pg.mkPen('yellow', style=Qt.PenStyle.DashLine))
         self.label = pg.TextItem(color='white', anchor=(0, 1))
         self.plot_widget.addItem(self.vLine, ignoreBounds=True)
         self.plot_widget.addItem(self.hLine, ignoreBounds=True)
@@ -572,6 +874,12 @@ class TimeGraph(QWidget):
 
         self.proxy = pg.SignalProxy(self.plot_widget.scene().sigMouseMoved, rateLimit=60, slot=self.mouse_moved)
         self.plot_widget.scene().sigMouseClicked.connect(self.mouse_clicked)
+
+    def resizeEvent(self, event):
+        super().resizeEvent(event)
+        # Keep reset button in top-right corner
+        if hasattr(self, 'reset_btn'):
+            self.reset_btn.move(self.width() - 42, 10)
 
     def update_data(self, history):
         """
@@ -763,53 +1071,42 @@ class LEDWidget(QFrame):
         self.options = options or {}
         self.led_configs = self.options.get('led_configs', {})
         
-        # Main layout
-        self.main_layout = QGridLayout(self)
-        self.main_layout.setContentsMargins(16, 16, 16, 16)
-        self.main_layout.setSpacing(16)
+        # Main layout - Responsive Flow
+        self.main_layout = FlowLayout(self, margin=16, hSpacing=16, vSpacing=16)
         
         self.leds = {}
         self.value_labels = {}
         
-        # Calculate grid dimensions
-        n = len(param_configs)
-        cols = math.ceil(math.sqrt(n))
-        
-        for i, p_config in enumerate(param_configs):
-            row = i // cols
-            col = i % cols
-            
+        for p_config in param_configs:
             # Container
             container = QFrame()
-            container.setStyleSheet("""
-                QFrame {
-                    background-color: rgba(50, 50, 50, 0.6);
-                    border-radius: 20px;
-                    border: 1px solid rgba(255, 255, 255, 0.05);
-                }
-            """)
+            container.setFixedSize(100, 100) # Compact fixed size
+            # Remove border/background
+            container.setStyleSheet("background: transparent; border: none;")
+            
             v_layout = QVBoxLayout(container)
-            v_layout.setContentsMargins(16, 16, 16, 16)
-            v_layout.setSpacing(8)
+            v_layout.setContentsMargins(0, 0, 0, 0)
+            v_layout.setSpacing(4)
+            v_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
             
             # Clean parameter name
             clean_name = p_config['name'].replace('GPS(', '').replace(')', '') if p_config['name'].startswith('GPS(') else p_config['name']
             
             # Title
             title = QLabel(f"{clean_name}")
-            title.setFont(QFont("SF Pro Text", 11, QFont.Weight.Bold))
-            title.setStyleSheet("color: rgba(255, 255, 255, 0.9);")
+            title.setFont(QFont("SF Pro Text", 10, QFont.Weight.Medium))
+            title.setStyleSheet("color: rgba(255, 255, 255, 0.7);")
             title.setAlignment(Qt.AlignmentFlag.AlignCenter)
             
             # LED indicator (now contains value)
             led = QLabel("--")
-            led.setFixedSize(60, 60) # Larger to hold text
+            led.setFixedSize(48, 48) # Compact size
             led.setAlignment(Qt.AlignmentFlag.AlignCenter)
-            led.setFont(QFont("SF Pro Display", 14, QFont.Weight.Bold))
+            led.setFont(QFont("SF Pro Display", 12, QFont.Weight.Bold))
             
             # Default inactive style
             led.setStyleSheet("""
-                border-radius: 30px; 
+                border-radius: 24px; 
                 background: #2a2a2a; 
                 border: 2px solid #444;
                 color: #666;
@@ -820,7 +1117,7 @@ class LEDWidget(QFrame):
             v_layout.addWidget(title)
             v_layout.addWidget(led, alignment=Qt.AlignmentFlag.AlignCenter)
             
-            self.main_layout.addWidget(container, row, col)
+            self.main_layout.addWidget(container)
         
         # Set frame style
         self.setStyleSheet("background: transparent;")
@@ -835,7 +1132,7 @@ class LEDWidget(QFrame):
                 if val is None:
                     led.setText("--")
                     led.setStyleSheet("""
-                        border-radius: 30px; 
+                        border-radius: 24px; 
                         background: #2a2a2a; 
                         border: 2px solid #444;
                         color: #666;
@@ -890,7 +1187,7 @@ class LEDWidget(QFrame):
                     text_color = "#000000" if brightness > 128 else "#ffffff"
                     
                     led.setStyleSheet(f"""
-                        border-radius: 30px; 
+                        border-radius: 24px; 
                         background-color: {active_color};
                         border: 2px solid {active_color};
                         color: {text_color};
@@ -909,7 +1206,7 @@ class LEDWidget(QFrame):
                 else:
                     # Inactive State
                     led.setStyleSheet("""
-                        border-radius: 30px; 
+                        border-radius: 24px; 
                         background: #2a2a2a; 
                         border: 2px solid #444;
                         color: #666;
@@ -1370,6 +1667,43 @@ class LogTable(QWidget):
         """)
         
         layout.addWidget(self.table)
+        # --- Collapsible Search Bar ---
+        
+        # 1. Toolbar with Toggle Button
+        toolbar = QHBoxLayout()
+        toolbar.setContentsMargins(4, 4, 4, 4)
+        toolbar.addStretch()
+        
+        self.toggle_search_btn = QPushButton()
+        self.toggle_search_btn.setIcon(QIcon.fromTheme("system-search-symbolic"))
+        self.toggle_search_btn.setFixedSize(32, 32)
+        self.toggle_search_btn.setCheckable(True)
+        self.toggle_search_btn.setToolTip("Toggle Search")
+        self.toggle_search_btn.setStyleSheet("""
+            QPushButton {
+                background-color: transparent;
+                border: none;
+                border-radius: 6px;
+            }
+            QPushButton:hover {
+                background-color: rgba(255, 255, 255, 0.1);
+            }
+            QPushButton:checked {
+                background-color: rgba(255, 255, 255, 0.2);
+            }
+        """)
+        self.toggle_search_btn.clicked.connect(self._toggle_search_visibility)
+        toolbar.addWidget(self.toggle_search_btn)
+        
+        layout.addLayout(toolbar)
+        
+        # 2. Search Container (Hidden by default)
+        self.search_container = QWidget()
+        self.search_container.hide()
+        
+        search_group_layout = QVBoxLayout(self.search_container)
+        search_group_layout.setContentsMargins(0, 0, 0, 0)
+        
         search_group = QGroupBox("Search and Highlight")
         search_layout = QHBoxLayout(search_group)
         self.search_param_combo = QComboBox(); self.search_param_combo.addItems([p['name'] for p in self.param_configs])
@@ -1379,9 +1713,18 @@ class LogTable(QWidget):
         search_layout.addWidget(QLabel("Find in:")); search_layout.addWidget(self.search_param_combo)
         search_layout.addWidget(self.search_cond_combo); search_layout.addWidget(self.search_value_spinbox)
         search_layout.addWidget(search_btn); search_layout.addWidget(clear_btn)
-        layout.addWidget(search_group)
+        
+        search_group_layout.addWidget(search_group)
+        layout.addWidget(self.search_container)
+        
         search_btn.clicked.connect(self.search_and_highlight)
         clear_btn.clicked.connect(self.clear_highlights)
+
+    def _toggle_search_visibility(self, checked):
+        if checked:
+            self.search_container.show()
+        else:
+            self.search_container.hide()
     def update_data(self, updated_param_id, history):
         # Optimization: Limit rows to 100
         if self.table.rowCount() > 100: self.table.removeRow(100)

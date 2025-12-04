@@ -170,26 +170,42 @@ class RawTelemetryMonitor(QDialog):
         self.is_paused = False
         self.max_lines = 1000
         
-        # Apply styling
+        # Apply styling - Apple-like Dark Theme
         self.setStyleSheet("""
             QDialog {
-                background-color: #1e1e1e;
+                background-color: #1c1c1e; /* Apple Dark Background */
+            }
+            QLabel {
+                color: #f5f5f7;
+                font-family: "SF Pro Text";
             }
             QPushButton {
-                background-color: #2a2a2a;
-                border: 1px solid #404040;
-                border-radius: 4px;
-                padding: 8px 16px;
-                color: #e0e0e0;
+                background-color: rgba(255, 255, 255, 0.1);
+                border: none;
+                border-radius: 6px;
+                padding: 6px 12px;
+                color: #f5f5f7;
+                font-family: "SF Pro Text";
                 font-weight: 500;
             }
             QPushButton:hover {
-                background-color: #333333;
-                border-color: #66b3ff;
+                background-color: rgba(255, 255, 255, 0.2);
             }
             QPushButton:checked {
-                background-color: #0a84ff;
-                border-color: #0a84ff;
+                background-color: #0a84ff; /* Apple Blue */
+                color: white;
+            }
+            QPushButton:pressed {
+                background-color: rgba(255, 255, 255, 0.05);
+            }
+            QTextEdit {
+                background-color: #000000;
+                color: #00ff88;
+                border: 1px solid #333;
+                border-radius: 8px;
+                padding: 8px;
+                font-family: "SF Mono", "Menlo", "Consolas", monospace;
+                font-size: 11px;
             }
         """)
 
@@ -404,38 +420,55 @@ class StandaloneTelemetryViewer(QDialog):
         
         main_layout.addWidget(content_area, 4)
         
-        # Apply global styling
+        # Apply global styling - Apple-like Dark Theme
         self.setStyleSheet("""
-            QDialog { background-color: #1e1e1e; color: #e0e0e0; }
-            QLabel { color: #e0e0e0; }
+            QDialog { background-color: #1c1c1e; color: #f5f5f7; }
+            QLabel { color: #f5f5f7; font-family: "SF Pro Text"; }
+            
+            /* Group Box - Clean & Minimal */
             QGroupBox {
-                border: 1px solid #3a3a3a;
-                border-radius: 6px;
-                margin-top: 12px;
-                padding-top: 12px;
-                font-weight: bold;
-                color: #ffffff;
-                background-color: #252525;
+                border: none;
+                margin-top: 24px;
+                font-family: "SF Pro Text";
+                font-weight: 600;
+                font-size: 13px;
+                color: #86868b; /* Apple Gray */
+                text-transform: uppercase;
+                letter-spacing: 0.5px;
             }
-            QGroupBox::title { subcontrol-origin: margin; left: 10px; padding: 0 5px; }
+            QGroupBox::title { subcontrol-origin: margin; left: 0px; padding: 0 0px; }
+            
+            /* Buttons - Rounded Pills */
             QPushButton {
-                background-color: #2a2a2a;
-                border: 1px solid #404040;
-                border-radius: 4px;
+                background-color: rgba(255, 255, 255, 0.1);
+                border: none;
+                border-radius: 6px;
                 padding: 6px 12px;
-                color: #e0e0e0;
+                color: #f5f5f7;
+                font-family: "SF Pro Text";
+                font-weight: 500;
             }
-            QPushButton:hover { background-color: #333333; border-color: #66b3ff; }
-            QPushButton:checked { background-color: #0a84ff; border-color: #0a84ff; }
+            QPushButton:hover { background-color: rgba(255, 255, 255, 0.2); }
+            QPushButton:checked { background-color: #0a84ff; color: white; }
+            QPushButton:pressed { background-color: rgba(255, 255, 255, 0.05); }
+            
+            /* Inputs - Modern Fields */
             QComboBox, QLineEdit, QSpinBox {
-                background-color: #2b2b2b;
-                border: 1px solid #4a4a4a;
-                border-radius: 4px;
-                padding: 5px;
-                color: #e0e0e0;
+                background-color: rgba(0, 0, 0, 0.2);
+                border: 1px solid rgba(255, 255, 255, 0.1);
+                border-radius: 6px;
+                padding: 6px;
+                color: #f5f5f7;
+                font-family: "SF Pro Text";
             }
-            QCheckBox { spacing: 8px; }
-            QCheckBox::indicator { width: 16px; height: 16px; border-radius: 3px; border: 1px solid #555; background: #2b2b2b; }
+            QComboBox:focus, QLineEdit:focus, QSpinBox:focus {
+                border: 1px solid #0a84ff;
+                background-color: rgba(0, 0, 0, 0.4);
+            }
+            
+            /* Checkboxes */
+            QCheckBox { spacing: 8px; color: #f5f5f7; font-family: "SF Pro Text"; }
+            QCheckBox::indicator { width: 18px; height: 18px; border-radius: 4px; border: 1px solid #555; background: rgba(0,0,0,0.3); }
             QCheckBox::indicator:checked { background: #0a84ff; border-color: #0a84ff; }
         """)
         

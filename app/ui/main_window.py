@@ -199,6 +199,8 @@ class MainWindow(QMainWindow):
         self.stream_status_label = QLabel("Awaiting Parameters")
         self.connection_status_label = QLabel("Not Connected")
         self.pause_button = QPushButton("Pause Stream"); self.pause_button.setCheckable(True)
+        self.logging_btn = QPushButton("Start Logging"); self.logging_btn.setCheckable(True)
+        self.logging_btn.clicked.connect(self.toggle_logging)
         self.logging_status_label = QLabel("Logging: OFF")
         
         # Customizable dashboard title
@@ -305,6 +307,18 @@ class MainWindow(QMainWindow):
         # ESC to exit fullscreen
         elif event.key() == Qt.Key.Key_Escape and self.is_fullscreen:
             self.toggle_fullscreen()
+            event.accept()
+        # Space to pause/resume
+        elif event.key() == Qt.Key.Key_Space:
+            self.toggle_pause_stream()
+            event.accept()
+        # Ctrl+L to toggle logging
+        elif event.key() == Qt.Key.Key_L and (event.modifiers() & Qt.KeyboardModifier.ControlModifier):
+            self.toggle_logging()
+            event.accept()
+        # F1 for shortcuts dialog
+        elif event.key() == Qt.Key.Key_F1:
+            self.show_shortcuts_dialog()
             event.accept()
         else:
             super().keyPressEvent(event)
@@ -1167,11 +1181,11 @@ class MainWindow(QMainWindow):
                 widget.update_values(values)
             
             elif isinstance(widget, GaugeWidget):
-                    if config['param_ids']:
-                        pid = config['param_ids'][0]
-                        if pid in self.data_history and self.data_history[pid]:
-                            val = self.data_history[pid][-1]['filtered_value']
-                            widget.update_value(val)
+                values = {}
+                for pid in config['param_ids']:
+                    if pid in self.data_history and self.data_history[pid]:
+                        values[pid] = self.data_history[pid][-1]['filtered_value']
+                widget.update_values(values)
 
             elif isinstance(widget, LEDWidget):
                 # LEDWidget now accepts a dict of values
@@ -1314,6 +1328,7 @@ class MainWindow(QMainWindow):
             # Wrap in dock
             mainwindow = tab_info['mainwindow']
             dock = ClosableDock(config['displayType'], mainwindow, widget_id=widget_id)
+            dock.setObjectName(f"dock_{widget_id}")
             dock.setWidget(widget)
             dock.closed.connect(self.remove_widget_by_id)
             
@@ -2947,6 +2962,7 @@ class MainWindow(QMainWindow):
         
         self.update_filter_menus()
         
+        
         filters_menu.addSeparator()
         manage_filters_action = QAction("Manage Filters...", self)
         manage_filters_action.setShortcut("Ctrl+F")
@@ -3026,13 +3042,18 @@ class MainWindow(QMainWindow):
         # Help menu
         help_menu = menubar.addMenu("Help")
         
+        shortcuts_action = QAction("Keyboard Shortcuts", self)
+        shortcuts_action.setShortcut("F1")
+        shortcuts_action.triggered.connect(self.show_shortcuts_dialog)
+        
         documentation_action = QAction("Documentation", self)
-        documentation_action.setShortcut("F1")
+        # documentation_action.setShortcut("F1")
         documentation_action.triggered.connect(self.show_documentation)
         
         about_action = QAction("About", self)
         about_action.triggered.connect(self.show_about_dialog)
         
+        help_menu.addAction(shortcuts_action)
         help_menu.addAction(documentation_action)
         help_menu.addAction(about_action)
 
@@ -3144,13 +3165,18 @@ class MainWindow(QMainWindow):
         # Help menu
         help_menu = menubar.addMenu("Help")
         
+        shortcuts_action = QAction("Keyboard Shortcuts", self)
+        shortcuts_action.setShortcut("F1")
+        shortcuts_action.triggered.connect(self.show_shortcuts_dialog)
+        
         documentation_action = QAction("Documentation", self)
-        documentation_action.setShortcut("F1")
+        # documentation_action.setShortcut("F1")
         documentation_action.triggered.connect(self.show_documentation)
         
         about_action = QAction("About", self)
         about_action.triggered.connect(self.show_about_dialog)
         
+        help_menu.addAction(shortcuts_action)
         help_menu.addAction(documentation_action)
         help_menu.addAction(about_action)
 
@@ -3719,9 +3745,9 @@ class MainWindow(QMainWindow):
             self.session_time_label.setVisible(False)
             
         # Log Size
-        if hasattr(self, 'data_logger') and self.data_logger.is_logging and self.data_logger.current_file:
+        if hasattr(self, 'data_logger') and self.data_logger.is_logging and self.data_logger.log_file_path:
             try:
-                size_bytes = os.path.getsize(self.data_logger.current_file)
+                size_bytes = os.path.getsize(self.data_logger.log_file_path)
                 for unit in ['B', 'KB', 'MB', 'GB']:
                     if size_bytes < 1024: break
                     size_bytes /= 1024
@@ -3811,8 +3837,8 @@ class MainWindow(QMainWindow):
                 self.sb_connection_label.setText("○ Disconnected")
                 self.sb_connection_label.setStyleSheet("color: #ff453a;")
 
-    def toggle_logging_from_statusbar(self):
-        """Toggle data logging from status bar button"""
+    def toggle_logging(self):
+        """Toggle data logging"""
         if self.data_logger.is_logging:
             # Stop logging
             self.stop_logging()
@@ -4869,13 +4895,15 @@ class MainWindow(QMainWindow):
                     param_values = {}
                     for line in json_lines:
                         entry = json.loads(line)
+                        ts = entry.get('timestamp', 0)
                         params = entry.get('parameters', {})
                         
                         for param_id, value in params.items():
                             if value is not None:
                                 if param_id not in param_values:
-                                    param_values[param_id] = []
-                                param_values[param_id].append(value)
+                                    param_values[param_id] = {'timestamps': [], 'values': []}
+                                param_values[param_id]['timestamps'].append(ts)
+                                param_values[param_id]['values'].append(value)
                     
                     # Compute statistics
                     for param in self.data_logger.parameters:
@@ -4883,14 +4911,16 @@ class MainWindow(QMainWindow):
                         param_name = param['name']
                         
                         if param_id in param_values:
-                            values = param_values[param_id]
+                            values = param_values[param_id]['values']
+                            timestamps = param_values[param_id]['timestamps']
                             data_summary['parameters'][param_name] = {
                                 'unit': param['unit'],
                                 'count': len(values),
                                 'min': min(values),
                                 'max': max(values),
                                 'mean': sum(values) / len(values),
-                                'values': values
+                                'values': values,
+                                'timestamps': timestamps
                             }
         
         except Exception as e:
@@ -4901,26 +4931,31 @@ class MainWindow(QMainWindow):
         return data_summary
     
     def _create_pdf_report(self, pdf_path, data_summary):
-        """Create a formatted PDF report"""
+        """Create a formatted PDF report with plots and professional styling"""
         
         from reportlab.lib.pagesizes import letter
         from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
         from reportlab.lib.units import inch
-        from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, PageBreak
+        from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, PageBreak, Image as ReportLabImage
         from reportlab.lib import colors
-        from reportlab.lib.enums import TA_CENTER, TA_LEFT
+        from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_RIGHT
+        import matplotlib.pyplot as plt
+        import io
+        from PIL import Image
         
         # Create PDF document
-        doc = SimpleDocTemplate(pdf_path, pagesize=letter)
+        doc = SimpleDocTemplate(pdf_path, pagesize=letter, topMargin=0.75*inch, bottomMargin=0.75*inch)
         story = []
         styles = getSampleStyleSheet()
         
-        # Custom styles
+        # --- Custom Styles ---
+        # Apple-like typography
         title_style = ParagraphStyle(
             'CustomTitle',
             parent=styles['Heading1'],
+            fontName='Helvetica-Bold',
             fontSize=24,
-            textColor=colors.HexColor('#0a84ff'),
+            textColor=colors.HexColor('#1d1d1f'), # Apple dark gray
             spaceAfter=30,
             alignment=TA_CENTER
         )
@@ -4928,17 +4963,61 @@ class MainWindow(QMainWindow):
         heading_style = ParagraphStyle(
             'CustomHeading',
             parent=styles['Heading2'],
+            fontName='Helvetica-Bold',
             fontSize=16,
-            textColor=colors.HexColor('#1c9c4f'),
+            textColor=colors.HexColor('#007aff'), # Apple Blue
             spaceAfter=12,
-            spaceBefore=12
+            spaceBefore=20
         )
         
-        # Title
-        story.append(Paragraph("Glance Telemetry Data Summary Report", title_style))
+        normal_style = ParagraphStyle(
+            'CustomNormal',
+            parent=styles['Normal'],
+            fontName='Helvetica',
+            fontSize=10,
+            textColor=colors.HexColor('#333333'),
+            leading=14
+        )
+
+        # --- Footer Function ---
+        def add_footer(canvas, doc):
+            canvas.saveState()
+            canvas.setFont('Helvetica', 9)
+            canvas.setFillColor(colors.HexColor('#86868b')) # Apple gray
+            
+            # Draw Line
+            canvas.setStrokeColor(colors.HexColor('#d2d2d7'))
+            canvas.line(inch, 0.75*inch, letter[0]-inch, 0.75*inch)
+            
+            # Left: Timestamp
+            timestamp = datetime.now().strftime('%Y-%m-%d %H:%M')
+            canvas.drawString(inch, 0.5*inch, f"Generated: {timestamp}")
+            
+            # Center: Page Number
+            page_num = canvas.getPageNumber()
+            canvas.drawCentredString(letter[0]/2, 0.5*inch, f"Page {page_num}")
+            
+            # Right: Logo & Branding
+            # Assuming logo exists at ./docs/public/Glance_nobg.png
+            logo_path = "./docs/public/Glance_nobg.png"
+            if os.path.exists(logo_path):
+                # Draw small logo
+                canvas.drawImage(logo_path, letter[0]-1.2*inch, 0.45*inch, width=0.2*inch, height=0.2*inch, mask='auto')
+                canvas.drawString(letter[0]-0.95*inch, 0.5*inch, "Glance")
+            else:
+                canvas.drawRightString(letter[0]-inch, 0.5*inch, "Glance Dashboard")
+                
+            canvas.restoreState()
+
+        # --- Content ---
+        
+        # 1. Title
+        # Use window title or default
+        report_title = self.windowTitle().replace(" - Telemetry Dashboard", "") + " Report"
+        story.append(Paragraph(report_title, title_style))
         story.append(Spacer(1, 0.2*inch))
         
-        # Report metadata
+        # 2. Metadata Table
         story.append(Paragraph("Report Information", heading_style))
         
         meta_data = [
@@ -4950,9 +5029,9 @@ class MainWindow(QMainWindow):
         ]
         
         if data_summary['start_time']:
-            meta_data.append(['Start Time:', data_summary['start_time']])
+            meta_data.append(['Start Time:', str(data_summary['start_time'])])
         if data_summary['end_time']:
-            meta_data.append(['End Time:', data_summary['end_time']])
+            meta_data.append(['End Time:', str(data_summary['end_time'])])
         if data_summary['duration']:
             hours = int(data_summary['duration'] // 3600)
             minutes = int((data_summary['duration'] % 3600) // 60)
@@ -4961,14 +5040,14 @@ class MainWindow(QMainWindow):
         
         meta_table = Table(meta_data, colWidths=[2*inch, 4*inch])
         meta_table.setStyle(TableStyle([
-            ('BACKGROUND', (0, 0), (0, -1), colors.HexColor('#f0f0f0')),
-            ('TEXTCOLOR', (0, 0), (-1, -1), colors.black),
+            ('BACKGROUND', (0, 0), (0, -1), colors.HexColor('#f5f5f7')), # Apple light gray
+            ('TEXTCOLOR', (0, 0), (-1, -1), colors.HexColor('#1d1d1f')),
             ('ALIGN', (0, 0), (0, -1), 'RIGHT'),
             ('ALIGN', (1, 0), (1, -1), 'LEFT'),
             ('FONTNAME', (0, 0), (0, -1), 'Helvetica-Bold'),
             ('FONTNAME', (1, 0), (1, -1), 'Helvetica'),
             ('FONTSIZE', (0, 0), (-1, -1), 10),
-            ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+            ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#d2d2d7')),
             ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
             ('TOPPADDING', (0, 0), (-1, -1), 8),
             ('BOTTOMPADDING', (0, 0), (-1, -1), 8),
@@ -4977,12 +5056,11 @@ class MainWindow(QMainWindow):
         story.append(meta_table)
         story.append(Spacer(1, 0.3*inch))
         
-        # Parameter statistics
+        # 3. Parameter Statistics Table
         if data_summary['parameters']:
             story.append(Paragraph("Parameter Statistics", heading_style))
             story.append(Spacer(1, 0.1*inch))
             
-            # Create statistics table
             stats_data = [['Parameter', 'Unit', 'Samples', 'Min', 'Max', 'Mean']]
             
             for param_name, stats in data_summary['parameters'].items():
@@ -4997,15 +5075,15 @@ class MainWindow(QMainWindow):
             
             stats_table = Table(stats_data, colWidths=[1.5*inch, 0.8*inch, 0.8*inch, 0.9*inch, 0.9*inch, 0.9*inch])
             stats_table.setStyle(TableStyle([
-                ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#0a84ff')),
-                ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+                ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#007aff')),
+                ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
                 ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
                 ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
                 ('FONTSIZE', (0, 0), (-1, 0), 11),
                 ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
                 ('FONTSIZE', (0, 1), (-1, -1), 9),
-                ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
-                ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor('#f9f9f9')]),
+                ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#d2d2d7')),
+                ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor('#f5f5f7')]),
                 ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
                 ('TOPPADDING', (0, 0), (-1, -1), 6),
                 ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
@@ -5014,79 +5092,122 @@ class MainWindow(QMainWindow):
             story.append(stats_table)
             story.append(Spacer(1, 0.3*inch))
             
-            # Add detailed breakdown for each parameter
+            # 4. Detailed Analysis & Plots
             story.append(PageBreak())
             story.append(Paragraph("Detailed Parameter Analysis", heading_style))
             story.append(Spacer(1, 0.2*inch))
             
             for param_name, stats in data_summary['parameters'].items():
-                # Parameter name
+                # Find param ID to check filters
+                param_id = None
+                for p in self.data_logger.parameters:
+                    if p['name'] == param_name:
+                        param_id = p['id']
+                        break
+                
+                # Parameter Header
                 param_title = ParagraphStyle(
                     'ParamTitle',
                     parent=styles['Heading3'],
-                    fontSize=13,
-                    textColor=colors.HexColor('#333333'),
-                    spaceAfter=8
+                    fontSize=14,
+                    textColor=colors.HexColor('#1d1d1f'),
+                    spaceAfter=8,
+                    fontName='Helvetica-Bold'
                 )
                 story.append(Paragraph(f"{param_name} ({stats['unit']})", param_title))
                 
-                # Detailed stats
+                # Stats Table (Mini)
                 detail_data = [
-                    ['Metric', 'Value'],
-                    ['Sample Count', str(stats['count'])],
-                    ['Minimum Value', f"{stats['min']:.6f}"],
-                    ['Maximum Value', f"{stats['max']:.6f}"],
-                    ['Mean (Average)', f"{stats['mean']:.6f}"],
-                    ['Range', f"{stats['max'] - stats['min']:.6f}"],
+                    ['Metric', 'Value', 'Metric', 'Value'],
+                    ['Count', str(stats['count']), 'Min', f"{stats['min']:.4f}"],
+                    ['Mean', f"{stats['mean']:.4f}", 'Max', f"{stats['max']:.4f}"],
                 ]
                 
-                # Calculate additional statistics if enough data
-                if len(stats['values']) > 1:
-                    # Standard deviation
-                    mean = stats['mean']
-                    variance = sum((x - mean) ** 2 for x in stats['values']) / len(stats['values'])
-                    std_dev = variance ** 0.5
-                    detail_data.append(['Standard Deviation', f"{std_dev:.6f}"])
-                
-                detail_table = Table(detail_data, colWidths=[2*inch, 2*inch])
+                detail_table = Table(detail_data, colWidths=[1.5*inch, 1.5*inch, 1.5*inch, 1.5*inch])
                 detail_table.setStyle(TableStyle([
-                    ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#1c9c4f')),
-                    ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
-                    ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+                    ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#f5f5f7')),
                     ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-                    ('FONTNAME', (0, 1), (0, -1), 'Helvetica-Bold'),
-                    ('FONTNAME', (1, 1), (1, -1), 'Helvetica'),
-                    ('FONTSIZE', (0, 0), (-1, -1), 10),
-                    ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
-                    ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor('#f0f0f0')]),
+                    ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#e5e5e5')),
+                    ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
                     ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
-                    ('TOPPADDING', (0, 0), (-1, -1), 6),
-                    ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
                 ]))
                 
                 story.append(detail_table)
                 story.append(Spacer(1, 0.2*inch))
-        
-        else:
-            story.append(Paragraph("No parameter data found in log file.", styles['Normal']))
-        
-        # Footer with logo/branding
-        story.append(PageBreak())
-        story.append(Spacer(1, 2*inch))
-        
-        footer_style = ParagraphStyle(
-            'Footer',
-            parent=styles['Normal'],
-            fontSize=10,
-            textColor=colors.grey,
-            alignment=TA_CENTER
-        )
-        
-        story.append(Paragraph("Report generated by Glance Telemetry Dashboard", footer_style))
-        story.append(Paragraph("© 2025 Team Ignition · Software Department", footer_style))
-        
-        # Build PDF
-        doc.build(story)
+                
+                # Plotting
+                if len(stats['values']) > 1:
+                    try:
+                        plt.figure(figsize=(8, 3), dpi=100)
+                        
+                        # Time axis
+                        timestamps = stats.get('timestamps', [])
+                        if not timestamps:
+                            timestamps = list(range(len(stats['values'])))
+                            xlabel = "Sample Index"
+                        else:
+                            start_ts = timestamps[0]
+                            timestamps = [t - start_ts for t in timestamps]
+                            xlabel = "Time (s)"
+                            
+                        values = stats['values']
+                        
+                        # Plot Raw Data
+                        plt.plot(timestamps, values, label='Raw Data', color='#a1a1a6', alpha=0.6, linewidth=1)
+                        
+                        # Apply Filter if exists
+                        if param_id:
+                            active_filters = self.filter_manager.get_filters(param_id)
+                            # Use the first enabled filter for the report
+                            active_filter = next((f for f in active_filters if f.enabled), None)
+                            
+                            if active_filter:
+                                filtered_values = []
+                                # Create a temporary filter instance
+                                if hasattr(active_filter, 'window_size'):
+                                     from app.core.filters import MovingAverageFilter, MedianFilter
+                                     if isinstance(active_filter, MovingAverageFilter):
+                                         temp_filter = MovingAverageFilter(active_filter.window_size)
+                                     elif isinstance(active_filter, MedianFilter):
+                                         temp_filter = MedianFilter(active_filter.window_size)
+                                elif hasattr(active_filter, 'alpha'):
+                                     from app.core.filters import LowPassFilter
+                                     temp_filter = LowPassFilter(active_filter.alpha)
+                                else:
+                                    temp_filter = None
+
+                                if temp_filter:
+                                    for v in values:
+                                        filtered_values.append(temp_filter.apply(v))
+                                    
+                                    plt.plot(timestamps, filtered_values, label=f'Filtered ({active_filter.__class__.__name__})', color='#007aff', linewidth=1.5)
+                        
+                        plt.title(f"{param_name} History", fontsize=10, fontweight='bold', color='#333333')
+                        plt.xlabel(xlabel, fontsize=8)
+                        plt.ylabel(stats['unit'], fontsize=8)
+                        plt.grid(True, linestyle='--', alpha=0.3)
+                        plt.legend(fontsize=8)
+                        plt.tight_layout()
+                        
+                        # Save to buffer
+                        buf = io.BytesIO()
+                        plt.savefig(buf, format='png')
+                        buf.seek(0)
+                        plt.close()
+                        
+                        # Add to PDF
+                        img = ReportLabImage(buf, width=6*inch, height=2.25*inch)
+                        story.append(img)
+                        story.append(Spacer(1, 0.3*inch))
+                        
+                    except Exception as e:
+                        print(f"Error plotting {param_name}: {e}")
+                        story.append(Paragraph(f"Could not generate plot: {str(e)}", normal_style))
+                
+                story.append(Spacer(1, 0.2*inch))
+
+        # Build PDF with Footer
+        doc.build(story, onFirstPage=add_footer, onLaterPages=add_footer)
 
             
     # Duplicate update_connection_status removed
@@ -5139,6 +5260,10 @@ class MainWindow(QMainWindow):
         self.pause_button.setFixedSize(120, 32)
         self.pause_button.setCursor(Qt.CursorShape.PointingHandCursor)
         header_layout.addWidget(self.pause_button)
+        
+        self.logging_btn.setFixedSize(120, 32)
+        self.logging_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        header_layout.addWidget(self.logging_btn)
         
         layout.addWidget(self.dashboard_header)
         
@@ -5564,14 +5689,189 @@ class MainWindow(QMainWindow):
         try:
             if self.simulator:
                 self.simulator.stop()
-                self.simulator._is_paused = True
-                try:
-                    if hasattr(self.simulator, 'reader') and self.simulator.reader:
-                        self.simulator.reader.close()
-                except Exception:
-                    pass
                 self.simulator.wait(1000)
         except Exception:
             pass
         
         super().closeEvent(event)
+
+    def show_shortcuts_dialog(self):
+        """Show a dialog listing all keyboard shortcuts with Apple-like styling"""
+        dialog = QDialog(self)
+        dialog.setWindowTitle("Keyboard Shortcuts")
+        dialog.setMinimumSize(600, 600)
+        dialog.setStyleSheet("background-color: #1c1c1e;")
+        
+        # Main Layout
+        main_layout = QVBoxLayout(dialog)
+        main_layout.setContentsMargins(0, 0, 0, 0)
+        main_layout.setSpacing(0)
+        
+        # Header
+        header = QWidget()
+        header.setStyleSheet("background-color: rgba(255, 255, 255, 0.05); border-bottom: 1px solid rgba(255, 255, 255, 0.1);")
+        header_layout = QVBoxLayout(header)
+        header_layout.setContentsMargins(30, 24, 30, 24)
+        
+        title = QLabel("Keyboard Shortcuts")
+        title.setStyleSheet("font-family: 'SF Pro Display'; font-size: 24px; font-weight: 700; color: #f5f5f7; background: transparent;")
+        header_layout.addWidget(title)
+        
+        main_layout.addWidget(header)
+        
+        # Scroll Area
+        scroll = QScrollArea()
+        scroll.setWidgetResizable(True)
+        scroll.setFrameShape(QFrame.Shape.NoFrame)
+        scroll.setStyleSheet("""
+            QScrollArea { background: transparent; border: none; }
+            QScrollBar:vertical {
+                border: none;
+                background: #2c2c2e;
+                width: 8px;
+                margin: 0px;
+                border-radius: 4px;
+            }
+            QScrollBar::handle:vertical {
+                background: #48484a;
+                min-height: 20px;
+                border-radius: 4px;
+            }
+            QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {
+                height: 0px;
+            }
+        """)
+        
+        content_widget = QWidget()
+        content_widget.setStyleSheet("background: transparent;")
+        content_layout = QVBoxLayout(content_widget)
+        content_layout.setContentsMargins(30, 30, 30, 30)
+        content_layout.setSpacing(24)
+        
+        # Helper to create a shortcut row
+        def create_shortcut_row(keys, description):
+            row = QWidget()
+            row_layout = QHBoxLayout(row)
+            row_layout.setContentsMargins(0, 8, 0, 8)
+            row_layout.setSpacing(12)
+            
+            # Description
+            desc_label = QLabel(description)
+            desc_label.setStyleSheet("font-family: 'SF Pro Text'; font-size: 14px; color: #f5f5f7; background: transparent;")
+            row_layout.addWidget(desc_label)
+            
+            row_layout.addStretch()
+            
+            # Keys
+            for key in keys:
+                key_label = QLabel(key)
+                key_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+                key_label.setStyleSheet("""
+                    background-color: #3a3a3c;
+                    color: #f5f5f7;
+                    border-radius: 6px;
+                    padding: 4px 10px;
+                    min-width: 20px;
+                    font-family: 'SF Pro Text';
+                    font-size: 13px;
+                    font-weight: 600;
+                    border-bottom: 2px solid #2c2c2e;
+                """)
+                row_layout.addWidget(key_label)
+                
+            return row
+
+        # Helper to create a category header
+        def create_category(name):
+            label = QLabel(name)
+            label.setStyleSheet("font-family: 'SF Pro Text'; font-size: 12px; font-weight: 600; color: #86868b; text-transform: uppercase; letter-spacing: 0.5px; background: transparent; margin-bottom: 8px;")
+            return label
+
+        # Categories and Shortcuts
+        categories = [
+            ("General", [
+                (["F1"], "Show Shortcuts"),
+                (["F11"], "Toggle Fullscreen"),
+                (["Esc"], "Exit Fullscreen"),
+                (["Space"], "Pause/Resume Stream"),
+                (["Ctrl", "Q"], "Exit Application"),
+            ]),
+            ("Project & File", [
+                (["Ctrl", "N"], "New Dashboard"),
+                (["Ctrl", "O"], "Load Project"),
+                (["Ctrl", "S"], "Save Project"),
+                (["Ctrl", "Shift", "S"], "Save Project As"),
+                (["Ctrl", "Shift", "C"], "Connection Settings"),
+            ]),
+            ("Dashboard & Widgets", [
+                (["Ctrl", "W"], "Add Widget"),
+                (["Ctrl", "Shift", "W"], "Remove Widget"),
+                (["Ctrl", "P"], "Manage Parameters"),
+                (["Ctrl", "L"], "Toggle Logging"),
+            ]),
+            ("Edit", [
+                (["Ctrl", "Z"], "Undo"),
+                (["Ctrl", "Shift", "Z"], "Redo"),
+            ])
+        ]
+        
+        for category_name, shortcuts in categories:
+            section = QWidget()
+            section_layout = QVBoxLayout(section)
+            section_layout.setContentsMargins(0, 0, 0, 0)
+            section_layout.setSpacing(4)
+            
+            section_layout.addWidget(create_category(category_name))
+            
+            # Group box for shortcuts in this category
+            group = QWidget()
+            group.setStyleSheet("background-color: rgba(255, 255, 255, 0.03); border-radius: 10px;")
+            group_layout = QVBoxLayout(group)
+            group_layout.setContentsMargins(16, 8, 16, 8)
+            group_layout.setSpacing(0)
+            
+            for i, (keys, desc) in enumerate(shortcuts):
+                row = create_shortcut_row(keys, desc)
+                group_layout.addWidget(row)
+                # Add separator if not last
+                if i < len(shortcuts) - 1:
+                    sep = QFrame()
+                    sep.setFrameShape(QFrame.Shape.HLine)
+                    sep.setStyleSheet("background-color: rgba(255, 255, 255, 0.05); border: none; max-height: 1px;")
+                    group_layout.addWidget(sep)
+            
+            section_layout.addWidget(group)
+            content_layout.addWidget(section)
+            
+        content_layout.addStretch()
+        scroll.setWidget(content_widget)
+        main_layout.addWidget(scroll)
+        
+        # Footer
+        footer = QWidget()
+        footer.setStyleSheet("background-color: rgba(255, 255, 255, 0.05); border-top: 1px solid rgba(255, 255, 255, 0.1);")
+        footer_layout = QHBoxLayout(footer)
+        footer_layout.setContentsMargins(30, 20, 30, 20)
+        footer_layout.addStretch()
+        
+        close_btn = QPushButton("Done")
+        close_btn.setFixedSize(100, 36)
+        close_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        close_btn.clicked.connect(dialog.accept)
+        close_btn.setStyleSheet("""
+            QPushButton {
+                background-color: #0a84ff;
+                color: white;
+                border-radius: 18px;
+                font-family: 'SF Pro Text';
+                font-weight: 600;
+                font-size: 14px;
+                border: none;
+            }
+            QPushButton:hover { background-color: #0077ed; }
+            QPushButton:pressed { background-color: #0062c4; }
+        """)
+        footer_layout.addWidget(close_btn)
+        main_layout.addWidget(footer)
+        
+        dialog.exec()

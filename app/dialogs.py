@@ -567,36 +567,31 @@ class AddWidgetDialog(QDialog):
         gauge_page = QWidget()
         gauge_layout = QVBoxLayout(gauge_page)
         
-        gauge_settings = QGroupBox("Gauge Settings")
-        gauge_form = QFormLayout(gauge_settings)
-        
-        self.gauge_source = self._create_param_combo()
-        gauge_form.addRow("Data Source:", self.gauge_source)
-        
-        self.gauge_min = QDoubleSpinBox(); self.gauge_min.setRange(-1e5, 1e5); self.gauge_min.setValue(0)
-        self.gauge_max = QDoubleSpinBox(); self.gauge_max.setRange(-1e5, 1e5); self.gauge_max.setValue(100)
-        gauge_form.addRow("Min Value:", self.gauge_min); gauge_form.addRow("Max Value:", self.gauge_max)
-        
+        # Style Selection
+        style_group = QGroupBox("Global Style")
+        style_layout = QFormLayout(style_group)
         self.gauge_style = QComboBox(); self.gauge_style.addItems(["Linear", "Circular"])
-        gauge_form.addRow("Style:", self.gauge_style)
+        style_layout.addRow("Gauge Style:", self.gauge_style)
+        gauge_layout.addWidget(style_group)
         
-        self.gauge_use_zones = QComboBox(); self.gauge_use_zones.addItems(["No Zones", "3 Zones (Safe/Warning/Critical)"])
-        gauge_form.addRow("Zones:", self.gauge_use_zones)
+        # Parameters & Thresholds Table
+        param_group = QGroupBox("Parameters & Thresholds")
+        param_layout = QVBoxLayout(param_group)
         
-        # Zone Limits
-        self.zone_limits_widget = QWidget()
-        zone_layout = QFormLayout(self.zone_limits_widget)
-        zone_layout.setContentsMargins(0, 0, 0, 0)
-        self.gauge_safe_limit = QDoubleSpinBox(); self.gauge_safe_limit.setRange(-1e5, 1e5); self.gauge_safe_limit.setValue(70)
-        self.gauge_warning_limit = QDoubleSpinBox(); self.gauge_warning_limit.setRange(-1e5, 1e5); self.gauge_warning_limit.setValue(90)
-        zone_layout.addRow("Safe Limit (Green <):", self.gauge_safe_limit)
-        zone_layout.addRow("Warning Limit (Yellow <):", self.gauge_warning_limit)
-        gauge_form.addRow(self.zone_limits_widget)
-        self.zone_limits_widget.setVisible(False)
-        self.gauge_use_zones.currentTextChanged.connect(lambda t: self.zone_limits_widget.setVisible(t != "No Zones"))
+        self.gauge_table = QTableWidget()
+        self.gauge_table.setColumnCount(6)
+        self.gauge_table.setHorizontalHeaderLabels(["Parameter", "Min", "Max", "Safe (<)", "Warn (<)", ""])
+        self.gauge_table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.ResizeToContents)
+        self.gauge_table.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)
+        self.gauge_table.verticalHeader().setVisible(False)
         
-        gauge_layout.addWidget(gauge_settings)
-        gauge_layout.addStretch()
+        param_layout.addWidget(self.gauge_table)
+        
+        add_gauge_btn = QPushButton("+ Add Gauge")
+        add_gauge_btn.clicked.connect(self.add_gauge_row)
+        param_layout.addWidget(add_gauge_btn)
+        
+        gauge_layout.addWidget(param_group)
         self.pages["Gauge"] = gauge_page; self.options_stack.addWidget(gauge_page)
         
         # 5. Histogram Page
@@ -715,6 +710,37 @@ class AddWidgetDialog(QDialog):
         rem = QPushButton("Remove"); rem.clicked.connect(lambda: self.led_table.removeRow(row))
         self.led_table.setCellWidget(row, 4, rem)
 
+    def add_gauge_row(self, param_id=None, config=None):
+        row = self.gauge_table.rowCount(); self.gauge_table.insertRow(row)
+        
+        # Parameter
+        param_combo = self._create_param_combo()
+        if param_id:
+            idx = param_combo.findData(param_id)
+            if idx >= 0: param_combo.setCurrentIndex(idx)
+        self.gauge_table.setCellWidget(row, 0, param_combo)
+        
+        # Min
+        min_spin = QDoubleSpinBox(); min_spin.setRange(-1e5, 1e5); min_spin.setValue(config.get('min', 0) if config else 0)
+        self.gauge_table.setCellWidget(row, 1, min_spin)
+        
+        # Max
+        max_spin = QDoubleSpinBox(); max_spin.setRange(-1e5, 1e5); max_spin.setValue(config.get('max', 100) if config else 100)
+        self.gauge_table.setCellWidget(row, 2, max_spin)
+        
+        # Safe Limit
+        safe_spin = QDoubleSpinBox(); safe_spin.setRange(-1e5, 1e5); safe_spin.setValue(config.get('safe', 70) if config else 70)
+        self.gauge_table.setCellWidget(row, 3, safe_spin)
+        
+        # Warning Limit
+        warn_spin = QDoubleSpinBox(); warn_spin.setRange(-1e5, 1e5); warn_spin.setValue(config.get('warning', 90) if config else 90)
+        self.gauge_table.setCellWidget(row, 4, warn_spin)
+        
+        # Remove
+        rem = QPushButton(); rem.setIcon(QIcon.fromTheme("list-remove")); rem.setFixedSize(24, 24)
+        rem.clicked.connect(lambda: self.gauge_table.removeRow(row))
+        self.gauge_table.setCellWidget(row, 5, rem)
+
     def validate_and_accept(self):
         widget_type = self.selected_type
         
@@ -727,6 +753,11 @@ class AddWidgetDialog(QDialog):
             }[widget_type]
             if list_widget.count() == 0:
                 QMessageBox.warning(self, "Error", "Please add at least one data series.")
+                return
+        
+        elif widget_type == "Gauge":
+             if self.gauge_table.rowCount() == 0:
+                QMessageBox.warning(self, "Error", "Please add at least one gauge.")
                 return
                 
         elif widget_type == "LED Indicator":
@@ -760,15 +791,21 @@ class AddWidgetDialog(QDialog):
                 options['priority'] = self.priority_combo.currentText()
                 
         elif widget_type == "Gauge":
-            param_ids.append(self.gauge_source.currentData())
-            options.update({
-                'min_value': self.gauge_min.value(), 
-                'max_value': self.gauge_max.value(), 
-                'style': self.gauge_style.currentText(), 
-                'use_zones': self.gauge_use_zones.currentText() != "No Zones",
-                'safe_limit': self.gauge_safe_limit.value(),
-                'warning_limit': self.gauge_warning_limit.value()
-            })
+            gauge_configs = {}
+            for r in range(self.gauge_table.rowCount()):
+                param_combo = self.gauge_table.cellWidget(r, 0)
+                if not param_combo: continue
+                pid = param_combo.currentData()
+                if pid not in param_ids: param_ids.append(pid)
+                
+                gauge_configs[pid] = {
+                    'min': self.gauge_table.cellWidget(r, 1).value(),
+                    'max': self.gauge_table.cellWidget(r, 2).value(),
+                    'safe': self.gauge_table.cellWidget(r, 3).value(),
+                    'warning': self.gauge_table.cellWidget(r, 4).value()
+                }
+            options['style'] = self.gauge_style.currentText()
+            options['gauge_configs'] = gauge_configs
             
         elif widget_type == "Histogram":
             param_ids.append(self.hist_source.currentData())

@@ -76,7 +76,8 @@ class TestWidgets:
     def test_gauge_widget_instantiation(self, qapp, param_config):
         widget = GaugeWidget(param_config)
         assert widget is not None
-        assert widget.param_config == param_config
+        assert len(widget.param_configs) == 1
+        assert widget.param_configs[0] == param_config
 
     def test_time_graph_instantiation(self, qapp, param_config):
         # TimeGraph expects a list of configs
@@ -99,3 +100,24 @@ class TestWidgets:
         widget = LogTable([param_config])
         assert widget is not None
         assert len(widget.param_configs) == 1
+
+    def test_value_card_update(self, qapp, param_config):
+        widget = ValueCard([param_config])
+        widget.update_values({'test_param': 123.45})
+        assert widget.value_labels['test_param'].text() == "123.5"
+
+    def test_gauge_widget_update(self, qapp, param_config):
+        widget = GaugeWidget(param_config)
+        widget.update_values({'test_param': 50.0})
+        assert widget.gauges['test_param'].value == 50.0
+
+    def test_closable_dock_instantiation(self, qapp):
+        from app.widgets.general import ClosableDock
+        from PySide6.QtWidgets import QMainWindow
+        mw = QMainWindow()
+        dock = ClosableDock("Test Dock", mw, widget_id="test_id")
+        dock.setObjectName("dock_test_id") 
+        
+        assert dock.widget_id == "test_id"
+        assert dock.objectName() == "dock_test_id"
+        assert dock.windowTitle() == "Test Dock"
