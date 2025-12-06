@@ -114,6 +114,27 @@ from app.core.history import CommandHistory
 from app.core.commands import AddWidgetCommand, RemoveWidgetCommand, UpdateParametersCommand
 
 ####################################################################################################
+class FpsTracker:
+    def __init__(self, window=0.5):
+        self.window = window            # seconds for averaging
+        self.counter = 0
+        self.last_time = time.perf_counter()
+        self.value = 0.0                # last computed FPS
+
+    def tick(self):
+        """Call this once per 'global update' (frame)."""
+        self.counter += 1
+        now = time.perf_counter()
+        elapsed = now - self.last_time
+        if elapsed >= self.window:
+            self.value = self.counter / elapsed
+            self.counter = 0
+            self.last_time = now
+
+    def get_fps(self):
+        return self.value
+
+
 class MainWindow(QMainWindow):
     """
     @brief Main application window.
@@ -122,6 +143,8 @@ class MainWindow(QMainWindow):
     """
     def __init__(self):
         super().__init__()
+        self.fps_tracker = FpsTracker(window=0.5)
+
         self.setWindowTitle("Glance - Telemetry Dashboard")
         self.setWindowIcon(QIcon("./docs/public/Glance_nobg.ico"))
         
@@ -1108,6 +1131,8 @@ class MainWindow(QMainWindow):
         if packet is None or not isinstance(packet, (list, tuple)):
             return
         timestamp = time.time()
+
+        self.fps_tracker.tick()
 
         # Track packets and bytes for status bar
         self.total_packets += 1
@@ -3714,25 +3739,15 @@ class MainWindow(QMainWindow):
         self.status_timer.timeout.connect(self._update_status_bar)
         self.status_timer.start(1000)
         
-        # FPS Counter
-        self.fps_counter = 0
-        self.fps_last_time = time.time()
-        
         self._update_status_bar()
 
     def _update_status_bar(self):
         # Clock
         self.clock_label.setText(datetime.now().strftime("%H:%M:%S"))
         
-        # FPS
-        self.fps_counter += 1
-        current_time = time.time()
-        elapsed = current_time - self.fps_last_time
-        if elapsed >= 1.0:
-            fps = self.fps_counter / elapsed
-            self.fps_label.setText(f"FPS: {int(fps)}")
-            self.fps_counter = 0
-            self.fps_last_time = current_time
+        # FPS - use the FpsTracker value
+        fps = self.fps_tracker.get_fps()
+        self.fps_label.setText(f"FPS: {round(fps)}")
             
         # Session Time
         if hasattr(self, 'session_start_time') and self.session_start_time:
