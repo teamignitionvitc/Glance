@@ -57,7 +57,7 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 # 005  MOD      30-10-2025  Shawn                Fixed issue where close button hides widget instead of actually closing it, changed comment type
 # 006  MOD      06-11-2025  Shawn                Fixed map issue on no wifi, fixed minor bugs with the map
 # 007  MOD      29-11-2025  MuhammadRamzy        feat: Redesign AddWidgetDialog with side-by-side layout and QStackedWidget
-# 008  MOD      29-11-2025  NeilBaranwal9        feat: Fixed TimeGraph crash on high-frequency data
+# 008  MOD      03-12-2025  NeilBaranwal9        feat: Fixed TimeGraph crash on high-frequency data
 ####################################################################################################
 
 

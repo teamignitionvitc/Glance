@@ -87,7 +87,7 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 # 018  MOD      14-10-2025  Shawn                fixed rendering of glance on main page in
 #                                                executable, Fixed ignition logo rendering in about
 #                                                tab
-# 019  MOD      21-10-2025  MuhammadRamzy        fixed the multiple tab saving issue
+# 019  MOD      21-10-2025  NeilBaranwal9        fixed the multiple tab saving issue
 # 020  MOD      23-10-2025  Shawn                Fixed resizing on project load
 # 021  MOD      30-10-2025  Shawn                Fixed issue where close button hides widget instead
 #                                                of actually closing it
