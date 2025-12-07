@@ -52,17 +52,18 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 # 000  NEW      26-09-2025  MuhammadRamzy        First commit with the ui/ux and flow changes
 # 001  MOD      27-09-2025  MuhammadRamzy        Stream Fix
 # 002  MOD      09-10-2025  MuhammadRamzy        Formatting
-# 003  MOD      12-10-2025  MuhammadRamzy        modularized main.py into widget.py
+# 003  MOD      12-10-2025  NeilBaranwal9        modularized main.py into widget.py
 # 004  MOD      13-10-2025  oslowtech            Fixed Dashboard creation failed.
 # 005  MOD      30-10-2025  Shawn                Fixed issue where close button hides widget instead of actually closing it, changed comment type
 # 006  MOD      06-11-2025  Shawn                Fixed map issue on no wifi, fixed minor bugs with the map
 # 007  MOD      29-11-2025  MuhammadRamzy        feat: Redesign AddWidgetDialog with side-by-side layout and QStackedWidget
 # 008  MOD      03-12-2025  NeilBaranwal9        feat: Fixed TimeGraph crash on high-frequency data
+# 008  MOD      07-12-2025  NeilBaranwal9        feat: Fix unresponsive TimeGraph buttons using QGraphicsProxyWidget
 ####################################################################################################
 
 
 
-from PySide6.QtWidgets import QWidget, QVBoxLayout, QFrame, QLabel, QTableWidget, QHeaderView, QAbstractItemView, QGroupBox, QHBoxLayout, QTableWidgetItem, QComboBox, QPushButton, QApplication, QMessageBox, QDoubleSpinBox, QDockWidget, QGridLayout, QGraphicsDropShadowEffect, QLayout, QSizePolicy, QStyle
+from PySide6.QtWidgets import QWidget, QVBoxLayout, QFrame, QLabel, QTableWidget, QHeaderView, QAbstractItemView, QGroupBox, QHBoxLayout, QTableWidgetItem, QComboBox, QPushButton, QApplication, QMessageBox, QDoubleSpinBox, QDockWidget, QGridLayout, QGraphicsDropShadowEffect, QLayout, QSizePolicy, QStyle, QGraphicsProxyWidget
 from PySide6.QtGui import QFont, QColor, QBrush, QLinearGradient, QConicalGradient, QPainter, QPen, QPainterPath, QIcon
 from PySide6.QtNetwork import QNetworkAccessManager, QNetworkRequest, QNetworkReply
 from PySide6.QtCore import Qt, Signal, QUrl, QTimer, QRectF, QPoint, QSize, QRect
@@ -747,7 +748,8 @@ class GaugeWidget(QFrame):
 class TimeGraph(QWidget):
     """
     @brief Widget for plotting parameter values over time.
-    @details Supports multiple curves, zooming, panning, and value inspection via mouse hover/click.
+    @details Supports multiple curves, zooming, panning, and value inspection.
+             Includes 'Guaranteed' Reset Button logic.
     """
     def __init__(self, param_configs):
         super().__init__()
@@ -755,22 +757,22 @@ class TimeGraph(QWidget):
         self.curves = {}
         self.last_known_values = {}
         
-        # --- NEW: Buffer and Threshold Control ---
-        self.latest_history = None  # Buffer to hold latest data
-        self.current_y_max = 1.0    # Track the current window top
+        # --- Buffer and Threshold Control ---
+        self.latest_history = None  
+        self.current_y_max = 1.0    
         self.update_timer = QTimer()
         self.update_timer.timeout.connect(self._refresh_plot)
-        self.update_timer.start(50) # Update UI every 50ms (20 FPS) to prevent crashing
+        self.update_timer.start(50) # 20 FPS
         # -----------------------------------------
 
         # Main Layout
         container = QVBoxLayout(self)
         container.setContentsMargins(0, 0, 0, 0)
 
-        # Plot
+        # Plot Widget Setup
         self.plot_widget = pg.PlotWidget()
-        self.plot_widget.setBackground(None) # Transparent background
-        self.plot_widget.showGrid(x=True, y=True, alpha=0.1) # Very subtle grid
+        self.plot_widget.setBackground(None) 
+        self.plot_widget.showGrid(x=True, y=True, alpha=0.1)
         self.plot_widget.setAntialiasing(True)
         self.plot_widget.setDownsampling(mode='peak')
         self.plot_widget.setClipToView(True)
@@ -784,25 +786,28 @@ class TimeGraph(QWidget):
         self.plot_widget.getAxis('left').setPen(axis_pen)
         self.plot_widget.getAxis('left').setTextPen(QColor(255, 255, 255, 150))
         
-        # Remove legend for cleaner look
-        # self.plot_widget.addLegend(offset=(10, 10))
-        
-        # Disable AutoRange for Y so our Threshold logic takes control
+        # AutoRange Configuration
+        # Disable AutoRange for Y so our custom Threshold logic takes control
         self.plot_widget.plotItem.vb.enableAutoRange(axis=pg.ViewBox.YAxis, enable=False) 
         self.plot_widget.enableAutoRange(axis=pg.ViewBox.XAxis, enable=True)
 
+        # Title & Label Logic
         title = ", ".join([p['name'] for p in self.param_configs])
         units = list(set([p['unit'] for p in self.param_configs]))
         unit_label = units[0] if len(units) == 1 else "Multiple Units"
         
-        # Title styling
         self.plot_widget.setTitle(title, color='#ffffff', size='11pt')
         self.plot_widget.setLabel('left', unit_label, color='#aaaaaa', **{'font-family': 'SF Pro Text', 'font-size': '10pt'})
 
-        # Reset Button (Overlay)
-        # Parent to self (TimeGraph) instead of plot_widget to avoid potential segfaults with PyQTGraph internals
-        self.reset_btn = QPushButton(self)
-        self.reset_btn.setIcon(QIcon.fromTheme("view-refresh"))
+        # --- FIX #1: The Reset Button (Using ProxyWidget) ---
+        self.reset_btn = QPushButton()
+        # Note: If you don't have a theme icon, this might be blank. 
+        # Fallback text is added just in case.
+        if QIcon.hasThemeIcon("view-refresh"):
+            self.reset_btn.setIcon(QIcon.fromTheme("view-refresh"))
+        else:
+            self.reset_btn.setText("R") 
+            
         self.reset_btn.setToolTip("Reset View")
         self.reset_btn.setFixedSize(32, 32)
         self.reset_btn.setStyleSheet("""
@@ -811,6 +816,7 @@ class TimeGraph(QWidget):
                 border: 1px solid rgba(255, 255, 255, 0.1);
                 border-radius: 6px;
                 color: #fff;
+                font-weight: bold;
             }
             QPushButton:hover {
                 background-color: rgba(255, 255, 255, 0.2);
@@ -819,49 +825,44 @@ class TimeGraph(QWidget):
                 background-color: rgba(255, 255, 255, 0.3);
             }
         """)
-        self.reset_btn.raise_() # Ensure it's on top of the plot
-        # Position in top-right corner
-        self.reset_btn.move(10, 10) # Initial position, will update in resizeEvent
-        self.reset_btn.clicked.connect(lambda: self.plot_widget.enableAutoRange())
+        
+        # Connect to the dedicated logic fix method
+        self.reset_btn.clicked.connect(self.reset_view)
 
+        # Embed into Scene using Proxy
+        self.proxy_btn = QGraphicsProxyWidget()
+        self.proxy_btn.setWidget(self.reset_btn)
+        self.plot_widget.scene().addItem(self.proxy_btn)
+        # ----------------------------------------------------
+
+        # Curve Initialization
         for p_config in self.param_configs:
-            # Use a nice gradient fill
-            # We need to define a brush that has a gradient
             color = QColor(p_config['color'])
             pen = pg.mkPen(color, width=2.5)
-            
             curve = self.plot_widget.plot(pen=pen, name=p_config['name'])
             
             # Gradient fill
-            # Create a gradient from the line color (semi-transparent) to transparent
-            # QLinearGradient(0, 0, 0, 1) goes from top (0) to bottom (1) in ObjectBoundingMode
-            # We want the top (near the line) to be opaque and bottom to be transparent.
             grad = QLinearGradient(0, 0, 0, 1)
             grad.setCoordinateMode(QLinearGradient.ObjectBoundingMode)
-            grad.setColorAt(0, QColor(color.red(), color.green(), color.blue(), 100)) # Top: More opaque
-            grad.setColorAt(1, QColor(color.red(), color.green(), color.blue(), 0))   # Bottom: Transparent
+            grad.setColorAt(0, QColor(color.red(), color.green(), color.blue(), 100))
+            grad.setColorAt(1, QColor(color.red(), color.green(), color.blue(), 0))
             brush = QBrush(grad)
             
             curve.setFillLevel(0)
             curve.setBrush(brush)
-            
-            # Optimization for jitter
-            curve.setDownsampling(auto=True, method='peak', ds=5) # Downsample
-            self.plot_widget.setClipToView(True) # Only draw what's visible
-            
+            curve.setDownsampling(auto=True, method='peak', ds=5)
             self.curves[p_config['id']] = curve
 
         container.addWidget(self.plot_widget)
         
         self.setStyleSheet("""
             QWidget {
-                background-color: rgba(20, 20, 20, 0.9); /* Darker background */
+                background-color: rgba(20, 20, 20, 0.9);
                 border-radius: 16px;
                 border: 1px solid rgba(255, 255, 255, 0.05);
             }
         """)
         
-        # Initialize start time for relative plotting
         self.start_time = time.time()
         
         # Crosshairs
@@ -877,21 +878,36 @@ class TimeGraph(QWidget):
 
     def resizeEvent(self, event):
         super().resizeEvent(event)
-        # Keep reset button in top-right corner
-        if hasattr(self, 'reset_btn'):
-            self.reset_btn.move(self.width() - 42, 10)
+        # --- FIX #3: Keep Proxy Positioned Correctly ---
+        if hasattr(self, 'proxy_btn') and hasattr(self, 'plot_widget'):
+            # Calculate position relative to the view
+            # We use the viewport rect to ensure it stays within the drawn area
+            view_rect = self.plot_widget.rect()
+            x = view_rect.width() - 42 
+            y = 10
+            self.proxy_btn.setPos(x, y)
 
     def update_data(self, history):
-        """
-        Lightweight setter. 
-        Just saves the data reference. Does NOT compute or paint.
-        """
         self.latest_history = history
 
+    def reset_view(self):
+        """
+        --- FIX #2: The Logic ---
+        Resets the internal state so the update loop doesn't fight the user.
+        """
+        # 1. Reset the threshold tracker.
+        # By setting this to 0 (or a very low number), the _refresh_plot logic 
+        # will see the current data max as 'Case A: Graph goes UP' and 
+        # immediately snap the view to fit the data.
+        self.current_y_max = 0.0 
+        
+        # 2. Trigger standard AutoRange for X-axis
+        self.plot_widget.enableAutoRange(axis=pg.ViewBox.XAxis)
+        
+        # 3. Force AutoRange for Y temporarily (optional, but good for instant feedback)
+        self.plot_widget.enableAutoRange(axis=pg.ViewBox.YAxis)
+
     def _refresh_plot(self):
-        """
-        Called by QTimer @ 20FPS. Handles plotting and Threshold logic.
-        """
         if not self.latest_history:
             return
 
@@ -908,7 +924,6 @@ class TimeGraph(QWidget):
                 values = [dp['value'] for dp in param_history]
                 curve.setData(x=timestamps, y=values)
                 
-                # Track max value for threshold logic
                 if values:
                     current_max = max(values)
                     if current_max > global_max_val:
@@ -917,25 +932,23 @@ class TimeGraph(QWidget):
 
         # 2. Threshold Window Logic
         if has_data:
-            # Dynamic threshold (e.g., 20% of current max to prevent jitter)
-            # You can tune this multiplier.
+            # If we just reset (current_y_max is 0), we treat this as a "Graph goes UP" event
+            # to snap immediately to the new data range.
+            
             hysteresis_gap = self.current_y_max * 0.2 
-
             should_update = False
             
-            # Case A: Graph goes UP -> Expand immediately
+            # Case A: Graph goes UP (or we just reset) -> Expand immediately
             if global_max_val > self.current_y_max:
-                self.current_y_max = global_max_val * 1.1 # Add 10% headroom
+                self.current_y_max = global_max_val * 1.1 
                 should_update = True
             
-            # Case B: Graph goes DOWN -> Only shrink if we drop below (Max - Threshold)
+            # Case B: Graph goes DOWN significantly -> Shrink
             elif global_max_val < (self.current_y_max - hysteresis_gap):
-                self.current_y_max = global_max_val * 1.1 # Reset to new max + headroom
+                self.current_y_max = global_max_val * 1.1 
                 should_update = True
 
-            # Apply the stable window
             if should_update:
-                # We only set Y range. X range is handled by standard auto-scroll.
                 self.plot_widget.setYRange(0, self.current_y_max, padding=0)
 
     def mouse_moved(self, evt):
@@ -946,7 +959,6 @@ class TimeGraph(QWidget):
         if self.plot_widget.sceneBoundingRect().contains(pos):
             mousePoint = self.plot_widget.getPlotItem().vb.mapSceneToView(pos)
             
-            # Check if mouse is within the X range of the data
             x_min, x_max = self.plot_widget.viewRange()[0]
             if mousePoint.x() < x_min or mousePoint.x() > x_max:
                 self.vLine.hide()
@@ -964,13 +976,10 @@ class TimeGraph(QWidget):
             for pid, curve in self.curves.items():
                 x_data, y_data = curve.getData()
                 if x_data is not None and len(x_data) > 0:
-                    # Find nearest point
                     idx = np.searchsorted(x_data, mousePoint.x())
                     if 0 < idx < len(x_data):
-                        # Interpolate or just take nearest? Nearest is safer for raw data
                         val_left = y_data[idx-1]
                         val_right = y_data[idx]
-                        # Simple nearest logic
                         if abs(x_data[idx] - mousePoint.x()) < abs(x_data[idx-1] - mousePoint.x()):
                             y_val = val_right
                         else:
@@ -986,7 +995,6 @@ class TimeGraph(QWidget):
             self.label.hide()
             
     def leaveEvent(self, event):
-        """Hide crosshair when mouse leaves the widget"""
         self.vLine.hide()
         self.hLine.hide()
         self.label.hide()
