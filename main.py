@@ -96,6 +96,8 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 # 024  MOD      29-11-2025  MuhammadRamzy        feat: Redesign AddWidgetDialog with side-by-side
 #                                                layout and QStackedWidget
 # 025  MOD      03-12-2025  NeilBaranwal9        feat: Fixed TimeGraph crash on high-frequency data
+# 026  MOD      07-12-2025  NeilBaranwal9        feat: Fix unresponsive TimeGraph buttons using QGraphicsProxyWidget
+# 027  MOD      07-12-2025  NeilBaranwal9        feat: Removed invisible hover-close button from TimeGraph and from CustomTitleBar in remaining widgets
 ####################################################################################################
 
 ####################################################################################################

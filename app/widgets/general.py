@@ -58,7 +58,8 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 # 006  MOD      06-11-2025  Shawn                Fixed map issue on no wifi, fixed minor bugs with the map
 # 007  MOD      29-11-2025  MuhammadRamzy        feat: Redesign AddWidgetDialog with side-by-side layout and QStackedWidget
 # 008  MOD      03-12-2025  NeilBaranwal9        feat: Fixed TimeGraph crash on high-frequency data
-# 008  MOD      07-12-2025  NeilBaranwal9        feat: Fix unresponsive TimeGraph buttons using QGraphicsProxyWidget
+# 009  MOD      07-12-2025  NeilBaranwal9        feat: Fix unresponsive TimeGraph buttons using QGraphicsProxyWidget
+# 010  MOD      07-12-2025  NeilBaranwal9        feat: Removed invisible hover-close button from TimeGraph and from CustomTitleBar in remaining widgets
 ####################################################################################################
 
 
@@ -214,6 +215,7 @@ except Exception:
 class CustomTitleBar(QWidget):
     """
     @brief Custom title bar for ClosableDock.
+    @details Displays only the title on hover (Close button removed).
     """
     def __init__(self, title, parent=None):
         super().__init__(parent)
@@ -227,51 +229,26 @@ class CustomTitleBar(QWidget):
         self.title_label.setFont(QFont("SF Pro Text", 10, QFont.Weight.Bold))
         self.title_label.setStyleSheet("color: #cccccc;")
         
-        # Close Button
-        self.close_btn = QPushButton("×")
-        self.close_btn.setFixedSize(20, 20)
-        self.close_btn.setStyleSheet("""
-            QPushButton {
-                background-color: transparent;
-                color: #aaaaaa;
-                border: none;
-                font-size: 16px;
-                font-weight: bold;
-                border-radius: 10px;
-            }
-            QPushButton:hover {
-                background-color: rgba(255, 59, 48, 0.8); /* Apple Red */
-                color: white;
-            }
-        """)
-        self.close_btn.clicked.connect(self._on_close_clicked)
-        
+        # Add Title to Layout
         self.layout.addWidget(self.title_label)
-        self.layout.addStretch()
-        self.layout.addWidget(self.close_btn)
+        self.layout.addStretch() # Keeps title aligned to the left
         
         # Transparent background initially
         self.setStyleSheet("background: transparent;")
-        self.setFixedHeight(32) # Ensure it has height to be grabbed
+        self.setFixedHeight(32) # Ensure it has height to be grabbed for moving
         
         # Initial state: hidden content
         self.title_label.hide()
-        self.close_btn.hide()
         
     def set_active(self, active):
         """Toggle visibility of title bar content"""
         if active:
             self.title_label.show()
-            self.close_btn.show()
             self.setStyleSheet("background-color: rgba(30, 30, 30, 0.9); border-bottom: 1px solid rgba(255,255,255,0.1);")
         else:
             self.title_label.hide()
-            self.close_btn.hide()
             self.setStyleSheet("background: transparent;")
-        
-    def _on_close_clicked(self):
-        if self.dock:
-            self.dock.closeEvent(None) # Trigger close logic
+ # _on_close_clicked method removed completely
 
 class ClosableDock(QDockWidget):
     """
@@ -745,11 +722,23 @@ class GaugeWidget(QFrame):
             pid = self.param_configs[0]['id']
             self.update_values({pid: value})
         
+import sys
+import time
+import numpy as np
+import pyqtgraph as pg
+
+from PySide6.QtWidgets import (
+    QWidget, QVBoxLayout, QPushButton, QApplication, QMessageBox, 
+    QGraphicsProxyWidget
+)
+from PySide6.QtCore import QTimer, Qt
+from PySide6.QtGui import QColor, QLinearGradient, QBrush, QIcon
+
 class TimeGraph(QWidget):
     """
     @brief Widget for plotting parameter values over time.
-    @details Supports multiple curves, zooming, panning, and value inspection.
-             Includes 'Guaranteed' Reset Button logic.
+    @details Includes 'Guaranteed' Reset Button.
+             (Close button removed to rely on external/parent control).
     """
     def __init__(self, param_configs):
         super().__init__()
@@ -762,7 +751,7 @@ class TimeGraph(QWidget):
         self.current_y_max = 1.0    
         self.update_timer = QTimer()
         self.update_timer.timeout.connect(self._refresh_plot)
-        self.update_timer.start(50) # 20 FPS
+        self.update_timer.start(50) 
         # -----------------------------------------
 
         # Main Layout
@@ -786,12 +775,9 @@ class TimeGraph(QWidget):
         self.plot_widget.getAxis('left').setPen(axis_pen)
         self.plot_widget.getAxis('left').setTextPen(QColor(255, 255, 255, 150))
         
-        # AutoRange Configuration
-        # Disable AutoRange for Y so our custom Threshold logic takes control
         self.plot_widget.plotItem.vb.enableAutoRange(axis=pg.ViewBox.YAxis, enable=False) 
         self.plot_widget.enableAutoRange(axis=pg.ViewBox.XAxis, enable=True)
 
-        # Title & Label Logic
         title = ", ".join([p['name'] for p in self.param_configs])
         units = list(set([p['unit'] for p in self.param_configs]))
         unit_label = units[0] if len(units) == 1 else "Multiple Units"
@@ -799,17 +785,19 @@ class TimeGraph(QWidget):
         self.plot_widget.setTitle(title, color='#ffffff', size='11pt')
         self.plot_widget.setLabel('left', unit_label, color='#aaaaaa', **{'font-family': 'SF Pro Text', 'font-size': '10pt'})
 
-        # --- FIX #1: The Reset Button (Using ProxyWidget) ---
+        # =========================================================
+        # RESET BUTTON ONLY
+        # =========================================================
         self.reset_btn = QPushButton()
-        # Note: If you don't have a theme icon, this might be blank. 
-        # Fallback text is added just in case.
         if QIcon.hasThemeIcon("view-refresh"):
             self.reset_btn.setIcon(QIcon.fromTheme("view-refresh"))
         else:
-            self.reset_btn.setText("R") 
+            self.reset_btn.setText("R")
             
         self.reset_btn.setToolTip("Reset View")
         self.reset_btn.setFixedSize(32, 32)
+        self.reset_btn.clicked.connect(self.reset_view)
+        
         self.reset_btn.setStyleSheet("""
             QPushButton {
                 background-color: rgba(255, 255, 255, 0.1);
@@ -825,15 +813,12 @@ class TimeGraph(QWidget):
                 background-color: rgba(255, 255, 255, 0.3);
             }
         """)
-        
-        # Connect to the dedicated logic fix method
-        self.reset_btn.clicked.connect(self.reset_view)
 
-        # Embed into Scene using Proxy
-        self.proxy_btn = QGraphicsProxyWidget()
-        self.proxy_btn.setWidget(self.reset_btn)
-        self.plot_widget.scene().addItem(self.proxy_btn)
-        # ----------------------------------------------------
+        # Embed Reset Button into Scene
+        self.proxy_reset = QGraphicsProxyWidget()
+        self.proxy_reset.setWidget(self.reset_btn)
+        self.plot_widget.scene().addItem(self.proxy_reset)
+        # =========================================================
 
         # Curve Initialization
         for p_config in self.param_configs:
@@ -841,7 +826,6 @@ class TimeGraph(QWidget):
             pen = pg.mkPen(color, width=2.5)
             curve = self.plot_widget.plot(pen=pen, name=p_config['name'])
             
-            # Gradient fill
             grad = QLinearGradient(0, 0, 0, 1)
             grad.setCoordinateMode(QLinearGradient.ObjectBoundingMode)
             grad.setColorAt(0, QColor(color.red(), color.green(), color.blue(), 100))
@@ -878,33 +862,19 @@ class TimeGraph(QWidget):
 
     def resizeEvent(self, event):
         super().resizeEvent(event)
-        # --- FIX #3: Keep Proxy Positioned Correctly ---
-        if hasattr(self, 'proxy_btn') and hasattr(self, 'plot_widget'):
-            # Calculate position relative to the view
-            # We use the viewport rect to ensure it stays within the drawn area
+        # Position Reset Button at Top-Right (No Close Button offset needed anymore)
+        if hasattr(self, 'proxy_reset') and hasattr(self, 'plot_widget'):
             view_rect = self.plot_widget.rect()
-            x = view_rect.width() - 42 
-            y = 10
-            self.proxy_btn.setPos(x, y)
+            x_reset = view_rect.width() - 42 # 32px button + 10px margin
+            y_reset = 10
+            self.proxy_reset.setPos(x_reset, y_reset)
 
     def update_data(self, history):
         self.latest_history = history
 
     def reset_view(self):
-        """
-        --- FIX #2: The Logic ---
-        Resets the internal state so the update loop doesn't fight the user.
-        """
-        # 1. Reset the threshold tracker.
-        # By setting this to 0 (or a very low number), the _refresh_plot logic 
-        # will see the current data max as 'Case A: Graph goes UP' and 
-        # immediately snap the view to fit the data.
         self.current_y_max = 0.0 
-        
-        # 2. Trigger standard AutoRange for X-axis
         self.plot_widget.enableAutoRange(axis=pg.ViewBox.XAxis)
-        
-        # 3. Force AutoRange for Y temporarily (optional, but good for instant feedback)
         self.plot_widget.enableAutoRange(axis=pg.ViewBox.YAxis)
 
     def _refresh_plot(self):
@@ -932,18 +902,12 @@ class TimeGraph(QWidget):
 
         # 2. Threshold Window Logic
         if has_data:
-            # If we just reset (current_y_max is 0), we treat this as a "Graph goes UP" event
-            # to snap immediately to the new data range.
-            
             hysteresis_gap = self.current_y_max * 0.2 
             should_update = False
             
-            # Case A: Graph goes UP (or we just reset) -> Expand immediately
             if global_max_val > self.current_y_max:
                 self.current_y_max = global_max_val * 1.1 
                 should_update = True
-            
-            # Case B: Graph goes DOWN significantly -> Shrink
             elif global_max_val < (self.current_y_max - hysteresis_gap):
                 self.current_y_max = global_max_val * 1.1 
                 should_update = True
@@ -952,7 +916,7 @@ class TimeGraph(QWidget):
                 self.plot_widget.setYRange(0, self.current_y_max, padding=0)
 
     def mouse_moved(self, evt):
-        if QApplication.keyboardModifiers() & Qt.ControlModifier:
+        if QApplication.keyboardModifiers() & Qt.KeyboardModifier.ControlModifier:
             return
 
         pos = evt[0]
