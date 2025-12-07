@@ -465,8 +465,21 @@ With multi-source connectivity, advanced signal filtering, powerful data logging
 
 ## Installation
 
-<details open>
-<summary><h3>Method 1: Standard Installation</h3></summary>
+### Method 1: Download & Run (Recommended)
+
+The easiest way to use Glance is to download the standalone executable for your system. No Python installation required.
+
+| Platform | Download | Release Notes |
+|----------|----------|---------------|
+| **Windows** | [![Windows](https://img.shields.io/badge/Windows-Download_.exe-0078D4?style=for-the-badge&logo=windows&logoColor=white)](https://github.com/teamignitionvitc/Glance/releases/download/v1.0.0-alpha.1/Glance_Setup_Windows_v1.exe) | [v1.0.0-alpha.1](https://github.com/teamignitionvitc/Glance/releases/tag/v1.0.0-alpha.1) |
+| **Linux** | [![Linux](https://img.shields.io/badge/Linux-Download_.tar.gz-FCC624?style=for-the-badge&logo=linux&logoColor=black)](https://github.com/teamignitionvitc/Glance/releases/download/v1.0.0-alpha.1/Glance_Linux_x64.tar.gz) | [v1.0.0-alpha.1](https://github.com/teamignitionvitc/Glance/releases/tag/v1.0.0-alpha.1) |
+
+> **📘 Full Documentation:** For detailed setup guides and troubleshooting, see the [Official Documentation](docs/index.html).
+
+### Method 2: Build from Source (Developers)
+
+<details>
+<summary><h3>Standard Installation</h3></summary>
 
 ```bash
 # Clone the repository
@@ -483,7 +496,7 @@ python main.py
 </details>
 
 <details>
-<summary><h3>Method 2: Virtual Environment (Recommended)</h3></summary>
+<summary><h3>Virtual Environment (Recommended)</h3></summary>
 
 ```bash
 # Clone repository

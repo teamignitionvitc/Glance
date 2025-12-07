@@ -370,14 +370,20 @@
         }
 
         .main-header h1 {
-            background: linear-gradient(120deg, var(--text-primary), var(--text-secondary));
+            background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%);
             -webkit-background-clip: text;
+            background-clip: text;
             -webkit-text-fill-color: transparent;
+            margin-bottom: 1rem;
         }
 
         .main-header p {
             margin-left: auto;
             margin-right: auto;
+        }
+
+        .main-header .download-btn-container {
+            margin-top: 1.5rem;
         }
 
         .overview-layout {
@@ -653,6 +659,12 @@
             height: 36px;
         }
 
+        .feature-icon svg,
+        .feature-icon img {
+            width: 28px;
+            height: 28px;
+        }
+
         .feature-card h4 {
             margin-top: 0;
             margin-bottom: 0.5rem;
@@ -667,23 +679,78 @@
         }
 
         .card-link {
-            display: inline-block;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
             margin-top: 1rem;
             font-weight: 600;
-            font-size: 0.9rem;
+            font-size: 0.95rem;
+            padding: 0.75rem 1.5rem;
+            background-color: var(--primary);
+            color: white;
+            border-radius: 8px;
+            text-align: center;
+            transition: all 0.2s ease;
+            width: 100%;
+            border: 1px solid transparent;
+            text-decoration: none;
+            /* Ensure no underline by default */
         }
 
         .card-link:hover {
+            background-color: var(--primary-dark);
+            color: white !important;
+            /* Force text color to remain white */
             text-decoration: none;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(10, 132, 255, 0.3);
         }
 
         .card-link span {
+            margin-left: 0.5rem;
             transition: transform 0.2s ease;
-            display: inline-block;
         }
 
         .card-link:hover span {
-            transform: translateX(4px);
+            transform: translateX(3px);
+        }
+
+        .secondary-link {
+            display: block;
+            text-align: center;
+            margin-top: 0.75rem;
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            font-weight: 500;
+            text-decoration: none;
+            transition: color 0.2s ease;
+        }
+
+        .secondary-link:hover {
+            color: var(--primary);
+            text-decoration: underline;
+        }
+
+        .primary-btn {
+            display: inline-block;
+            background-color: var(--primary);
+            color: white;
+            padding: 0.8rem 2rem;
+            border-radius: 50px;
+            font-weight: 600;
+            font-size: 1rem;
+            transition: all 0.2s ease;
+            border: 1px solid transparent;
+            box-shadow: 0 4px 15px rgba(10, 132, 255, 0.2);
+            text-decoration: none;
+        }
+
+        .primary-btn:hover {
+            background-color: var(--primary-dark);
+            text-decoration: none;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(10, 132, 255, 0.3);
+            color: white;
         }
 
         /* README Link Styling */
@@ -1396,6 +1463,9 @@
                             telemetry needs. With multi-source connectivity, powerful data logging, and an intuitive
                             UI/UX, Glance empowers engineers, researchers, and operators to gain actionable insights
                             from complex data streams—all at a single glance.</p>
+                        <div class="download-btn-container" style="margin-top: 2rem;">
+                            <a href="#installation" class="primary-btn hero-download-btn">Download Now</a>
+                        </div>
                         <div class="info-box">
                             <p><strong>Primary Goal:</strong> To provide a powerful, flexible, and user-friendly tool
                                 for monitoring live data, enabling rapid diagnostics, performance analysis, and
@@ -1622,7 +1692,44 @@
 
             <section id="installation">
                 <h2>Installation Guide</h2>
-                <h3>1. Clone the Repository</h3>
+
+                <h3>Option 1: Download & Run (Recommended)</h3>
+                <p>The easiest way to use Glance is to download the standalone executable for your operating system from
+                    our <a href="https://github.com/teamignitionvitc/Glance/releases/tag/v1.0.0-alpha.1"
+                        target="_blank">Releases Page</a>.</p>
+
+                <div class="feature-grid" style="margin-top: 1rem; margin-bottom: 2rem;">
+                    <div class="feature-card">
+                        <div class="feature-icon">
+                            <!-- Windows Logo -->
+                            <img src="public/Windows.svg" alt="Windows Logo" loading="lazy">
+                        </div>
+                        <h4>Windows</h4>
+                        <p>1. Download the <code>.exe</code> file.<br>2. Run the executable.<br>3. (Optional) Create a
+                            shortcut for easy access.</p>
+                        <a href="https://github.com/teamignitionvitc/Glance/releases/download/v1.0.0-alpha.1/Glance_Setup_Windows_v1.exe"
+                            download class="card-link">Download Windows .exe <span>&rarr;</span></a>
+                        <a href="https://github.com/teamignitionvitc/Glance/releases/tag/v1.0.0-alpha.1" target="_blank"
+                            class="secondary-link">View Release Notes</a>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon">
+                            <!-- Linux Penguin Logo -->
+                            <img src="public/Tux.svg" alt="Linux Logo" loading="lazy">
+                        </div>
+                        <h4>Linux</h4>
+                        <p>1. Download the <code>.tar.gz</code> release.<br>2. Extract it:
+                            <code>tar -xvzf Glance_Linux_x64.tar.gz</code><br>3. Run the binary: <code>./Glance</code>
+                        </p>
+                        <a href="https://github.com/teamignitionvitc/Glance/releases/download/v1.0.0-alpha.1/Glance_Linux_x64.tar.gz"
+                            download class="card-link">Download Linux Binary <span>&rarr;</span></a>
+                        <a href="https://github.com/teamignitionvitc/Glance/releases/tag/v1.0.0-alpha.1" target="_blank"
+                            class="secondary-link">View Release Notes</a>
+                    </div>
+                </div>
+
+                <h3>Option 2: Build from Source (Developers)</h3>
+                <h4>1. Clone the Repository</h4>
                 <p>First, clone the project from GitHub to your local machine.</p>
                 <div class="code-block-wrapper">
                     <div class="code-header">
@@ -1638,7 +1745,7 @@
 cd Glance</code></pre>
                 </div>
 
-                <h3>2. Set Up a Virtual Environment (Recommended)</h3>
+                <h4>2. Set Up a Virtual Environment (Recommended)</h4>
                 <p>Using a virtual environment prevents conflicts with other Python projects.</p>
                 <div class="code-block-wrapper">
                     <div class="code-header">
@@ -1646,7 +1753,7 @@ cd Glance</code></pre>
                         <button class="copy-btn" title="Copy code"><svg fill="none" stroke="currentColor"
                                 viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round"
-                                    d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z">
+                                    d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z">
                                 </path>
                             </svg><span>Copy</span></button>
                     </div>
@@ -1655,7 +1762,7 @@ cd Glance</code></pre>
 # On macOS/Linux: source venv/bin/activate</code></pre>
                 </div>
 
-                <h3>3. Install Dependencies</h3>
+                <h4>3. Install Dependencies</h4>
                 <p>Install all required libraries using the <code>requirements.txt</code> file.</p>
                 <div class="code-block-wrapper">
                     <div class="code-header">
@@ -1663,7 +1770,7 @@ cd Glance</code></pre>
                         <button class="copy-btn" title="Copy code"><svg fill="none" stroke="currentColor"
                                 viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round"
-                                    d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z">
+                                    d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z">
                                 </path>
                             </svg><span>Copy</span></button>
                     </div>
@@ -1674,13 +1781,8 @@ cd Glance</code></pre>
                     <p>For the <strong>Map Widget</strong> and <strong>PDF Reporting</strong>, optional dependencies are
                         required. Install them with: <code>pip install PySide6-WebEngine reportlab</code></p>
                 </div>
-                <div class="info-box accent">
-                    <p><strong>Coming Soon:</strong> We are actively working on one-click executables for Windows (.exe)
-                        and Linux (.AppImage) to make installation even easier. These will be available in upcoming
-                        releases!</p>
-                </div>
 
-                <h3>4. Launch the Application</h3>
+                <h4>4. Launch the Application</h4>
                 <p>Once dependencies are installed, you can start Glance.</p>
                 <div class="code-block-wrapper">
                     <div class="code-header">
@@ -1688,7 +1790,7 @@ cd Glance</code></pre>
                         <button class="copy-btn" title="Copy code"><svg fill="none" stroke="currentColor"
                                 viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round"
-                                    d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z">
+                                    d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z">
                                 </path>
                             </svg><span>Copy</span></button>
                     </div>
