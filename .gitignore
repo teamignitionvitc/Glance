@@ -155,3 +155,4 @@ logs/
 presets/
 .al/
 App_BuilderSpecs/
+inno_setup/
