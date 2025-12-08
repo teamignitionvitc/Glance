@@ -40,1245 +40,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <style>
-        /* General Reset & Root Variables */
-        :root {
-            --primary: #0a84ff;
-            --primary-dark: #0077ee;
-            --bg-dark: #0f0f10;
-            --bg-darker: #1a1a1c;
-            --bg-light: #2c2c2e;
-            --text-primary: #f5f5f7;
-            --text-secondary: #a0a0a5;
-            /* Slightly lighter for better readability */
-            --border: #3a3a3c;
-            --accent: #30d158;
-            --warning: #ff9f0a;
-            --danger: #ff453a;
-            --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-        }
-
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        html {
-            scroll-behavior: smooth;
-        }
-
-        body {
-            font-family: var(--font-sans);
-            background-color: var(--bg-dark);
-            background-image: radial-gradient(ellipse at top, #212124, var(--bg-dark) 70%);
-            color: var(--text-primary);
-            line-height: 1.7;
-            font-size: 16px;
-            -webkit-font-smoothing: antialiased;
-            -moz-osx-font-smoothing: grayscale;
-        }
-
-        /* Custom Scrollbar - Body */
-        ::-webkit-scrollbar {
-            width: 12px;
-            height: 12px;
-        }
-
-        ::-webkit-scrollbar-track {
-            background: var(--bg-dark);
-        }
-
-        ::-webkit-scrollbar-thumb {
-            background-color: var(--border);
-            border-radius: 6px;
-            border: 3px solid var(--bg-dark);
-        }
-
-        ::-webkit-scrollbar-thumb:hover {
-            background-color: var(--primary);
-        }
-
-        /* Firefox scrollbar */
-        html {
-            scrollbar-width: thin;
-            scrollbar-color: var(--border) var(--bg-dark);
-        }
-
-        /* Typography */
-        h1,
-        h2,
-        h3,
-        h4,
-        h5,
-        h6 {
-            color: var(--text-primary);
-            line-height: 1.3;
-            font-weight: 700;
-        }
-
-        h1 {
-            font-size: 2.75rem;
-            margin-bottom: 1rem;
-        }
-
-        h2 {
-            font-size: 2.25rem;
-            margin: 3.5rem 0 1.5rem 0;
-            padding-bottom: 0.75rem;
-            border-bottom: 1px solid var(--border);
-        }
-
-        h3 {
-            font-size: 1.75rem;
-            margin: 2.5rem 0 1.25rem 0;
-        }
-
-        h4 {
-            font-size: 1.25rem;
-            margin: 1.5rem 0 0.75rem 0;
-            color: var(--primary);
-            font-weight: 600;
-        }
-
-        p {
-            margin-bottom: 1rem;
-            color: var(--text-secondary);
-            max-width: 75ch;
-        }
-
-        a {
-            color: var(--primary);
-            text-decoration: none;
-            transition: color 0.2s ease;
-        }
-
-        a:hover {
-            color: var(--primary-dark);
-            text-decoration: underline;
-        }
-
-        strong {
-            font-weight: 600;
-            color: var(--text-primary);
-        }
-
-        ul,
-        ol {
-            margin: 1rem 0 1rem 1.25rem;
-            padding-left: 1rem;
-        }
-
-        li {
-            margin-bottom: 0.75rem;
-        }
-
-        /* Search Highlight Styling */
-        mark {
-            background-color: var(--warning);
-            color: var(--bg-darker);
-            padding: 0.1em 0.2em;
-            border-radius: 3px;
-        }
-
-
-        /* Main Layout */
-        .container {
-            display: flex;
-        }
-
-        .sidebar {
-            width: 280px;
-            background: var(--bg-darker);
-            border-right: 1px solid var(--border);
-            position: fixed;
-            height: 100%;
-            display: flex;
-            flex-direction: column;
-            transition: transform 0.3s ease;
-            z-index: 1000;
-        }
-
-        .content {
-            margin-left: 280px;
-            width: calc(100% - 280px);
-            padding: 3rem 5rem;
-            transition: filter 0.3s ease;
-        }
-
-        main>section {
-            scroll-margin-top: 3rem;
-        }
-
-        /* Sidebar Styling */
-        .sidebar-header {
-            padding: 1.5rem;
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            border-bottom: 1px solid var(--border);
-            flex-shrink: 0;
-        }
-
-        .sidebar-header img {
-            width: 40px;
-            height: 40px;
-        }
-
-        .sidebar-header .title h1 {
-            font-size: 1.2rem;
-            margin: 0;
-            color: var(--text-primary);
-        }
-
-        .sidebar-header .title p {
-            font-size: 0.8rem;
-            margin: 0;
-            color: var(--text-secondary);
-        }
-
-        /* IMPROVED: Search bar with clear button */
-        .search-container {
-            padding: 1rem 1.5rem;
-            border-bottom: 1px solid var(--border);
-            position: relative;
-            flex-shrink: 0;
-        }
-
-        #search-input {
-            width: 100%;
-            background-color: var(--bg-light);
-            border: 1px solid var(--border);
-            border-radius: 8px;
-            padding: 0.75rem 2.5rem;
-            /* space for icon and clear button */
-            color: var(--text-primary);
-            font-size: 0.9rem;
-            transition: border-color 0.2s, box-shadow 0.2s;
-        }
-
-        #search-input:focus {
-            outline: none;
-            border-color: var(--primary);
-            box-shadow: 0 0 0 3px rgba(10, 132, 255, 0.3);
-        }
-
-        .search-icon {
-            position: absolute;
-            left: 2.25rem;
-            top: 50%;
-            transform: translateY(-50%);
-            color: var(--text-secondary);
-            width: 20px;
-            height: 20px;
-            pointer-events: none;
-        }
-
-        .search-clear-btn {
-            position: absolute;
-            right: 2.25rem;
-            top: 50%;
-            transform: translateY(-50%);
-            background: none;
-            border: none;
-            padding: 0.25rem;
-            cursor: pointer;
-            color: var(--text-secondary);
-            display: none;
-            /* Hidden by default */
-        }
-
-        .search-clear-btn:hover {
-            color: var(--text-primary);
-        }
-
-        .search-clear-btn svg {
-            width: 18px;
-            height: 18px;
-            display: block;
-        }
-
-        .nav-container {
-            flex-grow: 1;
-            overflow-y: auto;
-        }
-
-        .nav-section-title {
-            padding: 1.5rem 1.5rem 0.5rem;
-            font-size: 0.75rem;
-            font-weight: 700;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            color: var(--text-secondary);
-        }
-
-        .nav-item {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            padding: 0.75rem 1.5rem;
-            color: var(--text-secondary);
-            font-size: 0.9rem;
-            border-left: 3px solid transparent;
-            transition: all 0.2s ease;
-            font-weight: 500;
-        }
-
-        .nav-item:hover {
-            background: var(--bg-light);
-            color: var(--text-primary);
-        }
-
-        .nav-item.active {
-            background: rgba(10, 132, 255, 0.1);
-            color: var(--primary);
-            border-left-color: var(--primary);
-            font-weight: 600;
-        }
-
-        .nav-item .icon {
-            width: 16px;
-            height: 16px;
-            stroke-width: 2px;
-        }
-
-        .nav-container::-webkit-scrollbar {
-            width: 8px;
-        }
-
-        .nav-container::-webkit-scrollbar-track {
-            background: transparent;
-        }
-
-        .nav-container::-webkit-scrollbar-thumb {
-            background: var(--border);
-            border-radius: 4px;
-        }
-
-        .nav-container::-webkit-scrollbar-thumb:hover {
-            background: var(--primary);
-        }
-
-        /* Content Styling */
-        .main-header {
-            text-align: center;
-            margin-bottom: 3rem;
-            padding-bottom: 2rem;
-            border-bottom: 1px solid var(--border);
-        }
-
-        .main-header .main-logo {
-            max-width: 200px;
-            margin-bottom: 1.5rem;
-        }
-
-        .main-header h1 {
-            background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%);
-            -webkit-background-clip: text;
-            background-clip: text;
-            -webkit-text-fill-color: transparent;
-            margin-bottom: 1rem;
-        }
-
-        .main-header p {
-            margin-left: auto;
-            margin-right: auto;
-        }
-
-        .main-header .download-btn-container {
-            margin-top: 1.5rem;
-        }
-
-        .overview-layout {
-            display: flex;
-            gap: 3rem;
-            align-items: center;
-            margin-top: 2rem;
-        }
-
-        .overview-layout .text-content {
-            flex: 1;
-        }
-
-        .overview-layout .gif-content {
-            flex: 1;
-            min-width: 0;
-        }
-
-        .overview-layout .gif-content img {
-            width: 100%;
-            border-radius: 8px;
-            border: 1px solid var(--border);
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
-        }
-
-        /* GitHub Link */
-        .github-link {
-            position: fixed;
-            top: 1.5rem;
-            right: 1.5rem;
-            z-index: 999;
-            background: var(--bg-light);
-            border: 1px solid var(--border);
-            border-radius: 50%;
-            width: 48px;
-            height: 48px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: all 0.2s ease;
-        }
-
-        .github-link svg {
-            width: 28px;
-            height: 28px;
-            color: var(--text-secondary);
-            transition: all 0.2s ease;
-        }
-
-        .github-link:hover {
-            background: var(--primary);
-            border-color: var(--primary);
-            transform: scale(1.1);
-        }
-
-        .github-link:hover svg {
-            color: white;
-        }
-
-        /* Utility & Components */
-        .info-box {
-            background: var(--bg-light);
-            border-left: 4px solid var(--primary);
-            padding: 1.25rem 1.5rem;
-            margin: 1.5rem 0;
-            border-radius: 0 8px 8px 0;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
-            display: flex;
-            align-items: center;
-            gap: 1rem;
-        }
-
-        .info-box.warning {
-            border-color: var(--warning);
-        }
-
-        .info-box.danger {
-            border-color: var(--danger);
-        }
-
-        .info-box.accent {
-            border-color: var(--accent);
-        }
-
-        .info-box::before {
-            content: '';
-            display: block;
-            width: 24px;
-            height: 24px;
-            flex-shrink: 0;
-            background-repeat: no-repeat;
-            background-size: contain;
-            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke-width='1.5' stroke='%230a84ff'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' d='M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z' /%3E%3C/svg%3E");
-        }
-
-        .info-box.warning::before {
-            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke-width='1.5' stroke='%23ff9f0a'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' d='M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z' /%3E%3C/svg%3E");
-        }
-
-        .info-box.danger::before {
-            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke-width='1.5' stroke='%23ff453a'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' d='M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z' /%3E%3C/svg%3E");
-        }
-
-        .info-box.accent::before {
-            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke-width='1.5' stroke='%2330d158'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' d='M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z' /%3E%3C/svg%3E");
-        }
-
-        .info-box p {
-            margin: 0;
-            max-width: none;
-        }
-
-        /* Code Blocks */
-        code {
-            background: var(--bg-light);
-            padding: 0.2em 0.4em;
-            border-radius: 4px;
-            font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
-            font-size: 0.9em;
-            color: #ff9f0a;
-        }
-
-        .code-block-wrapper {
-            background: var(--bg-darker);
-            border: 1px solid var(--border);
-            border-radius: 8px;
-            margin: 1.5rem 0;
-            overflow: hidden;
-        }
-
-        .code-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            background: var(--bg-light);
-            padding: 0.5rem 1rem;
-            border-bottom: 1px solid var(--border);
-            font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
-            font-size: 0.8rem;
-            color: var(--text-secondary);
-        }
-
-        pre {
-            margin: 0;
-            border: none;
-            border-radius: 0;
-            background: transparent;
-        }
-
-        pre code {
-            padding: 1.25rem 1.5rem;
-            display: block;
-            overflow-x: auto;
-            font-size: 0.85rem;
-            line-height: 1.6;
-            color: var(--text-primary);
-            white-space: pre;
-        }
-
-        .copy-btn {
-            background: none;
-            border: none;
-            color: var(--text-secondary);
-            padding: 0.5rem;
-            border-radius: 6px;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-
-        .copy-btn:hover {
-            background: var(--border);
-            color: var(--text-primary);
-        }
-
-        .copy-btn svg {
-            width: 16px;
-            height: 16px;
-            vertical-align: middle;
-            transition: transform 0.1s ease;
-        }
-
-        .copy-btn:active svg {
-            transform: scale(0.9);
-        }
-
-        .copy-btn.copied {
-            background-color: var(--accent);
-            color: white;
-        }
-
-        /* Responsive Tables */
-        .table-wrapper {
-            overflow-x: auto;
-            -webkit-overflow-scrolling: touch;
-            border: 1px solid var(--border);
-            border-radius: 8px;
-            margin: 1.5rem 0;
-        }
-
-        table {
-            width: 100%;
-            min-width: 600px;
-            border-collapse: collapse;
-            background: var(--bg-darker);
-        }
-
-        th,
-        td {
-            padding: 0.75rem 1rem;
-            text-align: left;
-            border-bottom: 1px solid var(--border);
-        }
-
-        th {
-            background: #333333;
-            font-weight: 600;
-        }
-
-        tbody tr {
-            transition: background-color 0.2s ease;
-        }
-
-        tbody tr:nth-child(even) {
-            background-color: rgba(255, 255, 255, 0.02);
-        }
-
-        tbody tr:hover {
-            background-color: var(--bg-light);
-        }
-
-        tr:last-child td {
-            border-bottom: none;
-        }
-
-        td ul {
-            margin: 0 0 0 1rem;
-        }
-
-        /* Enhanced Feature Grid Styling */
-        .feature-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-            gap: 1.5rem;
-            margin-top: 2rem;
-        }
-
-        .feature-card {
-            background: var(--bg-light);
-            border: 1px solid var(--border);
-            padding: 1.5rem;
-            border-radius: 12px;
-            transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
-            display: flex;
-            flex-direction: column;
-        }
-
-        .feature-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
-            border-color: var(--primary);
-        }
-
-        .feature-icon {
-            color: var(--primary);
-            margin-bottom: 1rem;
-        }
-
-        .feature-icon svg {
-            width: 36px;
-            height: 36px;
-        }
-
-        .feature-icon svg,
-        .feature-icon img {
-            width: 28px;
-            height: 28px;
-        }
-
-        .feature-card h4 {
-            margin-top: 0;
-            margin-bottom: 0.5rem;
-            color: var(--text-primary);
-            font-size: 1.2rem;
-            font-weight: 600;
-        }
-
-        .feature-card p {
-            font-size: 0.95rem;
-            flex-grow: 1;
-        }
-
-        .card-link {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            margin-top: 1rem;
-            font-weight: 600;
-            font-size: 0.95rem;
-            padding: 0.75rem 1.5rem;
-            background-color: var(--primary);
-            color: white;
-            border-radius: 8px;
-            text-align: center;
-            transition: all 0.2s ease;
-            width: 100%;
-            border: 1px solid transparent;
-            text-decoration: none;
-            /* Ensure no underline by default */
-        }
-
-        .card-link:hover {
-            background-color: var(--primary-dark);
-            color: white !important;
-            /* Force text color to remain white */
-            text-decoration: none;
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(10, 132, 255, 0.3);
-        }
-
-        .card-link span {
-            margin-left: 0.5rem;
-            transition: transform 0.2s ease;
-        }
-
-        .card-link:hover span {
-            transform: translateX(3px);
-        }
-
-        .secondary-link {
-            display: block;
-            text-align: center;
-            margin-top: 0.75rem;
-            font-size: 0.85rem;
-            color: var(--text-secondary);
-            font-weight: 500;
-            text-decoration: none;
-            transition: color 0.2s ease;
-        }
-
-        .secondary-link:hover {
-            color: var(--primary);
-            text-decoration: underline;
-        }
-
-        .primary-btn {
-            display: inline-block;
-            background-color: var(--primary);
-            color: white;
-            padding: 0.8rem 2rem;
-            border-radius: 50px;
-            font-weight: 600;
-            font-size: 1rem;
-            transition: all 0.2s ease;
-            border: 1px solid transparent;
-            box-shadow: 0 4px 15px rgba(10, 132, 255, 0.2);
-            text-decoration: none;
-        }
-
-        .primary-btn:hover {
-            background-color: var(--primary-dark);
-            text-decoration: none;
-            transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(10, 132, 255, 0.3);
-            color: white;
-        }
-
-        /* README Link Styling */
-        .readme-link {
-            margin-top: 2rem;
-            padding-top: 1.5rem;
-            border-top: 1px solid var(--border);
-            font-size: 0.9rem;
-            font-style: italic;
-            color: var(--text-secondary);
-        }
-
-        .readme-link a {
-            color: var(--text-secondary);
-            text-decoration: underline;
-            text-decoration-style: dotted;
-            text-underline-offset: 3px;
-        }
-
-        .readme-link a:hover {
-            color: var(--primary);
-            text-decoration-style: solid;
-        }
-
-        /* --- UPDATED: Workflow Timeline Styling --- */
-        .workflow-timeline {
-            margin-top: 3rem;
-            position: relative;
-            padding-left: 30px;
-            /* Space for the line and icons */
-        }
-
-        .workflow-timeline::before {
-            content: '';
-            position: absolute;
-            left: 20px;
-            top: 10px;
-            bottom: 10px;
-            width: 3px;
-            background-color: var(--border);
-            border-radius: 2px;
-        }
-
-        .workflow-step {
-            position: relative;
-            margin-bottom: 2.5rem;
-            opacity: 0;
-            transform: translateY(20px);
-            transition: opacity 0.5s ease, transform 0.5s ease;
-        }
-
-        .workflow-step.visible {
-            opacity: 1;
-            transform: translateY(0);
-        }
-
-        .workflow-step:last-child {
-            margin-bottom: 0;
-        }
-
-        .workflow-icon-container {
-            position: absolute;
-            left: -30px;
-            /* (50px padding - 20px icon width) / 2 - 20px */
-            top: 0;
-        }
-
-        .workflow-icon {
-            width: 42px;
-            height: 42px;
-            background-color: var(--bg-light);
-            border: 3px solid var(--border);
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: 700;
-            font-size: 1.1rem;
-            color: var(--text-secondary);
-            transition: all 0.2s ease;
-        }
-
-        .workflow-step:hover .workflow-icon {
-            background-color: var(--primary);
-            border-color: var(--primary);
-            color: white;
-            transform: scale(1.1);
-        }
-
-        .workflow-content {
-            background-color: var(--bg-darker);
-            border: 1px solid var(--border);
-            padding: 1.5rem;
-            border-radius: 12px;
-            margin-left: 2rem;
-        }
-
-        .workflow-content h4 {
-            margin-top: 0;
-            margin-bottom: 0.5rem;
-            color: var(--primary);
-        }
-
-        .workflow-content p {
-            margin-bottom: 0;
-            max-width: none;
-        }
-
-        .workflow-image {
-            max-width: 100%;
-            width: auto;
-            height: auto;
-            max-height: 350px;
-            border-radius: 8px;
-            margin-top: 1rem;
-            border: 1px solid var(--border);
-            display: block;
-            margin-left: auto;
-            margin-right: auto;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
-        }
-
-        /* Screenshots */
-        .screenshot-gallery {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
-            gap: 2rem;
-            margin-top: 2rem;
-        }
-
-        .screenshot-gallery figure {
-            text-align: center;
-            background-color: var(--bg-darker);
-            padding: 1rem;
-            border-radius: 12px;
-            border: 1px solid var(--border);
-            display: flex;
-            flex-direction: column;
-            transition: transform 0.2s ease, box-shadow 0.2s ease;
-            height: 100%;
-            /* Ensure equal height */
-        }
-
-        .screenshot-gallery figure:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
-            border-color: var(--primary);
-        }
-
-        .screenshot-gallery img {
-            width: 100%;
-            height: auto;
-            border-radius: 8px;
-            margin-bottom: 1rem;
-            object-fit: contain;
-            max-height: 400px;
-            /* Reduced max-height for better fit */
-        }
-
-        .screenshot-gallery figcaption {
-            font-style: italic;
-            color: var(--text-secondary);
-            font-size: 0.9rem;
-            margin-top: auto;
-            /* Push caption to bottom */
-            padding-top: 0.5rem;
-        }
-
-        .telemetry-images {
-            display: flex;
-            flex-direction: column;
-            gap: 1.5rem;
-            margin-top: 2rem;
-            align-items: center;
-        }
-
-        .telemetry-images img {
-            max-width: 100%;
-            height: auto;
-            border-radius: 8px;
-            border: 1px solid var(--border);
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
-        }
-
-        /* Troubleshooting Section */
-        details {
-            background: var(--bg-darker);
-            border: 1px solid var(--border);
-            border-radius: 8px;
-            margin-bottom: 1rem;
-            transition: background-color 0.2s ease;
-        }
-
-        details[open] {
-            background: var(--bg-light);
-        }
-
-        summary {
-            padding: 1rem 1.5rem;
-            font-weight: 600;
-            cursor: pointer;
-            list-style: none;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        summary::-webkit-details-marker {
-            display: none;
-        }
-
-        summary::after {
-            content: '';
-            width: 1em;
-            height: 1em;
-            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke-width='2.5' stroke='white'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' d='M8.25 4.5l7.5 7.5-7.5 7.5' /%3E%3C/svg%3E");
-            background-size: contain;
-            transition: transform 0.2s ease;
-            transform: rotate(90deg);
-        }
-
-        details[open] summary::after {
-            transform: rotate(-90deg);
-        }
-
-        .details-content {
-            padding: 0 1.5rem 1.5rem 1.5rem;
-            border-top: 1px solid var(--border);
-        }
-
-        .details-content p,
-        .details-content ul,
-        .details-content ol {
-            max-width: none;
-        }
-
-        /* Footer */
-        footer {
-            margin-top: 4rem;
-            padding: 3rem 2rem;
-            border-top: 1px solid var(--border);
-            background-color: var(--bg-darker);
-        }
-
-        .footer-content {
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
-            flex-wrap: wrap;
-            gap: 2rem;
-            max-width: 1200px;
-            margin: 0 auto;
-        }
-
-        .footer-main {
-            text-align: left;
-            flex-basis: 50%;
-            flex-grow: 1;
-        }
-
-        .footer-logo {
-            max-width: 80px;
-            margin-bottom: 1rem;
-        }
-
-        .footer-text {
-            max-width: 60ch;
-            margin: 0 0 1.5rem 0;
-            color: var(--text-secondary);
-            font-size: 0.9rem;
-        }
-
-        .social-links {
-            display: flex;
-            justify-content: flex-start;
-            gap: 1rem;
-            margin-bottom: 1.5rem;
-            list-style: none;
-            padding: 0;
-        }
-
-        .social-links a {
-            color: var(--text-secondary);
-            transition: color 0.2s ease;
-            display: inline-block;
-        }
-
-        .social-links a:hover {
-            color: var(--text-primary);
-            transform: scale(1.1);
-        }
-
-        .social-links svg {
-            width: 24px;
-            height: 24px;
-        }
-
-        .contributors {
-            flex-basis: 300px;
-            text-align: left;
-        }
-
-        .contributors h4 {
-            color: var(--text-primary);
-            margin: 0 0 1rem 0;
-            font-size: 1rem;
-        }
-
-        /* Contributor List Styling */
-        .contributor-list {
-            list-style: none;
-            padding: 0;
-            margin: 0;
-            display: flex;
-            align-items: center;
-        }
-
-        .contributor-item {
-            margin: 0;
-            margin-left: -12px;
-            /* Negative margin for stacking */
-            transition: transform 0.2s ease;
-        }
-
-        .contributor-item:first-child {
-            margin-left: 0;
-        }
-
-        .contributor-item a {
-            display: block;
-            position: relative;
-        }
-
-        .contributor-item img {
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            border: 3px solid var(--bg-darker);
-            transition: transform 0.2s ease;
-            background-color: var(--bg-light);
-        }
-
-        .contributor-item:hover {
-            transform: translateY(-4px);
-            z-index: 10;
-        }
-
-        .contributor-overflow {
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            background-color: var(--bg-light);
-            border: 3px solid var(--bg-darker);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 0.8rem;
-            font-weight: 600;
-            color: var(--text-secondary);
-            margin-left: -12px;
-            z-index: 0;
-            cursor: default;
-        }
-
-        .contributor-list-loading {
-            font-style: italic;
-            color: var(--text-secondary);
-        }
-
-        .copyright {
-            font-size: 0.85rem;
-            color: #777;
-            text-align: center;
-            margin-top: 3rem;
-            padding-top: 2rem;
-            border-top: 1px solid var(--border);
-        }
-
-        /* Mobile Responsive Design */
-        .mobile-nav-toggle {
-            display: none;
-        }
-
-        .mobile-nav-toggle .icon-close {
-            display: none;
-        }
-
-        @media (max-width: 1024px) {
-            body.sidebar-is-open {
-                overflow: hidden;
-                /* Prevent body scroll when menu is open */
-            }
-
-            body.sidebar-is-open .content,
-            body.sidebar-is-open .github-link {
-                filter: brightness(0.5) blur(2px);
-                pointer-events: none;
-                /* Disable interaction with main content */
-            }
-
-            .sidebar {
-                transform: translateX(-100%);
-                position: fixed;
-                box-shadow: 0 0 40px rgba(0, 0, 0, 0.5);
-            }
-
-            .sidebar.open {
-                transform: translateX(0);
-            }
-
-            .content {
-                margin-left: 0;
-                width: 100%;
-                padding: 2.5rem 2rem;
-                transition: filter 0.3s ease;
-            }
-
-            .mobile-nav-toggle {
-                display: block;
-                position: fixed;
-                top: 1rem;
-                left: 1rem;
-                z-index: 1001;
-                background: var(--bg-light);
-                border: 1px solid var(--border);
-                border-radius: 8px;
-                padding: 0.75rem;
-                cursor: pointer;
-                transition: opacity 0.3s ease;
-            }
-
-            .mobile-nav-toggle .icon {
-                color: var(--text-primary);
-                width: 24px;
-                height: 24px;
-            }
-
-            .sidebar.open+.content+.mobile-nav-toggle,
-            body.sidebar-is-open .mobile-nav-toggle {
-                opacity: 1;
-            }
-
-            .sidebar-header .app-logo {
-                display: block;
-            }
-
-            .sidebar.open .mobile-nav-toggle .icon-menu,
-            .sidebar:not(.open) .mobile-nav-toggle .icon-close {
-                display: none;
-            }
-
-            .sidebar.open .mobile-nav-toggle .icon-close,
-            .sidebar:not(.open) .mobile-nav-toggle .icon-menu {
-                display: block;
-            }
-
-            h1 {
-                font-size: 2.25rem;
-            }
-
-            h2 {
-                font-size: 1.75rem;
-            }
-
-            .github-link {
-                top: 1.25rem;
-                right: 1.25rem;
-                width: 44px;
-                height: 44px;
-                transition: filter 0.3s ease;
-            }
-
-            .github-link svg {
-                width: 24px;
-                height: 24px;
-            }
-
-            .overview-layout {
-                flex-direction: column;
-            }
-        }
-
-        @media (max-width: 768px) {
-            .content {
-                padding: 2.5rem 1.5rem;
-            }
-
-            .main-header {
-                padding-bottom: 1.5rem;
-            }
-
-            .main-header h1 {
-                font-size: 2rem;
-                margin-top: 1rem;
-            }
-
-            .screenshot-gallery {
-                grid-template-columns: 1fr;
-                gap: 1.5rem;
-            }
-
-            .screenshot-gallery img {
-                max-height: 300px;
-                /* Smaller max-height on mobile */
-            }
-
-            .feature-grid {
-                grid-template-columns: 1fr;
-            }
-
-            .footer-content {
-                flex-direction: column;
-                text-align: center;
-            }
-
-            .footer-main,
-            .contributors {
-                text-align: center;
-            }
-
-            .social-links {
-                justify-content: center;
-            }
-        }
-    </style>
+    <link rel="stylesheet" href="style.css">
 </head>
 
 <body>
@@ -1294,7 +56,7 @@
         <!-- Sidebar Navigation -->
         <aside class="sidebar" id="sidebar">
             <header class="sidebar-header">
-                <img src="public/Glance_nobg _jl.svg" alt="Glance Logo" class="app-logo">
+                <img src="public/Glance_nobg_jl.png" alt="Glance Logo" class="app-logo">
                 <div class="title">
                     <h1>Glance</h1>
                     <p>Dashboard Builder</p>
@@ -1466,7 +228,7 @@
                             telemetry needs. With multi-source connectivity, powerful data logging, and an intuitive
                             UI/UX, Glance empowers engineers, researchers, and operators to gain actionable insights
                             from complex data streams—all at a single glance.</p>
-                        <div class="download-btn-container" style="margin-top: 2rem;">
+                        <div class="download-btn-container">
                             <a href="#installation" class="primary-btn hero-download-btn">Download Now</a>
                         </div>
                         <div class="info-box">
@@ -1481,137 +243,283 @@
                 </div>
             </section>
 
-            <!-- UPDATED FEATURES SECTION -->
-            <section id="features">
+            <!-- UPDATED FEATURES SECTION WITH CAROUSEL -->
+            <section id="features" class="section-alt">
                 <h2>Key Features</h2>
-                <div class="feature-grid">
-                    <!-- Card 0: Modern UI -->
-                    <div class="feature-card">
-                        <div class="feature-icon">
-                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                    d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z">
-                                </path>
-                            </svg>
+                <p class="section-description">Discover what makes Glance the ultimate tool for telemetry
+                    visualization.</p>
+
+                <div class="carousel-view">
+                    <div class="carousel-track">
+                        <!-- ORIGINAL CARDS -->
+                        <!-- Card 0: Modern UI -->
+                        <div class="carousel-card">
+                            <div class="feature-icon">
+                                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z">
+                                    </path>
+                                </svg>
+                            </div>
+                            <h4>Professional UI/UX</h4>
+                            <p>Experience a refined "Apple-like" dark theme with glassmorphism effects, VS Code-style
+                                status
+                                bar, and high-quality system icons for a premium feel.</p>
+                            <a href="#workflow" class="card-link">Learn More <span>&rarr;</span></a>
                         </div>
-                        <h4>Professional UI/UX</h4>
-                        <p>Experience a refined "Apple-like" dark theme with glassmorphism effects, VS Code-style status
-                            bar, and high-quality system icons for a premium feel.</p>
-                        <a href="#workflow" class="card-link">Learn More <span>&rarr;</span></a>
-                    </div>
-                    <!-- Card 1: Connectivity -->
-                    <div class="feature-card">
-                        <div class="feature-icon">
-                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                    d="M8.111 16.404a5.5 5.5 0 017.778 0M12 20h.01m-7.08-7.071a10 10 0 0114.142 0M1.394 8.532a15 15 0 0121.212 0">
-                                </path>
-                            </svg>
+                        <!-- Card 1: Connectivity -->
+                        <div class="carousel-card">
+                            <div class="feature-icon">
+                                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M8.111 16.404a5.5 5.5 0 017.778 0M12 20h.01m-7.08-7.071a10 10 0 0114.142 0M1.394 8.532a15 15 0 0121.212 0">
+                                    </path>
+                                </svg>
+                            </div>
+                            <h4>Multi-Source Connectivity</h4>
+                            <p>Connect seamlessly to hardware via Serial (RS232/USB) or stream data over a network using
+                                TCP
+                                and UDP. Includes a built-in simulator for development without hardware.</p>
+                            <a href="#data-sources" class="card-link">Learn More <span>&rarr;</span></a>
                         </div>
-                        <h4>Multi-Source Connectivity</h4>
-                        <p>Connect seamlessly to hardware via Serial (RS232/USB) or stream data over a network using TCP
-                            and UDP. Includes a built-in simulator for development without hardware.</p>
-                        <a href="#data-sources" class="card-link">Learn More <span>&rarr;</span></a>
-                    </div>
-                    <!-- Card 2: Visualization -->
-                    <div class="feature-card">
-                        <div class="feature-icon">
-                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                    d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a2 2 0 01-2 2H6a2 2 0 01-2-2V4z">
-                                </path>
-                            </svg>
+                        <!-- Card 2: Visualization -->
+                        <div class="carousel-card">
+                            <div class="feature-icon">
+                                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a2 2 0 01-2 2H6a2 2 0 01-2-2V4z">
+                                    </path>
+                                </svg>
+                            </div>
+                            <h4>Dynamic Workspace</h4>
+                            <p>Build your ideal dashboard with a rich widget library. Arrange everything with a flexible
+                                drag-and-drop, multi-tab interface where tabs can be detached into floating windows.</p>
+                            <a href="#widget-library" class="card-link">Learn More <span>&rarr;</span></a>
                         </div>
-                        <h4>Dynamic Workspace</h4>
-                        <p>Build your ideal dashboard with a rich widget library. Arrange everything with a flexible
-                            drag-and-drop, multi-tab interface where tabs can be detached into floating windows.</p>
-                        <a href="#widget-library" class="card-link">Learn More <span>&rarr;</span></a>
-                    </div>
-                    <!-- Card 3: Filtering -->
-                    <div class="feature-card">
-                        <div class="feature-icon">
-                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"
-                                xmlns="http://www.w3.org/2000/svg">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                    d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path>
-                            </svg>
+                        <!-- Card 3: Filtering -->
+                        <div class="carousel-card">
+                            <div class="feature-icon">
+                                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                                    xmlns="http://www.w3.org/2000/svg">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path>
+                                </svg>
+                            </div>
+                            <h4>Real-Time Signal Filtering</h4>
+                            <p>Clean up noisy sensor data on the fly. Apply non-destructive Kalman, Low-Pass, Median,
+                                and
+                                Moving Average filters to any parameter for clearer visualization.</p>
+                            <a href="#signal-filtering" class="card-link">Learn More <span>&rarr;</span></a>
                         </div>
-                        <h4>Real-Time Signal Filtering</h4>
-                        <p>Clean up noisy sensor data on the fly. Apply non-destructive Kalman, Low-Pass, Median, and
-                            Moving Average filters to any parameter for clearer visualization.</p>
-                        <a href="#signal-filtering" class="card-link">Learn More <span>&rarr;</span></a>
-                    </div>
-                    <!-- Card 4: Logging -->
-                    <div class="feature-card">
-                        <div class="feature-icon">
-                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                    d="M8 7v8a2 2 0 002 2h4M8 7a2 2 0 012-2h4a2 2 0 012 2v8a2 2 0 01-2 2h-4a2 2 0 01-2-2l-4.5-4.5L8 7z">
-                                </path>
-                            </svg>
+                        <!-- Card 4: Logging -->
+                        <div class="carousel-card">
+                            <div class="feature-icon">
+                                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M8 7v8a2 2 0 002 2h4M8 7a2 2 0 012-2h4a2 2 0 012 2v8a2 2 0 01-2 2h-4a2 2 0 01-2-2l-4.5-4.5L8 7z">
+                                    </path>
+                                </svg>
+                            </div>
+                            <h4>Advanced Data Logging</h4>
+                            <p>Record sessions to CSV or JSON with a high-performance buffering system. Select specific
+                                parameters to log and manage file output with ease.</p>
+                            <a href="#data-logging" class="card-link">Learn More <span>&rarr;</span></a>
                         </div>
-                        <h4>Advanced Data Logging</h4>
-                        <p>Record sessions to CSV or JSON with a high-performance buffering system. Select specific
-                            parameters to log and manage file output with ease.</p>
-                        <a href="#data-logging" class="card-link">Learn More <span>&rarr;</span></a>
-                    </div>
-                    <!-- Card 5: Project Management -->
-                    <div class="feature-card">
-                        <div class="feature-icon">
-                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"
-                                xmlns="http://www.w3.org/2000/svg">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                    d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4">
-                                </path>
-                            </svg>
+                        <!-- Card 5: Project Management -->
+                        <div class="carousel-card">
+                            <div class="feature-icon">
+                                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                                    xmlns="http://www.w3.org/2000/svg">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4">
+                                    </path>
+                                </svg>
+                            </div>
+                            <h4>Project Management</h4>
+                            <p>Save and load your entire dashboard state—including connections, parameters, filters, and
+                                widget layouts—as a single, portable .json project file.</p>
+                            <a href="#project-file" class="card-link">Learn More <span>&rarr;</span></a>
                         </div>
-                        <h4>Project Management</h4>
-                        <p>Save and load your entire dashboard state—including connections, parameters, filters, and
-                            widget layouts—as a single, portable .json project file.</p>
-                        <a href="#project-file" class="card-link">Learn More <span>&rarr;</span></a>
-                    </div>
-                    <!-- Card 6: Developer Tools -->
-                    <div class="feature-card">
-                        <div class="feature-icon">
-                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"
-                                xmlns="http://www.w3.org/2000/svg">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                    d="M8 9l4-4 4 4m0 6l-4 4-4-4"></path>
-                            </svg>
+                        <!-- Card 6: Developer Tools -->
+                        <div class="carousel-card">
+                            <div class="feature-icon">
+                                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                                    xmlns="http://www.w3.org/2000/svg">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M8 9l4-4 4 4m0 6l-4 4-4-4"></path>
+                                </svg>
+                            </div>
+                            <h4>Advanced Tools</h4>
+                            <p>Debug your data stream with the Raw Telemetry Monitor, inspect packets in multiple
+                                formats,
+                                and leverage a comprehensive set of keyboard shortcuts.</p>
+                            <a href="#advanced-tools" class="card-link">Learn More <span>&rarr;</span></a>
                         </div>
-                        <h4>Advanced Tools</h4>
-                        <p>Debug your data stream with the Raw Telemetry Monitor, inspect packets in multiple formats,
-                            and leverage a comprehensive set of keyboard shortcuts.</p>
-                        <a href="#advanced-tools" class="card-link">Learn More <span>&rarr;</span></a>
-                    </div>
-                    <!-- NEW Card 7: Reporting -->
-                    <div class="feature-card">
-                        <div class="feature-icon">
-                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"
-                                xmlns="http://www.w3.org/2000/svg">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                    d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z">
-                                </path>
-                            </svg>
+                        <!-- Card 7: Reporting -->
+                        <div class="carousel-card">
+                            <div class="feature-icon">
+                                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                                    xmlns="http://www.w3.org/2000/svg">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z">
+                                    </path>
+                                </svg>
+                            </div>
+                            <h4>PDF Summary Reports</h4>
+                            <p>Automatically generate detailed PDF reports from your logged data sessions, including
+                                metadata, statistical summaries, and parameter analysis.</p>
+                            <a href="#data-logging" class="card-link">Learn More <span>&rarr;</span></a>
                         </div>
-                        <h4>PDF Summary Reports</h4>
-                        <p>Automatically generate detailed PDF reports from your logged data sessions, including
-                            metadata, statistical summaries, and parameter analysis.</p>
-                        <a href="#data-logging" class="card-link">Learn More <span>&rarr;</span></a>
-                    </div>
-                    <!-- NEW Card 8: Performance -->
-                    <div class="feature-card">
-                        <div class="feature-icon">
-                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"
-                                xmlns="http://www.w3.org/2000/svg">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                    d="M13 10V3L4 14h7v7l9-11h-7z"></path>
-                            </svg>
+                        <!-- Card 8: Performance -->
+                        <div class="carousel-card">
+                            <div class="feature-icon">
+                                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                                    xmlns="http://www.w3.org/2000/svg">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                                </svg>
+                            </div>
+                            <h4>High Performance</h4>
+                            <p>Optimized for high-frequency data. Features 30 FPS UI throttling, smart graph
+                                downsampling,
+                                and efficient memory management to handle 100Hz+ streams smoothly.</p>
+                            <a href="#development" class="card-link">Learn More <span>&rarr;</span></a>
                         </div>
-                        <h4>High Performance</h4>
-                        <p>Optimized for high-frequency data. Features 30 FPS UI throttling, smart graph downsampling,
-                            and efficient memory management to handle 100Hz+ streams smoothly.</p>
-                        <a href="#development" class="card-link">Learn More <span>&rarr;</span></a>
+
+                        <!-- DUPLICATE CARDS FOR INFINITE SCROLL -->
+                        <!-- Card 0 -->
+                        <div class="carousel-card">
+                            <div class="feature-icon">
+                                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z">
+                                    </path>
+                                </svg>
+                            </div>
+                            <h4>Professional UI/UX</h4>
+                            <p>Experience a refined "Apple-like" dark theme with glassmorphism effects, VS Code-style
+                                status
+                                bar, and high-quality system icons for a premium feel.</p>
+                            <a href="#workflow" class="card-link">Learn More <span>&rarr;</span></a>
+                        </div>
+                        <!-- Card 1 -->
+                        <div class="carousel-card">
+                            <div class="feature-icon">
+                                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M8.111 16.404a5.5 5.5 0 017.778 0M12 20h.01m-7.08-7.071a10 10 0 0114.142 0M1.394 8.532a15 15 0 0121.212 0">
+                                    </path>
+                                </svg>
+                            </div>
+                            <h4>Multi-Source Connectivity</h4>
+                            <p>Connect seamlessly to hardware via Serial (RS232/USB) or stream data over a network using
+                                TCP
+                                and UDP. Includes a built-in simulator for development without hardware.</p>
+                            <a href="#data-sources" class="card-link">Learn More <span>&rarr;</span></a>
+                        </div>
+                        <!-- Card 2 -->
+                        <div class="carousel-card">
+                            <div class="feature-icon">
+                                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a2 2 0 01-2 2H6a2 2 0 01-2-2V4z">
+                                    </path>
+                                </svg>
+                            </div>
+                            <h4>Dynamic Workspace</h4>
+                            <p>Build your ideal dashboard with a rich widget library. Arrange everything with a flexible
+                                drag-and-drop, multi-tab interface where tabs can be detached into floating windows.</p>
+                            <a href="#widget-library" class="card-link">Learn More <span>&rarr;</span></a>
+                        </div>
+                        <!-- Card 3 -->
+                        <div class="carousel-card">
+                            <div class="feature-icon">
+                                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                                    xmlns="http://www.w3.org/2000/svg">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path>
+                                </svg>
+                            </div>
+                            <h4>Real-Time Signal Filtering</h4>
+                            <p>Clean up noisy sensor data on the fly. Apply non-destructive Kalman, Low-Pass, Median,
+                                and
+                                Moving Average filters to any parameter for clearer visualization.</p>
+                            <a href="#signal-filtering" class="card-link">Learn More <span>&rarr;</span></a>
+                        </div>
+                        <!-- Card 4 -->
+                        <div class="carousel-card">
+                            <div class="feature-icon">
+                                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M8 7v8a2 2 0 002 2h4M8 7a2 2 0 012-2h4a2 2 0 012 2v8a2 2 0 01-2 2h-4a2 2 0 01-2-2l-4.5-4.5L8 7z">
+                                    </path>
+                                </svg>
+                            </div>
+                            <h4>Advanced Data Logging</h4>
+                            <p>Record sessions to CSV or JSON with a high-performance buffering system. Select specific
+                                parameters to log and manage file output with ease.</p>
+                            <a href="#data-logging" class="card-link">Learn More <span>&rarr;</span></a>
+                        </div>
+                        <!-- Card 5 -->
+                        <div class="carousel-card">
+                            <div class="feature-icon">
+                                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                                    xmlns="http://www.w3.org/2000/svg">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4">
+                                    </path>
+                                </svg>
+                            </div>
+                            <h4>Project Management</h4>
+                            <p>Save and load your entire dashboard state—including connections, parameters, filters, and
+                                widget layouts—as a single, portable .json project file.</p>
+                            <a href="#project-file" class="card-link">Learn More <span>&rarr;</span></a>
+                        </div>
+                        <!-- Card 6 -->
+                        <div class="carousel-card">
+                            <div class="feature-icon">
+                                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                                    xmlns="http://www.w3.org/2000/svg">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M8 9l4-4 4 4m0 6l-4 4-4-4"></path>
+                                </svg>
+                            </div>
+                            <h4>Advanced Tools</h4>
+                            <p>Debug your data stream with the Raw Telemetry Monitor, inspect packets in multiple
+                                formats,
+                                and leverage a comprehensive set of keyboard shortcuts.</p>
+                            <a href="#advanced-tools" class="card-link">Learn More <span>&rarr;</span></a>
+                        </div>
+                        <!-- Card 7 -->
+                        <div class="carousel-card">
+                            <div class="feature-icon">
+                                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                                    xmlns="http://www.w3.org/2000/svg">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z">
+                                    </path>
+                                </svg>
+                            </div>
+                            <h4>PDF Summary Reports</h4>
+                            <p>Automatically generate detailed PDF reports from your logged data sessions, including
+                                metadata, statistical summaries, and parameter analysis.</p>
+                            <a href="#data-logging" class="card-link">Learn More <span>&rarr;</span></a>
+                        </div>
+                        <!-- Card 8 -->
+                        <div class="carousel-card">
+                            <div class="feature-icon">
+                                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                                    xmlns="http://www.w3.org/2000/svg">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                                </svg>
+                            </div>
+                            <h4>High Performance</h4>
+                            <p>Optimized for high-frequency data. Features 30 FPS UI throttling, smart graph
+                                downsampling,
+                                and efficient memory management to handle 100Hz+ streams smoothly.</p>
+                            <a href="#development" class="card-link">Learn More <span>&rarr;</span></a>
+                        </div>
                     </div>
                 </div>
             </section>
@@ -1651,7 +559,7 @@
                 </div>
             </section>
 
-            <section id="requirements">
+            <section id="requirements" class="section-alt">
                 <h2>System Requirements</h2>
                 <div class="table-wrapper">
                     <table>
@@ -1701,7 +609,7 @@
                     our <a href="https://github.com/teamignitionvitc/Glance/releases/tag/v1.0.0-alpha.1"
                         target="_blank">Releases Page</a>.</p>
 
-                <div class="feature-grid" style="margin-top: 1rem; margin-bottom: 2rem;">
+                <div class="feature-grid installation-grid">
                     <div class="feature-card">
                         <div class="feature-icon">
                             <!-- Windows Logo -->
@@ -1806,7 +714,7 @@ cd Glance</code></pre>
                 </div>
             </section>
 
-            <section id="workflow">
+            <section id="workflow" class="section-alt">
                 <h2>The Glance Workflow</h2>
                 <p>Glance guides you from a blank slate to a fully functional dashboard in four clear phases.</p>
                 <div class="workflow-timeline">
@@ -1931,7 +839,7 @@ cd Glance</code></pre>
                 </div>
             </section>
 
-            <section id="data-formats">
+            <section id="data-formats" class="section-alt">
                 <h2>Configuring Data Formats</h2>
                 <p>Telling Glance how to interpret the incoming stream of bytes is one of the most critical
                     configuration steps. An incorrect data format setting will result in garbled or no data appearing on
@@ -2075,7 +983,7 @@ cd Glance</code></pre>
                 </div>
             </section>
 
-            <section id="widget-library">
+            <section id="widget-library" class="section-alt">
                 <h2>The Widget Library & Customization</h2>
                 <p>Widgets are the visual components of your dashboard. Add them by clicking <strong>"Add
                         Widget..."</strong> and linking them to one or more configured parameters. Each widget has
@@ -2216,7 +1124,7 @@ cd Glance</code></pre>
                 </ul>
             </section>
 
-            <section id="project-file">
+            <section id="project-file" class="section-alt">
                 <h2>Project File Structure</h2>
                 <p>Glance projects are saved as <code>.json</code> files, which store the entire state of your
                     dashboard. This makes your configurations portable and easy to share.</p>
@@ -2283,7 +1191,7 @@ cd Glance</code></pre>
             </section>
 
             <!-- NEW SECTION: Signal Filtering -->
-            <section id="signal-filtering">
+            <section id="signal-filtering" class="section-alt">
                 <h2>Signal Filtering & Processing</h2>
                 <p>Glance includes a powerful real-time signal filtering system to help you reduce noise, smooth out
                     sensor readings, and remove outliers directly within the application. Filters are applied
@@ -2494,7 +1402,7 @@ cd Glance</code></pre>
                 </div>
             </section>
 
-            <section id="development">
+            <section id="development" class="section-alt">
                 <h2>Development Guide</h2>
                 <p>Glance is an open-source project driven by community collaboration. This guide provides the technical
                     details needed to understand the codebase, add new features, and contribute to the project.</p>
@@ -2876,7 +1784,8 @@ pytest tests/ --cov=main --cov=backend --cov-report=xml --junitxml=test-results.
                 </div>
             </section>
 
-            <section id="troubleshooting">
+            <!-- Troubleshooting Section -->
+            <section id="troubleshooting" class="section-alt">
                 <h2>Troubleshooting FAQ</h2>
                 <p>Here are solutions to some of the most common issues encountered during setup and operation.</p>
 
@@ -3061,304 +1970,7 @@ pytest tests/ --cov=main --cov=backend --cov-report=xml --junitxml=test-results.
         </main>
     </div>
 
-    <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            // Mobile navigation toggle
-            const menuToggle = document.getElementById('menu-toggle');
-            const sidebar = document.getElementById('sidebar');
-            const content = document.querySelector('.content');
-            const menuIcon = menuToggle.querySelector('.icon-menu');
-            const closeIcon = menuToggle.querySelector('.icon-close');
-
-            menuToggle.addEventListener('click', (e) => {
-                e.stopPropagation(); // Prevent this click from immediately closing the menu
-                const isOpen = sidebar.classList.toggle('open');
-                document.body.classList.toggle('sidebar-is-open', isOpen);
-
-                menuIcon.style.display = isOpen ? 'none' : 'block';
-                closeIcon.style.display = isOpen ? 'block' : 'none';
-            });
-
-            // Function to close the sidebar
-            const closeSidebar = () => {
-                if (sidebar.classList.contains('open')) {
-                    sidebar.classList.remove('open');
-                    document.body.classList.remove('sidebar-is-open');
-                    menuIcon.style.display = 'block';
-                    closeIcon.style.display = 'none';
-                }
-            };
-
-            // Close sidebar when clicking on the dimmed content area or any other body element
-            document.body.addEventListener('click', (e) => {
-                if (document.body.classList.contains('sidebar-is-open')) {
-                    if (!sidebar.contains(e.target) && !menuToggle.contains(e.target)) {
-                        closeSidebar();
-                    }
-                }
-            });
-
-            // Copy-to-clipboard for code blocks with improved feedback
-            document.querySelectorAll('.copy-btn').forEach(button => {
-                const originalContent = button.innerHTML;
-                const copiedContent = `<svg fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg><span>Copied!</span>`;
-
-                button.addEventListener('click', () => {
-                    const pre = button.closest('.code-block-wrapper').querySelector('pre');
-                    if (pre) {
-                        const code = pre.querySelector('code').innerText;
-                        navigator.clipboard.writeText(code).then(() => {
-                            button.innerHTML = copiedContent;
-                            button.classList.add('copied');
-                            setTimeout(() => {
-                                button.innerHTML = originalContent;
-                                button.classList.remove('copied');
-                            }, 2000);
-                        }).catch(err => {
-                            console.error('Failed to copy text: ', err);
-                        });
-                    }
-                });
-            });
-
-
-            // Active nav item on scroll
-            const sections = document.querySelectorAll('main section[id]');
-            const navItems = document.querySelectorAll('.nav-item');
-            const observer = new IntersectionObserver(entries => {
-                entries.forEach(entry => {
-                    if (entry.isIntersecting) {
-                        const id = entry.target.getAttribute('id');
-                        navItems.forEach(item => {
-                            item.classList.toggle('active', item.getAttribute('href') === `#${id}`);
-                        });
-                    }
-                });
-            }, { rootMargin: '-30% 0px -70% 0px' });
-
-            sections.forEach(section => observer.observe(section));
-
-            // --- ENHANCED SEARCH FUNCTIONALITY WITH HIGHLIGHTING ---
-            const searchInput = document.getElementById('search-input');
-            const searchClearBtn = document.getElementById('search-clear-btn');
-            const navLinks = document.querySelectorAll('.nav-item');
-            const navSections = document.querySelectorAll('.nav-section');
-            const mainContent = document.querySelector('main');
-            const mainHeader = document.querySelector('.main-header');
-
-            const searchableSectionsData = Array.from(document.querySelectorAll('main > section[id]')).map(section => {
-                const title = section.querySelector('h2');
-                return {
-                    id: section.id,
-                    element: section,
-                    title: title ? title.textContent.toLowerCase() : '',
-                    originalHTML: section.innerHTML // Store original HTML to remove highlights
-                };
-            });
-
-            let noResultsMessage = document.createElement('div');
-            noResultsMessage.id = 'no-results';
-            noResultsMessage.style.display = 'none';
-            noResultsMessage.style.textAlign = 'center';
-            noResultsMessage.style.padding = '4rem 0';
-            mainContent.appendChild(noResultsMessage);
-
-            function escapeRegex(string) {
-                return string.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
-            }
-
-            function highlightText(searchTerm) {
-                if (!searchTerm) return;
-                const regex = new RegExp(`(${escapeRegex(searchTerm)})`, 'gi');
-                searchableSectionsData.forEach(sec => {
-                    if (sec.element.style.display !== 'none') {
-                        sec.element.innerHTML = sec.originalHTML.replace(regex, `<mark>$1</mark>`);
-                    }
-                });
-            }
-
-            function removeHighlights() {
-                searchableSectionsData.forEach(sec => {
-                    sec.element.innerHTML = sec.originalHTML;
-                });
-            }
-
-            function performSearch() {
-                const searchTerm = searchInput.value.toLowerCase().trim();
-                searchClearBtn.style.display = searchTerm ? 'block' : 'none';
-
-                removeHighlights(); // Always remove old highlights first
-
-                if (searchTerm === '') {
-                    mainHeader.style.display = 'block';
-                    searchableSectionsData.forEach(sec => sec.element.style.display = 'block');
-                    navLinks.forEach(link => link.style.display = 'flex');
-                    navSections.forEach(section => section.style.display = 'block');
-                    noResultsMessage.style.display = 'none';
-                    return;
-                }
-
-                const matchedIds = new Set();
-
-                searchableSectionsData.forEach(sec => {
-                    const content = sec.title + ' ' + sec.element.textContent.toLowerCase();
-                    const isMatch = content.includes(searchTerm);
-                    sec.element.style.display = isMatch ? 'block' : 'none';
-                    if (isMatch) {
-                        matchedIds.add(sec.id);
-                    }
-                });
-
-                highlightText(searchTerm);
-
-                navLinks.forEach(link => {
-                    const linkId = link.getAttribute('href')?.substring(1);
-                    link.style.display = (linkId && matchedIds.has(linkId)) ? 'flex' : 'none';
-                });
-
-                navSections.forEach(section => {
-                    const visibleLinks = section.querySelectorAll('.nav-item[style*="display: flex"]');
-                    section.style.display = visibleLinks.length > 0 ? 'block' : 'none';
-                });
-
-                if (matchedIds.size === 0) {
-                    mainHeader.style.display = 'none';
-                    noResultsMessage.innerHTML = `<h3>No results found for "${searchInput.value}"</h3><p>Try searching for a different term or check your spelling.</p>`;
-                    noResultsMessage.style.display = 'block';
-                } else {
-                    mainHeader.style.display = 'block';
-                    noResultsMessage.style.display = 'none';
-                }
-            }
-
-            // Smart scroll for sidebar links when search is active
-            navLinks.forEach(link => {
-                link.addEventListener('click', (e) => {
-                    const searchTerm = searchInput.value.trim();
-                    if (searchTerm) {
-                        e.preventDefault();
-                        const targetId = link.getAttribute('href').substring(1);
-                        const targetSection = document.getElementById(targetId);
-
-                        if (targetSection) {
-                            const firstHighlight = targetSection.querySelector('mark');
-                            if (firstHighlight) {
-                                firstHighlight.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                            } else {
-                                targetSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                            }
-                        }
-                    }
-                    // Close sidebar on mobile after click
-                    if (window.innerWidth <= 1024) {
-                        closeSidebar();
-                    }
-                });
-            });
-
-
-            searchInput.addEventListener('input', performSearch);
-
-            searchClearBtn.addEventListener('click', () => {
-                searchInput.value = '';
-                searchInput.focus();
-                performSearch();
-            });
-
-
-            // --- Fetch GitHub Contributors ---
-            const listElement = document.getElementById('contributor-list');
-
-            function displayContributors(contributors) {
-                listElement.innerHTML = ''; // Clear loading message
-
-                const maxVisible = 4; // Show max 4 avatars
-                const topContributors = contributors.filter(c => c.type !== 'Bot');
-
-                const visibleContributors = topContributors.slice(0, maxVisible);
-
-                visibleContributors.forEach(contributor => {
-                    const listItem = document.createElement('li');
-                    listItem.className = 'contributor-item';
-                    listItem.title = contributor.login;
-
-                    listItem.innerHTML = `
-                        <a href="${contributor.html_url}" target="_blank" rel="noopener noreferrer">
-                            <img src="${contributor.avatar_url}" alt="Avatar for ${contributor.login}" loading="lazy">
-                        </a>
-                    `;
-                    listElement.appendChild(listItem);
-                });
-
-                if (topContributors.length > maxVisible) {
-                    const remainingCount = topContributors.length - maxVisible;
-                    const overflowItem = document.createElement('li');
-                    overflowItem.className = 'contributor-overflow';
-                    overflowItem.title = `${remainingCount} more contributors`;
-                    overflowItem.textContent = `+${remainingCount}`;
-                    listElement.appendChild(overflowItem);
-                }
-            }
-
-            async function fetchContributors() {
-                const owner = 'teamignitionvitc';
-                const repo = 'Glance';
-                const apiUrl = `https://api.github.com/repos/${owner}/${repo}/contributors`;
-                const cacheKey = 'githubContributors';
-                const cacheDuration = 24 * 60 * 60 * 1000; // 24 hours
-
-                const cachedData = localStorage.getItem(cacheKey);
-
-                if (cachedData) {
-                    const { timestamp, data } = JSON.parse(cachedData);
-                    if (Date.now() - timestamp < cacheDuration) {
-                        displayContributors(data);
-                        return;
-                    }
-                }
-
-                try {
-                    const response = await fetch(apiUrl);
-                    if (!response.ok) {
-                        throw new Error(`GitHub API error: ${response.status}`);
-                    }
-                    const contributors = await response.json();
-
-                    const cachePayload = {
-                        timestamp: Date.now(),
-                        data: contributors
-                    };
-                    localStorage.setItem(cacheKey, JSON.stringify(cachePayload));
-                    displayContributors(contributors);
-
-                } catch (error) {
-                    if (cachedData) {
-                        console.log('GitHub API request failed, serving stale data from cache.', error.message);
-                        const { data } = JSON.parse(cachedData);
-                        displayContributors(data);
-                    } else {
-                        console.error('Failed to fetch contributors and no cache is available:', error);
-                        listElement.innerHTML = '<li class="contributor-list-loading">Could not load contributors.</li>';
-                    }
-                }
-            }
-
-            fetchContributors();
-
-            // Animate workflow on scroll
-            const workflowObserver = new IntersectionObserver(entries => {
-                entries.forEach(entry => {
-                    if (entry.isIntersecting) {
-                        entry.target.classList.add('visible');
-                    }
-                });
-            }, { threshold: 0.5 });
-
-            document.querySelectorAll('.workflow-step').forEach(step => {
-                workflowObserver.observe(step);
-            });
-        });
-    </script>
+    <script src="script.js"></script>
 </body>
 
 </html>
