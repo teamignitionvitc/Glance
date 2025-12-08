@@ -2,7 +2,6 @@
 
 <img src="docs/public/Glance.png" alt="Glance Logo" width="400"/>
 
-
 <h3>Professional Real-Time Telemetry Visualization Platform</h3>
 
 <p>
@@ -75,6 +74,7 @@ With multi-source connectivity, advanced signal filtering, powerful data logging
 <td width="50%">
 
 **Interactive Graphs**
+
 - Multi-parameter time-series plotting
 - Zoom, pan, and crosshair inspection
 - Auto-scaling with manual override
@@ -82,7 +82,8 @@ With multi-source connectivity, advanced signal filtering, powerful data logging
 - Real-time legend updates
 
 **Status Displays**
-- Large-format value cards with alarm states
+
+- Large-format instant value displays with alarm states
 - Circular gauges with threshold zones
 - LED indicators with color-coded status
 - Statistical histograms for distribution analysis
@@ -91,6 +92,7 @@ With multi-source connectivity, advanced signal filtering, powerful data logging
 <td width="50%">
 
 **Data Tables & GPS**
+
 - Searchable log tables with highlighting
 - Timestamped data entries
 - Multi-parameter comparison
@@ -99,10 +101,13 @@ With multi-source connectivity, advanced signal filtering, powerful data logging
 - Interactive map controls
 
 **Advanced Features**
+
 - Crosshair cursor with value readout
 - Mouse-click data point selection
 - Widget floating and docking
 - Multi-tab dashboard support
+- Undo/Redo functionality for widget operations
+- Standalone raw telemetry viewer
 
 </td>
 </tr>
@@ -167,6 +172,7 @@ With multi-source connectivity, advanced signal filtering, powerful data logging
 <td width="50%">
 
 **Serial Communication**
+
 - RS232, RS485, USB-Serial support
 - Auto-detection of available ports
 - Configurable baudrate (300-10M)
@@ -174,6 +180,7 @@ With multi-source connectivity, advanced signal filtering, powerful data logging
 - Timeout configuration
 
 **Network Protocols**
+
 - TCP client connections
 - UDP listener mode
 - Configurable host and port
@@ -184,15 +191,18 @@ With multi-source connectivity, advanced signal filtering, powerful data logging
 <td width="50%">
 
 **Data Format Support**
+
 - JSON array parsing
 - CSV delimited data
 - Raw binary bytes
+- Binary struct (with type definitions)
 - Bit-level data extraction
 - Custom format definitions
 - Little/big endian support
 - Configurable channel count (1-1024)
 
 **Simulation Mode**
+
 - Built-in dummy data generator
 - No hardware required for testing
 - Configurable sine wave patterns
@@ -212,6 +222,7 @@ With multi-source connectivity, advanced signal filtering, powerful data logging
 <td width="50%">
 
 **Logging Features**
+
 - CSV and JSON format support
 - Parameter-selective logging
 - Configurable buffer sizes (10-1000)
@@ -220,6 +231,7 @@ With multi-source connectivity, advanced signal filtering, powerful data logging
 - Organized logs directory structure
 
 **Data Management**
+
 - Raw and filtered value storage
 - Millisecond-precision timestamps
 - Elapsed time tracking
@@ -230,13 +242,23 @@ With multi-source connectivity, advanced signal filtering, powerful data logging
 <td width="50%">
 
 **Export Options**
+
 - Standard CSV for Excel/MATLAB
 - JSON Lines format for programming
 - Human-readable timestamps
 - Parameter metadata inclusion
 - Configurable write frequency
 
+**PDF Report Generation**
+
+- Automated summary reports from logged data
+- Statistical analysis (min, max, average)
+- Session metadata and duration
+- Professional formatting with charts
+- Generate via **Ctrl+Shift+R** or **Data Logging → Generate Summary Report**
+
 **Performance**
+
 - Buffered I/O for efficiency
 - Configurable flush intervals
 - Background writing
@@ -257,6 +279,7 @@ With multi-source connectivity, advanced signal filtering, powerful data logging
 <td width="50%">
 
 **Raw Telemetry Monitor**
+
 - Decimal, hexadecimal, ASCII, binary, and mixed display modes
 - Real-time packet inspection
 - Packet statistics (count, rate, bytes)
@@ -266,6 +289,7 @@ With multi-source connectivity, advanced signal filtering, powerful data logging
 - Save to file
 
 **VS Code-like Status Bar**
+
 - Segmented layout for clear information hierarchy
 - Live clock display
 - Connection status with interactive button
@@ -279,6 +303,7 @@ With multi-source connectivity, advanced signal filtering, powerful data logging
 <td width="50%">
 
 **Debug Tools**
+
 - Connection diagnostics
 - Data format validation
 - Parameter mapping verification
@@ -287,6 +312,7 @@ With multi-source connectivity, advanced signal filtering, powerful data logging
 - Connection retry logic
 
 **Advanced Telemetry**
+
 - Multiple display format switching
 - Packet numbering
 - Timestamp display options
@@ -308,6 +334,7 @@ With multi-source connectivity, advanced signal filtering, powerful data logging
 <td width="50%">
 
 **Modern Design**
+
 - Professional "Apple-like" dark theme
 - High-contrast elements with SF Pro typography
 - Custom styled widgets with glassmorphism effects
@@ -316,6 +343,7 @@ With multi-source connectivity, advanced signal filtering, powerful data logging
 - Responsive layout with segmented controls
 
 **Dashboard Management**
+
 - 4-phase creation wizard
 - Professional Welcome Screen with system icons
 - Setup wizard with validation
@@ -326,6 +354,7 @@ With multi-source connectivity, advanced signal filtering, powerful data logging
 <td width="50%">
 
 **Layout Control**
+
 - Drag-and-drop widget positioning
 - Floating and docked modes
 - Multi-tab support with rename
@@ -335,11 +364,13 @@ With multi-source connectivity, advanced signal filtering, powerful data logging
 - Customizable dashboard titles
 
 **Workflow**
+
 - Project save/load system
 - Unsaved changes tracking
 - Configuration validation
 - Error prevention dialogs
-- Keyboard shortcut support
+- Comprehensive keyboard shortcut support
+- Command pattern for undo/redo operations
 
 </td>
 </tr>
@@ -355,11 +386,13 @@ With multi-source connectivity, advanced signal filtering, powerful data logging
 <td width="50%">
 
 **Backend Core**
+
 - **Threaded Acquisition**: `DataSimulator` runs in a dedicated `QThread`, ensuring the UI remains responsive even at high data rates (100Hz+).
-- **Abstraction Layer**: `DataReader` provides a unified interface for Serial, TCP, and UDP sources, handling low-level socket/port management and error recovery.
-- **Binary Parsing**: Uses Python's `struct` module for high-performance parsing of binary packets. Supports mixed data types (int, float, double) and bit-fields defined via user configuration.
+- **Abstraction Layer**: `DataReader` provides a unified interface for Serial, TCP, UDP, and Dummy sources, handling low-level socket/port management and error recovery with automatic reconnection.
+- **Binary Parsing**: Uses Python's `struct` module for high-performance parsing of binary packets. Supports mixed data types (int8/16/32, uint8/16/32, float32/64) and binary struct definitions via parameter configuration.
 
 **Data Flow**
+
 1. **Source**: Hardware/Network sends data packet.
 2. **Acquisition**: `DataReader` reads bytes/string.
 3. **Parsing**: Data is converted to a normalized `list[float]`.
@@ -371,15 +404,19 @@ With multi-source connectivity, advanced signal filtering, powerful data logging
 <td width="50%">
 
 **Data Logging Internals**
+
 - **Buffered I/O**: `DataLogger` accumulates data in memory (default 100 samples) before performing a bulk write to disk. This minimizes filesystem overhead and prevents write-latency from affecting the acquisition loop.
 - **Formats**:
-  - **CSV**: Optimized for import into Excel/MATLAB.
-  - **JSON Lines**: Stream-friendly format for programmatic analysis.
+  - **CSV**: Optimized for import into Excel/MATLAB with timestamp and elapsed time columns.
+  - **JSON Lines**: Stream-friendly format for programmatic analysis with ISO timestamp formatting.
+- **Report Generation**: PDF reports generated using `reportlab` library, analyzing logged CSV/JSON data to produce statistical summaries and visualizations.
 
 **Signal Processing**
-- **Filter Chain**: Filters are implemented as independent objects inheriting from `SignalFilter`.
+
+- **Filter Chain**: Filters are implemented as independent objects inheriting from `SignalFilter` base class.
 - **State Management**: Filters maintain their own internal state (buffers, covariance matrices) which persists across updates but can be reset dynamically.
 - **Real-time**: All filtering occurs in the main event loop, designed for low-latency (<1ms) processing per packet.
+- **Filter Management**: `FilterManager` handles per-parameter filter chains, enabling/disabling filters without restart, and serialization for project save/load.
 
 </td>
 </tr>
@@ -396,27 +433,27 @@ With multi-source connectivity, advanced signal filtering, powerful data logging
 <table>
 <tr>
 <td width="50%">
-<img src="docs/public/Doc%20Images/HomeScreen.png" alt="Welcome Screen"/>
+<img src="docs/public/Doc%20Images/welcome_screen_new.png" alt="Welcome Screen"/>
 <p><em>Modern welcome screen with quick-start options</em></p>
 </td>
 <td width="50%">
-<img src="docs/public/Doc%20Images/Connection.png" alt="Connection Settings"/>
+<img src="docs/public/Doc%20Images/dashboard_config.png" alt="Connection Settings"/>
 <p><em>Flexible data source configuration</em></p>
 </td>
 </tr>
 <tr>
 <td width="50%">
-<img src="docs/public/Doc%20Images/parameters.png" alt="Parameter Management"/>
+<img src="docs/public/Doc%20Images/parameters_new.png" alt="Parameter Management"/>
 <p><em>Parameter configuration with array index mapping</em></p>
 </td>
 <td width="50%">
-<img src="docs/public/Doc%20Images/logging.png" alt="Data Logging"/>
+<img src="docs/public/Doc%20Images/logging_config.png" alt="Data Logging"/>
 <p><em>Comprehensive data logging with format selection</em></p>
 </td>
 </tr>
 <tr>
 <td colspan="2">
-<img src="docs/public/Doc%20Images/dashboard.png" alt="Dashboard View"/>
+<img src="docs/public/Doc%20Images/dashboard_full_new.png" alt="Dashboard View"/>
 <p><em>Real-time multi-widget dashboard layout</em></p>
 </td>
 </tr>
@@ -469,10 +506,10 @@ With multi-source connectivity, advanced signal filtering, powerful data logging
 
 The easiest way to use Glance is to download the standalone executable for your system. No Python installation required.
 
-| Platform | Download | Release Notes |
-|----------|----------|---------------|
+| Platform    | Download                                                                                                                                                                                                                          | Release Notes                                                                            |
+| ----------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
 | **Windows** | [![Windows](https://img.shields.io/badge/Windows-Download_.exe-0078D4?style=for-the-badge&logo=windows&logoColor=white)](https://github.com/teamignitionvitc/Glance/releases/download/v1.0.0-alpha.1/Glance_Setup_Windows_v1.exe) | [v1.0.0-alpha.1](https://github.com/teamignitionvitc/Glance/releases/tag/v1.0.0-alpha.1) |
-| **Linux** | [![Linux](https://img.shields.io/badge/Linux-Download_.tar.gz-FCC624?style=for-the-badge&logo=linux&logoColor=black)](https://github.com/teamignitionvitc/Glance/releases/download/v1.0.0-alpha.1/Glance_Linux_x64.tar.gz) | [v1.0.0-alpha.1](https://github.com/teamignitionvitc/Glance/releases/tag/v1.0.0-alpha.1) |
+| **Linux**   | [![Linux](https://img.shields.io/badge/Linux-Download_.tar.gz-FCC624?style=for-the-badge&logo=linux&logoColor=black)](https://github.com/teamignitionvitc/Glance/releases/download/v1.0.0-alpha.1/Glance_Linux_x64.tar.gz)        | [v1.0.0-alpha.1](https://github.com/teamignitionvitc/Glance/releases/tag/v1.0.0-alpha.1) |
 
 > **📘 Full Documentation:** For detailed setup guides and troubleshooting, see the [Official Documentation](docs/index.html).
 
@@ -543,11 +580,13 @@ pyserial>=3.5           # Serial communication
 
 ```
 PySide6-WebEngine       # GPS map widgets
+reportlab               # PDF report generation
 ```
 
 **Installation:**
+
 ```bash
-pip install PySide6-WebEngine
+pip install PySide6-WebEngine reportlab
 ```
 
 </td>
@@ -706,6 +745,7 @@ Navigate to **Edit → Manage Parameters** or press **Ctrl+P**
 **Key Concept**: Array Index maps each parameter to a position in your incoming data array.
 
 Example: If device sends `[23.5, 65.2, 1013.25, ...]`:
+
 - Index 0 = Temperature (23.5)
 - Index 1 = Humidity (65.2)
 - Index 2 = Pressure (1013.25)
@@ -761,9 +801,9 @@ Click **"Add Widget..."** or press **Ctrl+W**
 <th>Best For</th>
 </tr>
 <tr>
-<td>Value Card</td>
+<td>Instant Value</td>
 <td>1+</td>
-<td>Multiple critical values</td>
+<td>Large display of current value(s)</td>
 </tr>
 <tr>
 <td>Time Graph</td>
@@ -798,6 +838,7 @@ Click **"Add Widget..."** or press **Ctrl+W**
 </table>
 
 **Widget Management**:
+
 - Right-click for context menu
 - Rename, Float/Dock, Close options
 - Tile Evenly for auto-arrangement
@@ -842,7 +883,29 @@ Start logging with **Ctrl+Shift+L**, stop with **Ctrl+Alt+L**
 </details>
 
 <details>
-<summary><h3>8. Monitor Raw Data</h3></summary>
+<summary><h3>8. Generate PDF Reports</h3></summary>
+
+After logging data, generate professional PDF summary reports:
+
+Navigate to **Data Logging → Generate Summary Report...** or press **Ctrl+Shift+R**
+
+**Report Features:**
+
+- Session metadata (duration, sample count, file size)
+- Statistical summary for each parameter (min, max, average)
+- Visual charts and graphs
+- Professional formatting
+- Export to PDF format
+
+**Requirements:**
+
+- Requires `reportlab` library (install with `pip install reportlab`)
+- Must have logged data available
+
+</details>
+
+<details>
+<summary><h3>9. Monitor Raw Data</h3></summary>
 
 Open **View → Raw Telemetry Monitor** or press **Ctrl+M**
 
@@ -875,6 +938,123 @@ Open **View → Raw Telemetry Monitor** or press **Ctrl+M**
 </table>
 
 </details>
+
+---
+
+## Keyboard Shortcuts
+
+Boost your productivity with these keyboard shortcuts:
+
+<table>
+<tr>
+<th>Category</th>
+<th>Action</th>
+<th>Shortcut</th>
+</tr>
+<tr>
+<td rowspan="6"><strong>File Operations</strong></td>
+<td>New Dashboard</td>
+<td><code>Ctrl + N</code></td>
+</tr>
+<tr>
+<td>Load Project</td>
+<td><code>Ctrl + O</code></td>
+</tr>
+<tr>
+<td>Save Project</td>
+<td><code>Ctrl + S</code></td>
+</tr>
+<tr>
+<td>Save Project As</td>
+<td><code>Ctrl + Shift + S</code></td>
+</tr>
+<tr>
+<td>Connection Settings</td>
+<td><code>Ctrl + Shift + C</code></td>
+</tr>
+<tr>
+<td>Exit Application</td>
+<td><code>Ctrl + Q</code></td>
+</tr>
+<tr>
+<td rowspan="3"><strong>Edit</strong></td>
+<td>Manage Parameters</td>
+<td><code>Ctrl + P</code></td>
+</tr>
+<tr>
+<td>Add Widget</td>
+<td><code>Ctrl + W</code></td>
+</tr>
+<tr>
+<td>Remove Widget</td>
+<td><code>Ctrl + Shift + W</code></td>
+</tr>
+<tr>
+<td rowspan="5"><strong>View & Navigation</strong></td>
+<td>Add New Tab</td>
+<td><code>Ctrl + T</code></td>
+</tr>
+<tr>
+<td>Rename Current Tab</td>
+<td><code>Ctrl + R</code></td>
+</tr>
+<tr>
+<td>Float/Dock Current Tab</td>
+<td><code>Ctrl + Shift + F</code></td>
+</tr>
+<tr>
+<td>Raw Telemetry Monitor</td>
+<td><code>Ctrl + M</code></td>
+</tr>
+<tr>
+<td>Toggle Fullscreen</td>
+<td><code>F11</code></td>
+</tr>
+<tr>
+<td rowspan="2"><strong>Stream Control</strong></td>
+<td>Pause/Resume Stream</td>
+<td><code>Spacebar</code></td>
+</tr>
+<tr>
+<td>Exit Fullscreen</td>
+<td><code>ESC</code></td>
+</tr>
+<tr>
+<td rowspan="5"><strong>Data & Filters</strong></td>
+<td>Configure Logging</td>
+<td><code>Ctrl + L</code></td>
+</tr>
+<tr>
+<td>Start Data Logging</td>
+<td><code>Ctrl + Shift + L</code></td>
+</tr>
+<tr>
+<td>Stop Data Logging</td>
+<td><code>Ctrl + Alt + L</code></td>
+</tr>
+<tr>
+<td>Generate Summary Report</td>
+<td><code>Ctrl + Shift + R</code></td>
+</tr>
+<tr>
+<td>Manage Filters</td>
+<td><code>Ctrl + F</code></td>
+</tr>
+<tr>
+<td rowspan="2"><strong>Undo/Redo</strong></td>
+<td>Undo</td>
+<td><code>Ctrl + Z</code></td>
+</tr>
+<tr>
+<td>Redo</td>
+<td><code>Ctrl + Shift + Z</code> or <code>Ctrl + Y</code></td>
+</tr>
+<tr>
+<td><strong>Help</strong></td>
+<td>Show Keyboard Shortcuts</td>
+<td><code>F1</code></td>
+</tr>
+</table>
 
 ---
 
