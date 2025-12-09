@@ -284,6 +284,21 @@ If you encounter issues, check the [Troubleshooting](#troubleshooting) section.
 
 </details>
 
+<details>
+<summary><h4>Step 5: Explore Project Structure</h4></summary>
+
+Familiarize yourself with the key directories:
+
+- **`app/core/`**: Backend logic including `backend.py` (data acquisition), `simulator.py` (data generation), and `filters.py`.
+- **`app/ui/`**: UI components, primarily `main_window.py`.
+- **`app/widgets/`**: The library of visualization widgets.
+- **`app/dialogs.py`**: Configuration dialogs.
+- **`docs/`**: Documentation files.
+
+For a deep dive into the architecture, please read the [Developer Guide](docs/index.html#development).
+
+</details>
+
 ---
 
 ## Development Workflow
@@ -359,6 +374,9 @@ git branch
 5. Commit changes
 6. Push to your fork
 7. Create pull request
+
+> [!TIP]
+> **Developer Guide**: For detailed architectural insights and how-to guides on creating widgets, refer to the [Developer Guide](docs/index.html).
 
 </td>
 </tr>
@@ -620,6 +638,16 @@ Test your changes with:
 </table>
 
 ### Automated Testing (Future)
+
+We use `pytest` for our test suite. To run the tests:
+
+```bash
+# Run all tests
+pytest
+
+# Run a specific test file
+pytest tests/test_filters.py
+```
 
 We're working on adding automated tests. If you'd like to contribute test infrastructure:
 

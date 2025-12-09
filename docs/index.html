@@ -1068,7 +1068,8 @@ cd Glance</code></pre>
                 <div class="screenshot-gallery">
                     <figure>
                         <img src="public/Doc Images/log_table.png" alt="Log Table Widget" loading="lazy">
-                        <figcaption>The Log Table Widget displaying timestamped data with search functionality.</figcaption>
+                        <figcaption>The Log Table Widget displaying timestamped data with search functionality.
+                        </figcaption>
                     </figure>
                 </div>
 
@@ -1430,11 +1431,13 @@ cd Glance</code></pre>
                         and slots mechanism</strong> for communication between components. The architecture follows a
                     Model-View-Controller-like pattern:</p>
                 <ul>
-                    <li><strong>Model:</strong> The data acquisition layer (<code>app/backend.py</code>) and the
+                    <li><strong>Model:</strong> The data acquisition layer (<code>app/core/backend.py</code>) and the
                         application's state (parameters, widget configs, data history) managed by the `MainWindow`.</li>
-                    <li><strong>View:</strong> The various widget classes (<code>app/widgets.py</code>) and dialogs
+                    <li><strong>View:</strong> The various widget classes in the <code>app/widgets/</code> directory and
+                        dialogs
                         (<code>app/dialogs.py</code>) that present data and options to the user.</li>
-                    <li><strong>Controller:</strong> The `main.py` file containing the `MainWindow` class, which
+                    <li><strong>Controller:</strong> The `app/ui/main_window.py` file containing the `MainWindow` class,
+                        which
                         connects the data backend to the UI, handles user input, and orchestrates the overall
                         application logic.</li>
                 </ul>
@@ -1456,7 +1459,7 @@ cd Glance</code></pre>
 ├── app/                 # Application source code
 │   ├── core/            # Backend logic (backend.py, simulator.py, filters.py, data_logger.py)
 │   ├── ui/              # UI components (main_window.py)
-│   ├── widgets/         # Widget library (general.py, telemetry.py)
+│   ├── widgets/         # Widget library (general.py, telemetry.py, etc.)
 │   └── dialogs.py       # Dialog classes
 ├── docs/                # Documentation files and images
 ├── logs/                # Default directory for saved data logs
@@ -1468,7 +1471,8 @@ cd Glance</code></pre>
                 <h3>Core Data Flow</h3>
                 <p>Understanding the data flow is key to modifying or extending Glance.</p>
                 <ol>
-                    <li>The <code>DataSimulator</code> (or `DataReader` via `backend.py`) runs in a separate QThread.
+                    <li>The <code>DataSimulator</code> (or `DataReader` via `app/core/backend.py`) runs in a separate
+                        QThread.
                     </li>
                     <li>Upon receiving/generating a complete data packet, it emits a <code>newData</code> signal with
                         the data (as a list of values).</li>
@@ -1489,16 +1493,19 @@ cd Glance</code></pre>
                 <h3>Adding a Custom Widget</h3>
                 <p>Follow these steps to create and integrate a new widget type:</p>
                 <ol>
-                    <li><strong>Create the Widget Class in <code>main.py</code>:</strong>
-                        <p>Your class must inherit from a Qt widget (like <code>QWidget</code> or <code>QFrame</code>)
+                    <li><strong>Create the Widget Class in <code>app/widgets/</code>:</strong>
+                        <p>Create a new file (e.g. <code>my_widget.py</code>) or add to
+                            <code>app/widgets/general.py</code>.
+                            Your class must inherit from a Qt widget (like <code>QWidget</code> or <code>QFrame</code>)
                             and have an update method.</p>
                     </li>
-                    <li><strong>Register in <code>AddWidgetDialog</code>:</strong>
-                        <p>In the `AddWidgetDialog` class, add the name of your new widget to the `display_types` list
+                    <li><strong>Register in <code>AddWidgetDialog</code> (app/dialogs.py):</strong>
+                        <p>In the `AddWidgetDialog` class, add the name of your new widget to the `widget_types` list
                             to make it selectable by the user.</p>
                     </li>
-                    <li><strong>Add Handler in <code>MainWindow.add_widget_to_dashboard</code>:</strong>
-                        <p>In this method, add a new `elif` block to instantiate your widget class when its display type
+                    <li><strong>Add Handler in <code>app/ui/main_window.py</code>:</strong>
+                        <p>In the `add_widget_to_dashboard` method, add a new `elif` block to instantiate your widget
+                            class when its display type
                             is chosen.</p>
                     </li>
                 </ol>
