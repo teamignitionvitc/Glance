@@ -3568,7 +3568,7 @@ class MainWindow(QMainWindow):
         text_layout = QVBoxLayout(text_container); text_layout.setSpacing(6)
         title_label = QLabel("Glance"); title_label.setObjectName("heroTitle")
         subtitle_label = QLabel("Professional Telemetry Dashboard"); subtitle_label.setObjectName("heroSubtitle")
-        version_badge = QLabel("Version 2.0.0"); version_badge.setObjectName("heroVersion")
+        version_badge = QLabel("Version 1.0.0"); version_badge.setObjectName("heroVersion")
         desc_label = QLabel("Real-time data visualization platform for aerospace applications,\nembedded systems, and industrial monitoring.")
         desc_label.setStyleSheet("color: rgba(255,255,255,0.85); font-size: 12px; line-height: 1.5;"); desc_label.setWordWrap(True)
         text_layout.addWidget(title_label); text_layout.addWidget(subtitle_label); text_layout.addWidget(version_badge)

@@ -5,3 +5,4 @@ pyserial
 reportlab
 pytest
 pytest-cov
+matplotlib
