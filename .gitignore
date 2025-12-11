@@ -156,3 +156,12 @@ presets/
 .al/
 App_BuilderSpecs/
 inno_setup/
+
+# Build artifacts
+build/
+dist/
+*_deb/
+*.deb
+*.exe
+*.spec
+.venv_build/

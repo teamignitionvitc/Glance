@@ -1,0 +1,9 @@
+Package: glance
+Version: 1.0.0
+Section: utils
+Priority: optional
+Architecture: amd64
+Maintainer: Ignition Software Department <contact@example.com>
+Description: Glance Telemetry Dashboard
+ A modern, high-performance telemetry dashboard for visualizing data streams.
+ Built with Python and PySide6.

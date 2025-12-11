@@ -629,10 +629,10 @@
                             <img src="public/Tux.svg" alt="Linux Logo" loading="lazy">
                         </div>
                         <h4>Linux</h4>
-                        <p>1. Download the <code>.tar.gz</code> release.<br>2. Extract it:
-                            <code>tar -xvzf Glance_Linux_x64.tar.gz</code><br>3. Run the binary: <code>./Glance</code>
+                        <p>1. Download the <code>.deb</code> release.<br>2. Install it:
+                            <code>sudo dpkg -i glance_1.0.0_amd64.deb</code><br>3. Run the app: <code>glance</code>
                         </p>
-                        <a href="https://github.com/teamignitionvitc/Glance/releases/download/v1.0.0-alpha.1/Glance_Linux_x64.tar.gz"
+                        <a href="https://github.com/teamignitionvitc/Glance/releases/download/v1.0.0-alpha.1/glance_1.0.0_amd64.deb"
                             download class="card-link">Download Linux Binary <span>&rarr;</span></a>
                         <a href="https://github.com/teamignitionvitc/Glance/releases/tag/v1.0.0-alpha.1" target="_blank"
                             class="secondary-link">View Release Notes</a>
@@ -1093,7 +1093,7 @@ cd Glance</code></pre>
                     previous locations, and includes a button to zoom directly to the latest point.</p>
 
                 <div class="screenshot-gallery">
-                   <figure>
+                    <figure>
                         <img src="public/Doc Images/map_widget_2.png" alt="Map Widget" loading="lazy">
                         <figcaption>Configuration panel demonstrating customizable settings.</figcaption>
                     </figure>
@@ -1519,7 +1519,8 @@ cd Glance</code></pre>
                         <p>Create a new file (e.g. <code>my_widget.py</code>) or add to
                             <code>app/widgets/general.py</code>.
                             Your class must inherit from a Qt widget (like <code>QWidget</code> or <code>QFrame</code>)
-                            and have an update method.</p>
+                            and have an update method.
+                        </p>
                     </li>
                     <li><strong>Register in <code>AddWidgetDialog</code> (app/dialogs.py):</strong>
                         <p>In the `AddWidgetDialog` class, add the name of your new widget to the `widget_types` list

@@ -1,0 +1,9 @@
+#!/bin/sh
+set -e
+
+if [ "$1" = "configure" ]; then
+    gtk-update-icon-cache -f /usr/share/icons/hicolor || true
+    update-desktop-database || true
+fi
+
+exit 0
