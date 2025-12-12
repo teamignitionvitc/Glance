@@ -629,13 +629,25 @@
                             <img src="public/Tux.svg" alt="Linux Logo" loading="lazy">
                         </div>
                         <h4>Linux</h4>
-                        <p>1. Download the <code>.deb</code> release.<br>2. Install it:
-                            <code>sudo dpkg -i glance_1.0.0_amd64.deb</code><br>3. Run the app: <code>glance</code>
+                        <p><strong>Option 1: Debian Package (.deb)</strong><br>
+                            For Ubuntu/Debian based systems:<br>
+                            <code>sudo dpkg -i glance_1.0.0_amd64.deb</code>
                         </p>
                         <a href="https://github.com/teamignitionvitc/Glance/releases/download/v1.0.0-alpha.1/glance_1.0.0_amd64.deb"
-                            download class="card-link">Download Linux Binary <span>&rarr;</span></a>
-                        <a href="https://github.com/teamignitionvitc/Glance/releases/tag/v1.0.0-alpha.1" target="_blank"
-                            class="secondary-link">View Release Notes</a>
+                            download class="card-link">Download .deb <span>&rarr;</span></a>
+
+                        <div style="margin-top: 15px;"></div>
+                        <p><strong>Option 2: AppImage (Portable)</strong><br>
+                            Works on most Linux distros:<br>
+                            <code>chmod +x Glance.AppImage && ./Glance.AppImage</code>
+                        </p>
+                        <a href="https://github.com/teamignitionvitc/Glance/releases/download/v1.0.0-alpha.1/Glance-1.0.0-x86_64.AppImage"
+                            download class="card-link">Download AppImage <span>&rarr;</span></a>
+
+                        <div style="margin-top: 10px;">
+                            <a href="https://github.com/teamignitionvitc/Glance/releases/tag/v1.0.0-alpha.1"
+                                target="_blank" class="secondary-link">View Release Notes</a>
+                        </div>
                     </div>
                 </div>
 

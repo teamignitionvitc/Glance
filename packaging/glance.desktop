@@ -2,7 +2,7 @@
 Name=Glance
 Comment=Telemetry Dashboard
 Exec=/usr/bin/glance
-Icon=/usr/share/icons/hicolor/scalable/apps/glance.svg
+Icon=glance
 Terminal=false
 Type=Application
 Categories=Utility;Science;

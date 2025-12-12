@@ -510,6 +510,7 @@ The easiest way to use Glance is to download the standalone executable for your 
 | ----------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
 | **Windows** | [![Windows](https://img.shields.io/badge/Windows-Download_.exe-0078D4?style=for-the-badge&logo=windows&logoColor=white)](https://github.com/teamignitionvitc/Glance/releases/download/v1.0.0-alpha.1/Glance_Setup_Windows_v1.exe) | [v1.0.0-alpha.1](https://github.com/teamignitionvitc/Glance/releases/tag/v1.0.0-alpha.1) |
 | **Linux**   | [![Linux](https://img.shields.io/badge/Linux-Download_.deb-FCC624?style=for-the-badge&logo=linux&logoColor=black)](https://github.com/teamignitionvitc/Glance/releases/download/v1.0.0-alpha.1/glance_1.0.0_amd64.deb)        | [v1.0.0-alpha.1](https://github.com/teamignitionvitc/Glance/releases/tag/v1.0.0-alpha.1) |
+| **Linux (AppImage)**   | [![Linux](https://img.shields.io/badge/Linux-Download_.AppImage-FCC624?style=for-the-badge&logo=linux&logoColor=black)](https://github.com/teamignitionvitc/Glance/releases/download/v1.0.0-alpha.1/Glance-1.0.0-x86_64.AppImage)        | [v1.0.0-alpha.1](https://github.com/teamignitionvitc/Glance/releases/tag/v1.0.0-alpha.1) |
 
 > **📘 Full Documentation:** For detailed setup guides and troubleshooting, see the [Official Documentation](docs/index.html).
 
