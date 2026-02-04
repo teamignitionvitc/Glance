@@ -107,6 +107,7 @@ except ImportError:
 from app.core.data_logger import DataLogger
 from app.core.filters import FilterManager, MovingAverageFilter, LowPassFilter, KalmanFilter, MedianFilter
 from app.core.simulator import DataSimulator
+from app.core.error_checker import ErrorChecker
 from app.widgets import ValueCard, TimeGraph, LogTable, GaugeWidget, HistogramWidget, LEDWidget, MapWidget, ClosableDock
 from app.widgets.telemetry import RawTelemetryMonitor, StandaloneTelemetryViewer
 from app.dialogs import ConnectionSettingsDialog, AddWidgetDialog, ParameterEntryDialog, ManageParametersDialog, DataLoggingDialog
@@ -198,6 +199,10 @@ class MainWindow(QMainWindow):
         self.total_packets = 0
         self.total_rx_bytes = 0
         self.packet_timestamps = []
+        
+        # Error tracking
+        self.error_counts = {}  # parameter_id -> error count
+        self.error_status = {'total_errors': 0, 'has_errors': False}
 
         # Raw telemetry monitor
         self.raw_tlm_monitor = None
@@ -1150,6 +1155,17 @@ class MainWindow(QMainWindow):
                 if raw_value is None: 
                     continue  # Skip if data for this channel is null
 
+                # Check for errors (lightweight validation)
+                error_status, error_msg = self.error_checker.check_value(param_meta, raw_value)
+                if error_status != 'OK':
+                    # Increment error count for this parameter
+                    if param_id not in self.error_counts:
+                        self.error_counts[param_id] = 0
+                    self.error_counts[param_id] += 1
+                    # Update global error status
+                    self.error_status['total_errors'] = sum(self.error_counts.values())
+                    self.error_status['has_errors'] = self.error_status['total_errors'] > 0
+
                 # Apply filters to get filtered value
                 filtered_value = self.filter_manager.apply_filters(param_id, raw_value, timestamp)
 
@@ -1260,6 +1276,11 @@ class MainWindow(QMainWindow):
         if self.simulator: 
             self.simulator.stop()
             self.simulator.wait()
+        
+        # Reset error counters on connection restart
+        if hasattr(self, 'error_counts'):
+            self.error_counts.clear()
+            self.error_status = {'total_errors': 0, 'has_errors': False}
         
         # Create new simulator with connection settings and parameters
         self.simulator = DataSimulator(num_channels=32, connection_settings=self.connection_settings, parameters=self.parameters)
@@ -3702,6 +3723,12 @@ class MainWindow(QMainWindow):
         self.fps_label.setToolTip("Frames Per Second")
         sb.addPermanentWidget(self.fps_label)
         
+        # Error Status
+        self.error_label = QLabel("Errors: 0")
+        self.error_label.setObjectName("SBRight")
+        self.error_label.setToolTip("Data validation errors")
+        sb.addPermanentWidget(self.error_label)
+        
         # Packet Rate
         self.rate_label = QLabel("0 pkt/s")
         self.rate_label.setObjectName("SBRight")
@@ -3748,6 +3775,34 @@ class MainWindow(QMainWindow):
         # FPS - use the FpsTracker value
         fps = self.fps_tracker.get_fps()
         self.fps_label.setText(f"FPS: {round(fps)}")
+        
+        # Error Status
+        if hasattr(self, 'error_status'):
+            total_errors = self.error_status.get('total_errors', 0)
+            self.error_label.setText(f"Errors: {total_errors}")
+            
+            # Build tooltip with parameter breakdown
+            if total_errors > 0 and hasattr(self, 'error_counts'):
+                error_details = []
+                for param_id, count in sorted(self.error_counts.items(), key=lambda x: x[1], reverse=True)[:5]:
+                    error_details.append(f"{param_id}: {count}")
+                if len(self.error_counts) > 5:
+                    error_details.append(f"... and {len(self.error_counts) - 5} more")
+                tooltip_text = "Data validation errors:\n" + "\n".join(error_details)
+                self.error_label.setToolTip(tooltip_text)
+            else:
+                self.error_label.setToolTip("Data validation errors")
+            
+            # Color coding: green (0), yellow (1-10), red (>10)
+            if total_errors == 0:
+                self.error_label.setStyleSheet("color: #00ff00;")
+            elif total_errors <= 10:
+                self.error_label.setStyleSheet("color: #ffaa00;")
+            else:
+                self.error_label.setStyleSheet("color: #ff3131;")
+        else:
+            self.error_label.setText("Errors: 0")
+            self.error_label.setStyleSheet("color: #00ff00;")
             
         # Session Time
         if hasattr(self, 'session_start_time') and self.session_start_time:
@@ -3918,6 +3973,8 @@ class MainWindow(QMainWindow):
             self.sb_connection_label.setVisible(is_dashboard)
         if hasattr(self, 'fps_label'):
             self.fps_label.setVisible(is_dashboard)
+        if hasattr(self, 'error_label'):
+            self.error_label.setVisible(is_dashboard)
         if hasattr(self, 'rate_label'):
             self.rate_label.setVisible(is_dashboard)
         if hasattr(self, 'log_size_label'):
