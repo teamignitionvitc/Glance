@@ -188,6 +188,7 @@ class MainWindow(QMainWindow):
         # Initialize data logger
         self.data_logger = DataLogger()
         self.filter_manager = FilterManager()
+        self.error_checker = ErrorChecker()
         self.logging_settings = None
         
         # Undo/Redo History - Dashboard specific
