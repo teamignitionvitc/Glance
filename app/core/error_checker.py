@@ -47,6 +47,7 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 # No#   |       when       who                  what
 # ######+*********+**********+********************+**************************************************
 # 000  NEW      04-02-2026  Shawn        First commit with the error checking logic
+# 001  MOD      09-02-2026  Shawn        Added crc
 
 ####################################################################################################
 
@@ -54,7 +55,10 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 # Imports
 
 import math
-from typing import Dict, Tuple, Optional
+import zlib
+import json
+import struct
+from typing import Dict, Tuple, Optional, Any
 
 
 class ErrorChecker:
@@ -208,3 +212,35 @@ class ErrorChecker:
         if math.isnan(value) or math.isinf(value):
             return ('ERROR', 'Invalid numeric value (NaN/Infinity)')
         return ('OK', None)
+
+    def calculate_crc(self, data: Any) -> int:  
+        """
+        Calculates CRC32 checksum for any given data type.
+        The data to calculate CRC for (None, str, int, float, list, dict, bytes, etc.)
+        32-bit unsigned integer CRC value
+        """
+        if data is None:
+            return zlib.crc32(b"") & 0xFFFFFFFF
+
+        if isinstance(data, (bytes, bytearray)):
+            raw_bytes = data
+        elif isinstance(data, str):
+            raw_bytes = data.encode('utf-8')
+        elif isinstance(data, int):
+            # Hex representation or packed bytes could work, using string for simplicity
+            # but struct is more robust for fixed width.
+            # Using strings as fallback for many things, but let's try to be consistent.
+            raw_bytes = str(data).encode('utf-8')
+        elif isinstance(data, float):
+            # Pack as double precision float
+            raw_bytes = struct.pack('d', data)
+        elif isinstance(data, (list, dict, tuple)):
+            try:
+                raw_bytes = json.dumps(data, sort_keys=True).encode('utf-8')
+            except (TypeError, ValueError):
+                raw_bytes = str(data).encode('utf-8')
+        else:
+            # Fallback for other objects
+            raw_bytes = str(data).encode('utf-8')
+
+        return zlib.crc32(raw_bytes) & 0xFFFFFFFF
