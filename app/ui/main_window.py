@@ -204,6 +204,12 @@ class MainWindow(QMainWindow):
         # Error tracking
         self.error_counts = {}  # parameter_id -> error count
         self.error_status = {'total_errors': 0, 'has_errors': False}
+        
+        # CRC tracking
+        self.crc_status = 'OK'  # 'OK', 'WARNING', 'ERROR'
+        self.crc_message = None
+        self.last_crc_value = None
+        self.crc_test_mode = 'normal'  # 'normal', 'error', 'warning' - for testing
 
         # Raw telemetry monitor
         self.raw_tlm_monitor = None
@@ -1144,6 +1150,28 @@ class MainWindow(QMainWindow):
         self.total_packets += 1
         # Estimate bytes (each value as 4 bytes for simplicity)
         self.total_rx_bytes += len(packet) * 4
+        
+        # Calculate CRC for the entire packet (non-blocking)
+        try:
+            self.last_crc_value = self.error_checker.calculate_crc(packet)
+            
+            # Test mode simulation (for testing error display)
+            if hasattr(self, 'crc_test_mode'):
+                if self.crc_test_mode == 'error':
+                    self.crc_status = 'ERROR'
+                    self.crc_message = 'Simulated CRC mismatch detected'
+                elif self.crc_test_mode == 'warning':
+                    self.crc_status = 'WARNING'
+                    self.crc_message = 'CRC checksum suspicious'
+                else:
+                    self.crc_status = 'OK'
+                    self.crc_message = None
+            else:
+                self.crc_status = 'OK'
+                self.crc_message = None
+        except Exception as e:
+            self.crc_status = 'ERROR'
+            self.crc_message = f"CRC calculation failed: {str(e)}"
 
         # Iterate through the user-defined parameters, not the incoming data keys
         for param_meta in self.parameters:
@@ -1282,6 +1310,12 @@ class MainWindow(QMainWindow):
         if hasattr(self, 'error_counts'):
             self.error_counts.clear()
             self.error_status = {'total_errors': 0, 'has_errors': False}
+        
+        # Reset CRC status on connection restart
+        if hasattr(self, 'crc_status'):
+            self.crc_status = 'OK'
+            self.crc_message = None
+            self.last_crc_value = None
         
         # Create new simulator with connection settings and parameters
         self.simulator = DataSimulator(num_channels=32, connection_settings=self.connection_settings, parameters=self.parameters)
@@ -3103,6 +3137,11 @@ class MainWindow(QMainWindow):
         help_menu.addAction(shortcuts_action)
         help_menu.addAction(documentation_action)
         help_menu.addAction(about_action)
+        
+        # Hidden keyboard shortcut for CRC testing (Ctrl+Shift+T)
+        # No menu item - shortcut only for developers/testing
+        test_crc_shortcut = QShortcut(QKeySequence("Ctrl+Shift+T"), self)
+        test_crc_shortcut.activated.connect(self.cycle_crc_test_mode)
 
     def _build_splash_screen(self):
         """Splash screen with animated logo that transitions to welcome screen"""
@@ -3730,6 +3769,12 @@ class MainWindow(QMainWindow):
         self.error_label.setToolTip("Data validation errors")
         sb.addPermanentWidget(self.error_label)
         
+        # CRC Status
+        self.crc_label = QLabel("CRC: --")
+        self.crc_label.setObjectName("SBRight")
+        self.crc_label.setToolTip("CRC validation status")
+        sb.addPermanentWidget(self.crc_label)
+        
         # Packet Rate
         self.rate_label = QLabel("0 pkt/s")
         self.rate_label.setObjectName("SBRight")
@@ -3804,6 +3849,29 @@ class MainWindow(QMainWindow):
         else:
             self.error_label.setText("Errors: 0")
             self.error_label.setStyleSheet("color: #00ff00;")
+        
+        # CRC Status
+        if hasattr(self, 'crc_status'):
+            if self.crc_status == 'OK':
+                if self.last_crc_value is not None:
+                    self.crc_label.setText(f"CRC OK ✅")
+                    self.crc_label.setStyleSheet("color: #00ff00;")
+                    self.crc_label.setToolTip(f"CRC32: 0x{self.last_crc_value:08X}")
+                else:
+                    self.crc_label.setText("CRC: --")
+                    self.crc_label.setStyleSheet("color: #888888;")
+                    self.crc_label.setToolTip("No CRC data")
+            elif self.crc_status == 'WARNING':
+                self.crc_label.setText(f"CRC ⚠️")
+                self.crc_label.setStyleSheet("color: #ffaa00;")
+                self.crc_label.setToolTip(f"CRC Warning: {self.crc_message or 'Unknown'}")
+            elif self.crc_status == 'ERROR':
+                self.crc_label.setText(f"CRC ❌")
+                self.crc_label.setStyleSheet("color: #ff3131;")
+                self.crc_label.setToolTip(f"CRC Error: {self.crc_message or 'Unknown'}")
+        else:
+            self.crc_label.setText("CRC: --")
+            self.crc_label.setStyleSheet("color: #888888;")
             
         # Session Time
         if hasattr(self, 'session_start_time') and self.session_start_time:
@@ -3976,6 +4044,8 @@ class MainWindow(QMainWindow):
             self.fps_label.setVisible(is_dashboard)
         if hasattr(self, 'error_label'):
             self.error_label.setVisible(is_dashboard)
+        if hasattr(self, 'crc_label'):
+            self.crc_label.setVisible(is_dashboard)
         if hasattr(self, 'rate_label'):
             self.rate_label.setVisible(is_dashboard)
         if hasattr(self, 'log_size_label'):
@@ -5948,3 +6018,20 @@ class MainWindow(QMainWindow):
         main_layout.addWidget(footer)
         
         dialog.exec()
+
+    def cycle_crc_test_mode(self):
+        """Cycle through CRC test modes: normal -> error -> warning -> normal"""
+        modes = ['normal', 'error', 'warning']
+        current_idx = modes.index(self.crc_test_mode)
+        next_idx = (current_idx + 1) % len(modes)
+        self.crc_test_mode = modes[next_idx]
+        
+        # Show notification
+        mode_messages = {
+            'normal': 'CRC Test: Normal Mode (showing real CRC)',
+            'error': 'CRC Test: ERROR Mode (simulating CRC mismatch)',
+            'warning': 'CRC Test: WARNING Mode (simulating suspicious CRC)'
+        }
+        
+        if hasattr(self, 'statusBar'):
+            self.statusBar().showMessage(mode_messages[self.crc_test_mode], 3000)

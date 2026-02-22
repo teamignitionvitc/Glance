@@ -4,5 +4,6 @@ numpy
 pyserial
 reportlab
 pytest
+pytest-qt
 pytest-cov
 matplotlib
